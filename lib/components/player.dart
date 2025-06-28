@@ -1,18 +1,27 @@
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';  // ← Add this import
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../magnet_walker_game.dart';
 import 'game_object.dart';
 
-class Player extends CircleComponent with HasGameReference<MagnetWalkerGame> {
+class Player extends CircleComponent 
+    with HasGameRef<MagnetWalkerGame>, DragCallbacks {
+
   double magnetRadius = 80.0;
   late Paint magnetFieldPaint;
   late Paint playerPaint;
-
-  Player({required super.position}) : super(radius: 15);
+  Player({required super.position}) : super(
+    radius: 15,
+    anchor: Anchor.center,
+  );
 
   @override
   Future<void> onLoad() async {
+    super.onLoad();
+    // Set size for drag detection - this is crucial!
+    size = Vector2.all(radius * 2);
+    
     magnetFieldPaint = Paint()
       ..color = Colors.blueAccent.withOpacity(0.2)
       ..style = PaintingStyle.fill;
@@ -20,6 +29,11 @@ class Player extends CircleComponent with HasGameReference<MagnetWalkerGame> {
     playerPaint = Paint()
       ..color = Colors.blue
       ..style = PaintingStyle.fill;
+  }
+
+  @override
+  void onDragUpdate(DragUpdateEvent event) {
+    moveHorizontally(event.localDelta.x);
   }
 
   @override
