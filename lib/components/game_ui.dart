@@ -10,8 +10,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   @override
   Future<void> onLoad() async {
-    final game = gameReference;
-    if (game == null) return;
+    // final game = gameReference;
+    // if (game == null) return;
     
     // Score text
     scoreText = TextComponent(
@@ -79,8 +79,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   @override
   void update(double dt) {
-    final game = gameReference;
-    if (game == null) return;
+    // final game = gameReference;
+    // if (game == null) return;
     
     scoreText.text = 'Score: ${game.score}';
     levelText.text = 'Level: ${game.level}';

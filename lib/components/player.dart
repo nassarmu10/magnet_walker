@@ -55,17 +55,14 @@ class Player extends CircleComponent with HasGameReference<MagnetWalkerGame> {
     // }
   }
 
-  void applyMagneticForce(GameObject obj) {
-    // final game = gameReference;
-    // if (game == null) return;
-    
+  void applyMagneticForce(GameObject obj, double dt) {
     final distance = position.distanceTo(obj.position);
     
     if (distance < magnetRadius && distance > 0) {
       final direction = (position - obj.position)..normalize();
       final force = 100 * (1 - distance / magnetRadius);
       
-      obj.velocity += direction * force * game.dt;
+      obj.velocity += direction * force * dt;  // ✅ Now using the passed dt
       obj.isMagnetized = true;
     } else {
       obj.isMagnetized = false;

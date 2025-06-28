@@ -3,7 +3,8 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'dart:async';
+import 'dart:async' as async;
+
 import 'components/player.dart';
 import 'components/game_object.dart';
 import 'components/game_particle.dart';
@@ -11,7 +12,7 @@ import 'components/background.dart';
 import 'components/game_ui.dart';
 
 class MagnetWalkerGame extends FlameGame 
-    with HasCollisionDetection, HasPanDetector, HasTapDetector {
+    with HasCollisionDetection {
   
   late Player player;
   late GameUI gameUI;
@@ -25,7 +26,7 @@ class MagnetWalkerGame extends FlameGame
   bool gameRunning = true;
   
   // Spawning
-  Timer? spawnTimer;
+  async.Timer? spawnTimer;
   final List<GameObject> gameObjects = [];
   final List<GameParticle> particles = [];
 
@@ -51,14 +52,18 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startSpawning() {
-    spawnTimer?.cancel();
+    spawnTimer?.cancel();  // Cancel existing timer if any
     final spawnRate = math.max(2.0 - (level * 0.1), 0.8);
-    spawnTimer = Timer.periodic(Duration(milliseconds: (spawnRate * 1000).round()), (_) {
-      if (gameRunning) {
-        spawnObject();
+    spawnTimer = async.Timer.periodic(
+      Duration(milliseconds: (spawnRate * 1000).round()), 
+      (timer) {  // ← The timer parameter here
+        if (gameRunning) {
+          spawnObject();
+        }
       }
-    });
+    );
   }
+
 
   void spawnObject() {
     final x = math.Random().nextDouble() * (size.x - 60) + 30;
@@ -151,9 +156,9 @@ class MagnetWalkerGame extends FlameGame
   }
 
   @override
-  bool onPanUpdate(PanUpdateInfo info) {
+  bool onDragUpdate(DragUpdateEvent event) {
     if (gameRunning) {
-      player.moveHorizontally(info.delta.global.x * 0.5);
+      player.moveHorizontally(event.localDelta.x * 0.5);
     }
     return true;
   }
@@ -166,7 +171,7 @@ class MagnetWalkerGame extends FlameGame
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
-          player.applyMagneticForce(obj);
+          player.applyMagneticForce(obj, dt);
         }
       }
       
