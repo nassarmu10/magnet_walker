@@ -15,7 +15,7 @@ import 'spawn_managers/gravity_spawn_manager.dart';
 import 'spawn_managers/survival_spawn_manager.dart';
 
 class MagnetWalkerGame extends FlameGame
-    with HasCollisionDetection, DragCallbacks {
+    with HasCollisionDetection, DragCallbacks, TapCallbacks {
   late Player player;
   late GameUI gameUI;
   late Background background;
@@ -154,6 +154,7 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void destroyBomb(GameObject bomb) {
+    print('Destroying bomb');
     if (bomb.type == ObjectType.bomb && bomb.isMounted) {
       createParticles(bomb.position, Colors.orange);
       bomb.removeFromParent();
@@ -327,31 +328,22 @@ class MagnetWalkerGame extends FlameGame
   }
 
   @override
-  bool onTapDown(TapDownEvent event) {
-    // Handle tap events for survival mode (bomb destruction and coin collection)
+  void onTapDown(TapDownEvent event) {
+    print('onTapDown called');
+    // Existing tap logic here
     if (gameRunning && currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
-
-      // Check if any object was tapped
       for (final obj in List.from(gameObjects)) {
-        if (obj.isMounted) {
+        if (obj.isMounted && !obj.collected && obj.type == ObjectType.bomb) {
           final distance = tapPosition.distanceTo(obj.position);
           if (distance < obj.radius + 15) {
-            // Larger tap area for easier clicking
-            if (obj.type == ObjectType.bomb) {
-              // Destroy bomb
-              destroyBomb(obj);
-              return true;
-            } else if (obj.type == ObjectType.coin) {
-              // Collect coin
-              collectObject(obj);
-              return true;
-            }
+            obj.collected = true;
+            destroyBomb(obj);
+            return;
           }
         }
       }
     }
-    return true;
   }
 
   @override

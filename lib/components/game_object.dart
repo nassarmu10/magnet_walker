@@ -78,12 +78,16 @@ class GameObject extends CircleComponent
         collected = true;
         game.collectObject(this);
       } else if (levelType == LevelType.survival) {
-        // In survival mode, only bombs collide with player (coins are clicked)
-        if (type == ObjectType.bomb) {
+        // In survival mode, coins collide with player, bombs only if they hit player
+        if (type == ObjectType.coin) {
+          // Coins collide with player to give points
+          collected = true;
+          game.collectObject(this);
+        } else if (type == ObjectType.bomb) {
+          // Bombs only collide if they hit the player (game over)
           collected = true;
           game.collectObject(this);
         }
-        // Coins in survival mode don't collide, they must be clicked
       }
     }
 
