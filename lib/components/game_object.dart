@@ -25,7 +25,10 @@ class GameObject extends CircleComponent
 
   @override
   Future<void> onLoad() async {
-    velocity.y = 50 + level * 10.0;
+    // Base speed increases with level
+    final baseSpeed = 100.0;
+    final levelSpeedMultiplier = 1.0 + (level * 0.3); // 30% faster per level
+    velocity.y = baseSpeed * levelSpeedMultiplier;
 
     if (type == ObjectType.coin) {
       objectPaint = Paint()..color = Colors.amber;

@@ -11,7 +11,8 @@ import 'components/game_particle.dart';
 import 'components/background.dart';
 import 'components/game_ui.dart';
 
-class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
+class MagnetWalkerGame extends FlameGame
+    with HasCollisionDetection, DragCallbacks {
   late Player player;
   late GameUI gameUI;
   late Background background;
@@ -25,7 +26,9 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
 
   // Play time tracking
   DateTime? gameStartTime;
+  DateTime? pauseStartTime;
   Duration playTime = Duration.zero;
+  Duration pausedTime = Duration.zero;
   async.Timer? playTimeTimer;
 
   // Spawning
@@ -63,17 +66,31 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
   }
 
   void startPlayTimeTracking() {
-    gameStartTime = DateTime.now();
+    // If this is the first time starting, set the start time
+    if (gameStartTime == null) {
+      gameStartTime = DateTime.now();
+    }
+
+    // Cancel existing timer if any
+    playTimeTimer?.cancel();
+
     playTimeTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
       if (gameRunning && gameStartTime != null) {
-        playTime = DateTime.now().difference(gameStartTime!);
+        // Calculate total time minus paused time
+        final totalTime = DateTime.now().difference(gameStartTime!);
+        playTime = totalTime - pausedTime;
       }
     });
   }
 
   void startSpawning() {
     spawnTimer?.cancel(); // Cancel existing timer if any
-    final spawnRate = math.max(2.0 - (level * 0.1), 0.8);
+    // Spawn rate decreases with level (faster spawning)
+    final baseSpawnRate = 2.0;
+    final levelSpawnReduction = level * 0.15; // 15% faster spawning per level
+    final spawnRate = math.max(
+        baseSpawnRate - levelSpawnReduction, 0.5); // Minimum 0.5 seconds
+
     spawnTimer = async.Timer.periodic(
         Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
       // ← The timer parameter here
@@ -105,6 +122,13 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
       levelProgress++;
       createParticles(obj.position, Colors.yellow);
 
+      // Check if player reached 100 points (level completion)
+      if (score >= 100) {
+        levelCompleted();
+        return;
+      }
+
+      // Check if player reached target score for current level
       if (levelProgress >= targetScore) {
         nextLevel();
       }
@@ -140,6 +164,21 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
     }
   }
 
+  void levelCompleted() {
+    gameRunning = false;
+    spawnTimer?.cancel();
+    playTimeTimer?.cancel();
+
+    // Clear all objects immediately when level ends
+    clearAllObjects();
+
+    // Pause play time when showing dialog
+    pausePlayTime();
+
+    // Show level completion dialog
+    gameUI.showLevelCompleted(score, level, playTime);
+  }
+
   void nextLevel() {
     level++;
     levelProgress = 0;
@@ -153,8 +192,28 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
     spawnTimer?.cancel();
     playTimeTimer?.cancel();
 
+    // Clear all objects immediately when game ends
+    clearAllObjects();
+
+    // Pause play time when showing dialog
+    pausePlayTime();
+
     // Show game over dialog
     gameUI.showGameOver(score, level, playTime);
+  }
+
+  void clearAllObjects() {
+    // Clear all game objects
+    for (final obj in gameObjects) {
+      obj.removeFromParent();
+    }
+    gameObjects.clear();
+
+    // Clear all particles
+    for (final particle in particles) {
+      particle.removeFromParent();
+    }
+    particles.clear();
   }
 
   void restartGame() {
@@ -165,17 +224,12 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
     targetScore = 10;
     gameRunning = true;
     playTime = Duration.zero;
+    pausedTime = Duration.zero;
+    gameStartTime = null; // Reset start time for new game
+    pauseStartTime = null; // Reset pause time for new game
 
-    // Clear objects and particles
-    for (final obj in gameObjects) {
-      obj.removeFromParent();
-    }
-    gameObjects.clear();
-
-    for (final particle in particles) {
-      particle.removeFromParent();
-    }
-    particles.clear();
+    // Clear all objects using the helper method
+    clearAllObjects();
 
     // Reset player
     player.reset();
@@ -188,12 +242,66 @@ class MagnetWalkerGame extends FlameGame with HasCollisionDetection {
     gameUI.hideGameOver();
   }
 
+  void continueToNextLevel() {
+    // Resume play time before starting new level
+    resumePlayTime();
+
+    // Increment level and reset score but keep play time
+    level++;
+    score = 0;
+    levelProgress = 0;
+    targetScore = level * 8 + 5;
+    gameRunning = true;
+
+    // Clear all objects using the helper method
+    clearAllObjects();
+
+    // Reset player position and upgrade magnet
+    player.reset();
+    player.upgradeMagnet(level);
+
+    // Restart spawning with faster speed for next level
+    startSpawning();
+
+    // Hide level completion UI
+    gameUI.hideLevelCompleted();
+  }
+
+  void pausePlayTime() {
+    if (pauseStartTime == null) {
+      pauseStartTime = DateTime.now();
+      // Stop the timer immediately
+      playTimeTimer?.cancel();
+    }
+  }
+
+  void resumePlayTime() {
+    if (pauseStartTime != null) {
+      final pauseDuration = DateTime.now().difference(pauseStartTime!);
+      pausedTime += pauseDuration;
+      pauseStartTime = null;
+      // Restart the timer
+      startPlayTimeTracking();
+    }
+  }
+
+  @override
+  bool onDragStart(DragStartEvent event) {
+    return true; // Accept all drag events
+  }
+
   @override
   bool onDragUpdate(DragUpdateEvent event) {
+    // Forward drag events to the player for better control
     if (gameRunning) {
       player.moveHorizontally(event.localDelta.x * 0.5);
     }
     return true;
+  }
+
+  @override
+  bool onDragEnd(DragEndEvent event) {
+    return true; // Accept all drag events
   }
 
   @override
