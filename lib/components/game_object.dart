@@ -18,6 +18,7 @@ class GameObject extends CircleComponent
 
   late Paint objectPaint;
   late Paint glowPaint;
+  SpriteComponent? bombSpriteComponent; // For rocket image
 
   GameObject({
     required super.position,
@@ -30,6 +31,27 @@ class GameObject extends CircleComponent
 
   @override
   Future<void> onLoad() async {
+    // Load rocket sprite for bombs
+    if (type == ObjectType.bomb) {
+      try {
+        print('Loading rocket.png for bomb...');
+        final bombSprite = Sprite(game.images.fromCache('rocket.png'));
+        print('Rocket sprite loaded successfully');
+        bombSpriteComponent = SpriteComponent(
+          sprite: bombSprite,
+          size: Vector2.all(radius * 2), // Match the radius size
+          anchor: Anchor.center, // Ensure it's centered
+        );
+        print('Adding bomb sprite component');
+        add(bombSpriteComponent!);
+        print('Bomb sprite component added successfully');
+      } catch (e) {
+        print('Could not load rocket.png: $e');
+        print('Stack trace: ${StackTrace.current}');
+        // Fall back to default bomb rendering
+      }
+    }
+
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
       // Base speed increases with level
@@ -66,6 +88,23 @@ class GameObject extends CircleComponent
     // Update pulse time for survival mode
     if (levelType == LevelType.survival) {
       pulseTime += dt * 3.0; // Pulse speed
+    }
+
+    // Apply pulse effect to bomb sprite component and rotate toward player
+    if (type == ObjectType.bomb && bombSpriteComponent != null) {
+      double pulseScale = 1.0;
+      if (levelType == LevelType.survival) {
+        pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
+      }
+      bombSpriteComponent!.size = Vector2.all(radius * 2 * pulseScale);
+
+      // Calculate angle to point toward player
+      final player = game.player;
+      final direction = (player.position - position);
+      final angle = math.atan2(direction.y, direction.x);
+
+      // Rotate the sprite component to point toward player
+      bombSpriteComponent!.angle = angle;
     }
 
     position += velocity * dt;
@@ -130,37 +169,52 @@ class GameObject extends CircleComponent
         ..color = (type == ObjectType.coin ? Colors.amber : Colors.red)
             .withOpacity(0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-      canvas.drawCircle(Offset.zero, radius * pulseScale + 5, pulseGlowPaint);
+
+      // Adjust glow size based on object type
+      double glowRadius;
+      if (type == ObjectType.bomb && bombSpriteComponent != null) {
+        // For rockets, make glow slightly larger than the sprite
+        glowRadius = radius * pulseScale + 8;
+      } else {
+        // For coins and fallback bombs, use original size
+        glowRadius = radius * pulseScale + 5;
+      }
+
+      canvas.drawCircle(Offset.zero, glowRadius, pulseGlowPaint);
     }
 
     // Draw main object with pulse effect
     final scaledRadius = radius * pulseScale;
-    canvas.drawCircle(Offset.zero, scaledRadius, objectPaint);
 
-    // Draw border
-    final borderPaint = Paint()
-      ..color = type == ObjectType.coin ? Colors.orange : Colors.red
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+    // Draw circle for coins or fallback for bombs
+    if (type == ObjectType.coin || bombSpriteComponent == null) {
+      canvas.drawCircle(Offset.zero, scaledRadius, objectPaint);
 
-    canvas.drawCircle(Offset.zero, scaledRadius, borderPaint);
+      // Draw border
+      final borderPaint = Paint()
+        ..color = type == ObjectType.coin ? Colors.orange : Colors.red
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
 
-    // Draw symbol
-    if (type == ObjectType.bomb) {
-      final textPainter = TextPainter(
-        text: const TextSpan(
-          text: '!',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
+      canvas.drawCircle(Offset.zero, scaledRadius, borderPaint);
+
+      // Draw symbol only for fallback bomb rendering
+      if (type == ObjectType.bomb && bombSpriteComponent == null) {
+        final textPainter = TextPainter(
+          text: const TextSpan(
+            text: '!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(
-          canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(
+            canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
+      }
     }
   }
 }

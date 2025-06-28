@@ -48,6 +48,14 @@ class MagnetWalkerGame extends FlameGame
     // Wait for the game to be fully initialized
     await Future.delayed(const Duration(milliseconds: 50));
 
+    // Preload images
+    try {
+      await images.load('rocket.png');
+      print('Rocket image preloaded successfully');
+    } catch (e) {
+      print('Failed to preload rocket image: $e');
+    }
+
     // Set up camera with proper size
     camera.viewfinder.visibleGameSize = Vector2(375, 667);
 
