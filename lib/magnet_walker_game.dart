@@ -10,12 +10,20 @@ import 'components/game_object.dart';
 import 'components/game_particle.dart';
 import 'components/background.dart';
 import 'components/game_ui.dart';
+import 'level_types.dart';
+import 'spawn_managers/gravity_spawn_manager.dart';
+import 'spawn_managers/survival_spawn_manager.dart';
 
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks {
   late Player player;
   late GameUI gameUI;
   late Background background;
+
+  // Level type management
+  late GravitySpawnManager gravitySpawnManager;
+  late SurvivalSpawnManager survivalSpawnManager;
+  late LevelType currentLevelType;
 
   // Game state
   int score = 0;
@@ -32,7 +40,6 @@ class MagnetWalkerGame extends FlameGame
   async.Timer? playTimeTimer;
 
   // Spawning
-  async.Timer? spawnTimer;
   final List<GameObject> gameObjects = [];
   final List<GameParticle> particles = [];
 
@@ -43,6 +50,13 @@ class MagnetWalkerGame extends FlameGame
 
     // Set up camera with proper size
     camera.viewfinder.visibleGameSize = Vector2(375, 667);
+
+    // Initialize spawn managers
+    gravitySpawnManager = GravitySpawnManager(this);
+    survivalSpawnManager = SurvivalSpawnManager(this);
+
+    // Set initial level type
+    currentLevelType = LevelTypeConfig.getLevelType(level);
 
     // Add background first
     background = Background();
@@ -84,34 +98,23 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startSpawning() {
-    spawnTimer?.cancel(); // Cancel existing timer if any
-    // Spawn rate decreases with level (faster spawning)
-    final baseSpawnRate = 2.0;
-    final levelSpawnReduction = level * 0.15; // 15% faster spawning per level
-    final spawnRate = math.max(
-        baseSpawnRate - levelSpawnReduction, 0.5); // Minimum 0.5 seconds
+    // Stop any existing spawn managers
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
 
-    spawnTimer = async.Timer.periodic(
-        Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
-      // ← The timer parameter here
-      if (gameRunning) {
-        spawnObject();
-      }
-    });
+    // Start the appropriate spawn manager based on level type
+    currentLevelType = LevelTypeConfig.getLevelType(level);
+
+    if (currentLevelType == LevelType.gravity) {
+      gravitySpawnManager.startSpawning();
+    } else {
+      survivalSpawnManager.startSpawning();
+    }
   }
 
   void spawnObject() {
-    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final x = math.Random().nextDouble() * (gameSize.x - 60) + 30;
-    final type =
-        math.Random().nextDouble() < 0.7 ? ObjectType.coin : ObjectType.bomb;
-    final obj = GameObject(
-      position: Vector2(x, -20),
-      type: type,
-      level: level,
-    );
-    add(obj);
-    gameObjects.add(obj);
+    // This method is now handled by the specific spawn managers
+    // Keeping it for backward compatibility but it's not used
   }
 
   void collectObject(GameObject obj) {
@@ -122,8 +125,8 @@ class MagnetWalkerGame extends FlameGame
       levelProgress++;
       createParticles(obj.position, Colors.yellow);
 
-      // Check if player reached 100 points (level completion)
-      if (score >= 100) {
+      // Check if player reached 10 points (level completion)
+      if (score >= 10) {
         levelCompleted();
         return;
       }
@@ -133,12 +136,29 @@ class MagnetWalkerGame extends FlameGame
         nextLevel();
       }
     } else {
-      gameOver();
-      createParticles(obj.position, Colors.red);
+      // Handle bomb collision based on level type
+      if (currentLevelType == LevelType.gravity) {
+        // In gravity mode, bomb collision = game over
+        gameOver();
+        createParticles(obj.position, Colors.red);
+      } else {
+        // In survival mode, bombs should be clicked, not collided with
+        // If we reach here, it means the bomb hit the player = game over
+        gameOver();
+        createParticles(obj.position, Colors.red);
+      }
     }
 
     obj.removeFromParent();
     gameObjects.remove(obj);
+  }
+
+  void destroyBomb(GameObject bomb) {
+    if (bomb.type == ObjectType.bomb && bomb.isMounted) {
+      createParticles(bomb.position, Colors.orange);
+      bomb.removeFromParent();
+      gameObjects.remove(bomb);
+    }
   }
 
   void createParticles(Vector2 position, Color color) {
@@ -166,7 +186,8 @@ class MagnetWalkerGame extends FlameGame
 
   void levelCompleted() {
     gameRunning = false;
-    spawnTimer?.cancel();
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
     playTimeTimer?.cancel();
 
     // Clear all objects immediately when level ends
@@ -189,7 +210,8 @@ class MagnetWalkerGame extends FlameGame
 
   void gameOver() {
     gameRunning = false;
-    spawnTimer?.cancel();
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
     playTimeTimer?.cancel();
 
     // Clear all objects immediately when game ends
@@ -200,20 +222,6 @@ class MagnetWalkerGame extends FlameGame
 
     // Show game over dialog
     gameUI.showGameOver(score, level, playTime);
-  }
-
-  void clearAllObjects() {
-    // Clear all game objects
-    for (final obj in gameObjects) {
-      obj.removeFromParent();
-    }
-    gameObjects.clear();
-
-    // Clear all particles
-    for (final particle in particles) {
-      particle.removeFromParent();
-    }
-    particles.clear();
   }
 
   void restartGame() {
@@ -285,6 +293,20 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
+  void clearAllObjects() {
+    // Clear all game objects
+    for (final obj in gameObjects) {
+      obj.removeFromParent();
+    }
+    gameObjects.clear();
+
+    // Clear all particles
+    for (final particle in particles) {
+      particle.removeFromParent();
+    }
+    particles.clear();
+  }
+
   @override
   bool onDragStart(DragStartEvent event) {
     return true; // Accept all drag events
@@ -302,6 +324,34 @@ class MagnetWalkerGame extends FlameGame
   @override
   bool onDragEnd(DragEndEvent event) {
     return true; // Accept all drag events
+  }
+
+  @override
+  bool onTapDown(TapDownEvent event) {
+    // Handle tap events for survival mode (bomb destruction and coin collection)
+    if (gameRunning && currentLevelType == LevelType.survival) {
+      final tapPosition = event.localPosition;
+
+      // Check if any object was tapped
+      for (final obj in List.from(gameObjects)) {
+        if (obj.isMounted) {
+          final distance = tapPosition.distanceTo(obj.position);
+          if (distance < obj.radius + 15) {
+            // Larger tap area for easier clicking
+            if (obj.type == ObjectType.bomb) {
+              // Destroy bomb
+              destroyBomb(obj);
+              return true;
+            } else if (obj.type == ObjectType.coin) {
+              // Collect coin
+              collectObject(obj);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return true;
   }
 
   @override
@@ -335,7 +385,8 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void onRemove() {
-    spawnTimer?.cancel();
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
     playTimeTimer?.cancel();
     super.onRemove();
   }

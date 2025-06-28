@@ -2,10 +2,12 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import '../magnet_walker_game.dart';
+import '../level_types.dart';
 
 class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent scoreText;
   late TextComponent levelText;
+  late TextComponent levelTypeText;
   late TextComponent playTimeText;
   late TextComponent instructionsText;
   bool gameOverVisible = false;
@@ -67,10 +69,32 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(levelText);
 
+    // Level type text
+    levelTypeText = TextComponent(
+      text: 'Gravity Mode',
+      position: Vector2(gameSize.x / 2, 80),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.cyan,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          shadows: [
+            Shadow(
+              offset: Offset(2, 2),
+              blurRadius: 4,
+              color: Colors.black54,
+            ),
+          ],
+        ),
+      ),
+    );
+    add(levelTypeText);
+
     // Play time text
     playTimeText = TextComponent(
       text: 'Time: 00:00',
-      position: Vector2(gameSize.x / 2, 50),
+      position: Vector2(gameSize.x / 2, 110),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -119,6 +143,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     scoreText.text = 'Score: ${game.score}';
     levelText.text = 'Level: ${game.level}';
+
+    // Update level type display
+    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    levelTypeText.text = LevelTypeConfig.getLevelTypeName(currentLevelType);
+
+    // Update instructions based on level type
+    instructionsText.text =
+        LevelTypeConfig.getLevelInstructions(currentLevelType);
 
     // Update play time display
     final minutes = game.playTime.inMinutes;

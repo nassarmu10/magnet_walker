@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../magnet_walker_game.dart';
+import '../level_types.dart';
 import 'game_object.dart';
 
 class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
@@ -59,7 +60,15 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void moveHorizontally(double deltaX) {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    position.x = (position.x + deltaX).clamp(30.0, gameSize.x - 30);
+    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+
+    if (currentLevelType == LevelType.gravity) {
+      // In gravity mode, player moves horizontally at bottom
+      position.x = (position.x + deltaX).clamp(30.0, gameSize.x - 30);
+    } else if (currentLevelType == LevelType.survival) {
+      // In survival mode, player stays stationary in center
+      // No movement allowed
+    }
   }
 
   void applyMagneticForce(GameObject obj, double dt) {
@@ -83,7 +92,16 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void reset() {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    position = Vector2(gameSize.x / 2, gameSize.y - 117);
+    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+
+    if (currentLevelType == LevelType.gravity) {
+      // In gravity mode, player stays at bottom
+      position = Vector2(gameSize.x / 2, gameSize.y - 117);
+    } else {
+      // In survival mode, player starts at center
+      position = Vector2(gameSize.x / 2, gameSize.y / 2);
+    }
+
     magnetRadius = 80.0;
   }
 }
