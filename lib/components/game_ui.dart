@@ -13,6 +13,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   bool gameOverVisible = false;
   bool isInitialized = false;
 
+  // Rectangle background for top bar
+  late RectangleComponent topBarBg;
+
   @override
   Future<void> onLoad() async {
     // Wait for the game to be properly initialized
@@ -27,107 +30,84 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
 
+    // Top bar background
+    topBarBg = RectangleComponent(
+      position: Vector2(12, 28),
+      size: Vector2(gameSize.x - 24, 70),
+      paint: Paint()..color = Colors.black.withOpacity(0.35),
+      priority: -1,
+    );
+    add(topBarBg);
+
     // Score text
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(20, 50),
+      position: Vector2(32, 48),
       textRenderer: TextPaint(
         style: const TextStyle(
+          fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 24,
+          fontSize: 26,
           fontWeight: FontWeight.bold,
           shadows: [
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 4,
-              color: Colors.black54,
-            ),
+            Shadow(offset: Offset(2, 2), blurRadius: 6, color: Colors.black54),
           ],
         ),
       ),
+      anchor: Anchor.topLeft,
     );
     add(scoreText);
 
     // Level text
     levelText = TextComponent(
       text: 'Level: 1',
-      position: Vector2(gameSize.x - 120, 50),
+      position: Vector2(gameSize.x - 32, 48),
       textRenderer: TextPaint(
         style: const TextStyle(
+          fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 20,
+          fontSize: 26,
           fontWeight: FontWeight.bold,
           shadows: [
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 4,
-              color: Colors.black54,
-            ),
+            Shadow(offset: Offset(2, 2), blurRadius: 6, color: Colors.black54),
           ],
         ),
       ),
+      anchor: Anchor.topRight,
     );
     add(levelText);
 
-    // Level type text
-    levelTypeText = TextComponent(
-      text: 'Gravity Mode',
-      position: Vector2(gameSize.x / 2, 80),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.cyan,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          shadows: [
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 4,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-    );
-    add(levelTypeText);
-
-    // Play time text
+    // Play time text (centered, below mode)
     playTimeText = TextComponent(
       text: 'Time: 00:00',
-      position: Vector2(gameSize.x / 2, 110),
-      anchor: Anchor.center,
+      position: Vector2(gameSize.x / 2, 78),
       textRenderer: TextPaint(
         style: const TextStyle(
+          fontFamily: 'Roboto',
           color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           shadows: [
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 4,
-              color: Colors.black54,
-            ),
+            Shadow(offset: Offset(2, 2), blurRadius: 6, color: Colors.black54),
           ],
         ),
       ),
+      anchor: Anchor.topCenter,
     );
     add(playTimeText);
 
-    // Instructions
+    // Instructions at the bottom
     instructionsText = TextComponent(
       text: 'Swipe left/right to move • Collect coins • Avoid bombs',
       position: Vector2(gameSize.x / 2, gameSize.y - 50),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
+          fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 14,
+          fontSize: 16,
           shadows: [
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 4,
-              color: Colors.black54,
-            ),
+            Shadow(offset: Offset(2, 2), blurRadius: 4, color: Colors.black54),
           ],
         ),
       ),
@@ -146,7 +126,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Update level type display
     final currentLevelType = LevelTypeConfig.getLevelType(game.level);
-    levelTypeText.text = LevelTypeConfig.getLevelTypeName(currentLevelType);
 
     // Update instructions based on level type
     instructionsText.text =

@@ -8,7 +8,8 @@ import 'game_object.dart';
 class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   double magnetRadius = 80.0;
   late Paint magnetFieldPaint;
-  late Paint playerPaint;
+  late Paint playerGlowPaint;
+  SpriteComponent? earthSpriteComponent;
 
   Player({required super.position})
       : super(
@@ -26,9 +27,19 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       ..color = Colors.blueAccent.withOpacity(0.2)
       ..style = PaintingStyle.fill;
 
-    playerPaint = Paint()
-      ..color = Colors.blue
-      ..style = PaintingStyle.fill;
+    playerGlowPaint = Paint()
+      ..color = Colors.blue.withOpacity(0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+
+    // Load Earth sprite
+    final earthImage = await game.images.load('earth.png');
+    earthSpriteComponent = SpriteComponent(
+      sprite: Sprite(earthImage),
+      size: Vector2.all(radius * 5),
+      anchor: Anchor.center,
+      priority: 1,
+    );
+    add(earthSpriteComponent!);
   }
 
   @override
@@ -40,21 +51,11 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       magnetFieldPaint,
     );
 
-    // Draw player with glow effect
-    final glowPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    // Draw glow behind the Earth
+    canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
 
-    canvas.drawCircle(Offset.zero, radius, glowPaint);
-    canvas.drawCircle(Offset.zero, radius, playerPaint);
-
-    // Draw player border
-    final borderPaint = Paint()
-      ..color = Colors.blue
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    canvas.drawCircle(Offset.zero, radius, borderPaint);
+    // The Earth sprite is rendered by the SpriteComponent (added as a child)
+    // No need to draw the circle or border anymore
   }
 
   void moveHorizontally(double deltaX) {

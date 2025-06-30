@@ -39,7 +39,7 @@ class GameObject extends CircleComponent
         print('Rocket sprite loaded successfully');
         bombSpriteComponent = SpriteComponent(
           sprite: bombSprite,
-          size: Vector2.all(radius * 2), // Match the radius size
+          size: Vector2.all(radius * 4), // Make rocket 4x bigger (was 2x)
           anchor: Anchor.center, // Ensure it's centered
         );
         print('Adding bomb sprite component');
@@ -96,7 +96,8 @@ class GameObject extends CircleComponent
       if (levelType == LevelType.survival) {
         pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
       }
-      bombSpriteComponent!.size = Vector2.all(radius * 2 * pulseScale);
+      bombSpriteComponent!.size =
+          Vector2.all(radius * 4 * pulseScale); // Use 4x scaling
 
       // Calculate angle to point toward player
       final player = game.player;

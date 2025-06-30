@@ -214,6 +214,7 @@ class MagnetWalkerGame extends FlameGame
     levelProgress = 0;
     targetScore = level * 8 + 5;
     player.upgradeMagnet(level);
+    currentLevelType = LevelTypeConfig.getLevelType(level);
     startSpawning(); // Restart timer with new spawn rate
   }
 
@@ -241,7 +242,6 @@ class MagnetWalkerGame extends FlameGame
     targetScore = 10;
     gameRunning = true;
     playTime = Duration.zero;
-    pausedTime = Duration.zero;
     gameStartTime = null; // Reset start time for new game
     pauseStartTime = null; // Reset pause time for new game
 
@@ -269,6 +269,7 @@ class MagnetWalkerGame extends FlameGame
     levelProgress = 0;
     targetScore = level * 8 + 5;
     gameRunning = true;
+    currentLevelType = LevelTypeConfig.getLevelType(level);
 
     // Clear all objects using the helper method
     clearAllObjects();
