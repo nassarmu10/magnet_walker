@@ -107,6 +107,7 @@ class MagnetWalkerGame extends FlameGame
         // Calculate total time minus paused time
         final totalTime = DateTime.now().difference(gameStartTime!);
         playTime = totalTime - pausedTime;
+        if (playTime.isNegative) playTime = Duration.zero;
       }
     });
   }
@@ -304,6 +305,11 @@ class MagnetWalkerGame extends FlameGame
       final pauseDuration = DateTime.now().difference(pauseStartTime!);
       pausedTime += pauseDuration;
       pauseStartTime = null;
+      // Clamp pausedTime to not exceed totalTime
+      final totalTime = DateTime.now().difference(gameStartTime!);
+      if (pausedTime > totalTime) {
+        pausedTime = totalTime;
+      }
       // Restart the timer
       startPlayTimeTracking();
     }
@@ -333,6 +339,7 @@ class MagnetWalkerGame extends FlameGame
     // Forward drag events to the player for better control
     if (gameRunning) {
       player.moveHorizontally(event.localDelta.x * 0.5);
+      //player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
     }
     return true;
   }

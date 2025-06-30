@@ -32,7 +32,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
 
     // Load Earth sprite
-    final earthImage = await game.images.load('earth.png');
+    final earthImage = await game.images.load('player.png');
     earthSpriteComponent = SpriteComponent(
       sprite: Sprite(earthImage),
       size: Vector2.all(radius * 5),
@@ -56,6 +56,21 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
     // The Earth sprite is rendered by the SpriteComponent (added as a child)
     // No need to draw the circle or border anymore
+  }
+
+  void moveBy(double deltaX, double deltaY) {
+    final gameSize =
+        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+
+    if (currentLevelType == LevelType.gravity) {
+      // In gravity mode, player moves both horizontally and vertically
+      position.x = (position.x + deltaX).clamp(30.0, gameSize.x - 30);
+      position.y = (position.y + deltaY).clamp(30.0, gameSize.y - 30);
+    } else if (currentLevelType == LevelType.survival) {
+      // In survival mode, player stays stationary in center
+      // No movement allowed
+    }
   }
 
   void moveHorizontally(double deltaX) {
