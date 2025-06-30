@@ -56,6 +56,12 @@ class MagnetWalkerGame extends FlameGame
       print('Failed to preload rocket image: $e');
     }
 
+    try {
+      await images.load('rocket-2.png');
+      print('Rocket image preloaded successfully');
+    } catch (e) {
+      print('Failed to preload rocket image: $e');
+    }
     // Set up camera with proper size
     camera.viewfinder.visibleGameSize = Vector2(375, 667);
 
@@ -164,7 +170,7 @@ class MagnetWalkerGame extends FlameGame
   void destroyBomb(GameObject bomb) {
     print('Destroying bomb');
     if (bomb.type == ObjectType.bomb && bomb.isMounted) {
-      createParticles(bomb.position, Colors.orange);
+      createParticles(bomb.position, Colors.red);
       bomb.removeFromParent();
       gameObjects.remove(bomb);
     }

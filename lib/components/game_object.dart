@@ -34,9 +34,13 @@ class GameObject extends CircleComponent
     // Load rocket sprite for bombs
     if (type == ObjectType.bomb) {
       try {
-        print('Loading rocket.png for bomb...');
-        final bombSprite = Sprite(game.images.fromCache('rocket.png'));
-        print('Rocket sprite loaded successfully');
+        print('Loading rocket image for bomb...');
+        // Randomly choose between rocket.png and rocket-2.png
+        final rocketImages = ['rocket.png', 'rocket-2.png'];
+        final chosen =
+            (math.Random().nextBool()) ? rocketImages[0] : rocketImages[1];
+        final bombSprite = Sprite(game.images.fromCache(chosen));
+        print('Rocket sprite loaded successfully: $chosen');
         bombSpriteComponent = SpriteComponent(
           sprite: bombSprite,
           size: Vector2.all(radius * 4), // Make rocket 4x bigger (was 2x)
@@ -46,7 +50,7 @@ class GameObject extends CircleComponent
         add(bombSpriteComponent!);
         print('Bomb sprite component added successfully');
       } catch (e) {
-        print('Could not load rocket.png: $e');
+        print('Could not load rocket image: $e');
         print('Stack trace: ${StackTrace.current}');
         // Fall back to default bomb rendering
       }
