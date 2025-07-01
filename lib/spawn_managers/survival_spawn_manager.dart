@@ -16,12 +16,13 @@ class SurvivalSpawnManager {
   void startSpawning() {
     spawnTimer?.cancel();
 
-    // Spawn rate for survival mode (slightly faster than gravity)
+    // Make spawn rate depend on wave
     final baseSpawnRate = 1.5;
-    final levelSpawnReduction =
-        game.level * 0.1; // 10% faster spawning per level
+    final levelSpawnReduction = game.level * 0.1;
+    final waveSpawnReduction = game.currentWave * 0.2; // 20% faster per wave
     final spawnRate = math.max(
-        baseSpawnRate - levelSpawnReduction, 0.3); // Minimum 0.3 seconds
+        baseSpawnRate - levelSpawnReduction - waveSpawnReduction,
+        0.2); // Minimum 0.2 seconds
 
     spawnTimer = async.Timer.periodic(
         Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
@@ -69,9 +70,11 @@ class SurvivalSpawnManager {
         spawnPosition = Vector2(0, 0);
     }
 
-    // Higher chance of bombs in survival mode for challenge
-    final type =
-        math.Random().nextDouble() < 0.6 ? ObjectType.bomb : ObjectType.coin;
+    // Bomb/coin ratio increases with wave
+    final bombChance = 0.6 + 0.15 * (game.currentWave - 1); // 0.6, 0.75, 0.9
+    final type = math.Random().nextDouble() < bombChance
+        ? ObjectType.bomb
+        : ObjectType.coin;
 
     final obj = GameObject(
       position: spawnPosition,
@@ -79,6 +82,10 @@ class SurvivalSpawnManager {
       level: game.level,
       levelType: LevelType.survival,
     );
+    // Increase speed per wave
+    if (type == ObjectType.bomb || type == ObjectType.coin) {
+      obj.velocity *= (1.0 + 0.2 * (game.currentWave - 1));
+    }
 
     game.add(obj);
     game.gameObjects.add(obj);

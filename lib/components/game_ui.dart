@@ -39,17 +39,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(topBarBg);
 
+    final leftPadding = gameSize.x * 0.07;
+    final rightPadding = gameSize.x * 0.07;
+    final topPadding = gameSize.y * 0.06;
+    final fontSize =
+        (gameSize.x * 0.06).clamp(18.0, 28.0); // Responsive font size
+
     // Score text
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(32, 48),
+      position: Vector2(leftPadding, topPadding),
       textRenderer: TextPaint(
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 26,
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          shadows: [
+          shadows: const [
             Shadow(offset: Offset(2, 2), blurRadius: 6, color: Colors.black54),
           ],
         ),
@@ -60,15 +66,15 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Level text
     levelText = TextComponent(
-      text: 'Level: 1',
-      position: Vector2(gameSize.x - 32, 48),
+      text: 'Level: 1 (Wave 1/3)',
+      position: Vector2(gameSize.x - rightPadding, topPadding),
       textRenderer: TextPaint(
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 26,
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          shadows: [
+          shadows: const [
             Shadow(offset: Offset(2, 2), blurRadius: 6, color: Colors.black54),
           ],
         ),
@@ -122,7 +128,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     if (!isInitialized) return;
 
     scoreText.text = 'Score: ${game.score}';
-    levelText.text = 'Level: ${game.level}';
+    levelText.text = 'Level: ${game.level} (Wave ${game.currentWave}/3)';
 
     // Update level type display
     final currentLevelType = LevelTypeConfig.getLevelType(game.level);
@@ -141,16 +147,46 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     super.update(dt);
   }
 
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    // Show wave message/countdown overlay
+    if (game.waveMessage != null && game.waveMessage!.isNotEmpty) {
+      final gameSize =
+          game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: game.waveMessage,
+          style: const TextStyle(
+            fontFamily: 'Roboto',
+            color: Colors.white,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                  offset: Offset(2, 2), blurRadius: 8, color: Colors.black87),
+            ],
+          ),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      final offset = Offset(
+        (gameSize.x - textPainter.width) / 2,
+        (gameSize.y - textPainter.height) / 2 - 40,
+      );
+      textPainter.paint(canvas, offset);
+    }
+  }
+
   void showGameOver(int finalScore, int finalLevel, Duration playTime) {
     gameOverVisible = true;
-
     // Format play time
     final minutes = playTime.inMinutes;
     final seconds = playTime.inSeconds % 60;
     final timeString =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-
-    // Show game over dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
         context: game.buildContext!,
@@ -237,14 +273,11 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   void showLevelCompleted(int finalScore, int finalLevel, Duration playTime) {
     gameOverVisible = true;
-
     // Format play time
     final minutes = playTime.inMinutes;
     final seconds = playTime.inSeconds % 60;
     final timeString =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-
-    // Show level completion dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
         context: game.buildContext!,
@@ -256,10 +289,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
               borderRadius: BorderRadius.circular(20),
             ),
             title: const Text(
-              'Level Completed! 🎉',
+              'Level Complete!',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Colors.green,
               ),
@@ -371,5 +404,99 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   void hideLevelCompleted() {
     gameOverVisible = false;
+  }
+
+  void showWaveFailedDialog(int level, int wave, VoidCallback onRestartLevel,
+      VoidCallback onWatchAd) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: game.buildContext!,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'Wave Failed!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'You failed wave $wave of level $level.',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Would you like to restart the level or watch an ad to retry this wave?',
+                  style: TextStyle(fontSize: 15, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      onRestartLevel();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Restart Level',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      onWatchAd();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Watch Ad',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 }
