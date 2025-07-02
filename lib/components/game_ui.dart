@@ -147,13 +147,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Level text with cosmic purple theme - centered in level container
     levelText = TextComponent(
-      text: 'Level: 1',
+      text: 'Level: 1 (Wave 1/3)',
       position: Vector2(gameSize.x - 70, 52.5), // Center of level container
       textRenderer: TextPaint(
         style: const TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFF8844ff),
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w700,
           shadows: [
             Shadow(
@@ -175,7 +175,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Play time text with space blue theme - centered in time container
     playTimeText = TextComponent(
-      text: 'TIME: 00:00',
+      text: 'Time: 00:00',
       position: Vector2(gameSize.x / 2, 87.5), // Center of time container (75 + 25/2)
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -242,23 +242,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     pulseTime += dt * 2.0;
     glowIntensity = (math.sin(pulseTime) * 0.5 + 0.5) * 0.3 + 0.7;
 
-    // Update text content
-    scoreText.text = 'SCORE: ${game.score}';
-    levelText.text = 'LVL: ${game.level}';
+    // Update text content with wave information
+    scoreText.text = 'Score: ${game.score}';
+    levelText.text = 'Level: ${game.level} (Wave ${game.currentWave}/3)';
 
     // Update level type display
     final currentLevelType = LevelTypeConfig.getLevelType(game.level);
 
     // Update instructions based on level type with modern styling
     final instructions = LevelTypeConfig.getLevelInstructions(currentLevelType);
-    instructionsText.text = instructions.toUpperCase();
+    instructionsText.text = instructions;
 
     // Update play time display
     final minutes = game.playTime.inMinutes;
     final seconds = game.playTime.inSeconds % 60;
     final timeString =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    playTimeText.text = 'TIME: $timeString';
+    playTimeText.text = 'Time: $timeString';
 
     // Update container colors with pulsing effect
     final glowOpacity = (glowIntensity * 0.3).clamp(0.1, 0.3);
@@ -281,6 +281,69 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     
     // Add border glow effects
     _renderGlowEffects(canvas);
+
+    // Show wave message/countdown overlay with modern styling
+    if (game.waveMessage != null && game.waveMessage!.isNotEmpty) {
+      final gameSize =
+          game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+      
+      // Background for wave message
+      final messageBg = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(gameSize.x / 2, gameSize.y / 2 - 40),
+          width: gameSize.x * 0.8,
+          height: 80,
+        ),
+        const Radius.circular(20),
+      );
+      
+      final bgPaint = Paint()
+        ..color = const Color(0xFF1a1a2e).withOpacity(0.9)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+      canvas.drawRRect(messageBg, bgPaint);
+      
+      // Border glow
+      final borderPaint = Paint()
+        ..color = const Color(0xFF44aaff).withOpacity(0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      canvas.drawRRect(messageBg, borderPaint);
+      
+      // Wave message text
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: game.waveMessage,
+          style: const TextStyle(
+            fontFamily: 'Roboto',
+            color: Color(0xFF00ff88),
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+            shadows: [
+              Shadow(
+                offset: Offset(0, 0),
+                blurRadius: 10,
+                color: Color(0xFF00ff88),
+              ),
+              Shadow(
+                offset: Offset(2, 2),
+                blurRadius: 8,
+                color: Colors.black87,
+              ),
+            ],
+          ),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      final offset = Offset(
+        (gameSize.x - textPainter.width) / 2,
+        (gameSize.y - textPainter.height) / 2 - 40,
+      );
+      textPainter.paint(canvas, offset);
+    }
   }
 
   void _renderStarField(Canvas canvas) {
@@ -488,7 +551,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       ),
                     ),
                     child: const Text(
-                      'NEXT LEVEL WILL BE FASTER!',
+                      'Objects will move faster in the next level!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -519,6 +582,107 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                     () {
                       Navigator.of(context).pop();
                       game.continueToNextLevel();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    });
+  }
+
+  // New wave failed dialog with modern styling (from the second PR)
+  void showWaveFailedDialog(int level, int wave, VoidCallback onRestartLevel,
+      VoidCallback onWatchAd) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: game.buildContext!,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1a1a2e),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+              side: BorderSide(
+                color: const Color(0xFFff4444).withOpacity(0.5),
+                width: 2,
+              ),
+            ),
+            title: const Text(
+              'WAVE FAILED!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFff4444),
+                letterSpacing: 1.5,
+                shadows: [
+                  Shadow(
+                    offset: Offset(0, 0),
+                    blurRadius: 10,
+                    color: Color(0xFFff4444),
+                  ),
+                ],
+              ),
+            ),
+            content: Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'You failed wave $wave of level $level.',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF88aacc),
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF44aaff).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: const Color(0xFF44aaff).withOpacity(0.3),
+                      ),
+                    ),
+                    child: const Text(
+                      'Would you like to restart the level or watch an ad to retry this wave?',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF44aaff),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildActionButton(
+                    'RESTART LEVEL',
+                    const Color(0xFF666666),
+                    () {
+                      Navigator.of(context).pop();
+                      onRestartLevel();
+                    },
+                  ),
+                  _buildActionButton(
+                    'WATCH AD',
+                    const Color(0xFFff8844),
+                    () {
+                      Navigator.of(context).pop();
+                      onWatchAd();
                     },
                   ),
                 ],
@@ -583,7 +747,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
