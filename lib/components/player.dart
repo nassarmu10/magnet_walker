@@ -6,7 +6,7 @@ import '../level_types.dart';
 import 'game_object.dart';
 
 class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
-  double magnetRadius = 200.0;
+  double magnetRadius = 80.0;
   late Paint magnetFieldPaint;
   late Paint playerGlowPaint;
   SpriteComponent? earthSpriteComponent;
@@ -103,7 +103,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   void upgradeMagnet(int level) {
     //magnetRadius = math.min(120.0, 80.0 + level * 3);
-    magnetRadius = 200.0 + level * 3;
+    magnetRadius = 80.0 + level * 3;
   }
 
   void reset() {
@@ -119,6 +119,6 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       position = Vector2(gameSize.x / 2, gameSize.y / 2);
     }
 
-    magnetRadius = 200.0;
+    magnetRadius = 80.0;
   }
 }

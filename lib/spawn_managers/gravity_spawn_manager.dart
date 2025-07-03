@@ -16,12 +16,13 @@ class GravitySpawnManager {
   void startSpawning() {
     spawnTimer?.cancel();
 
-    // Spawn rate decreases with level (faster spawning)
+    // Make spawn rate depend on wave
     final baseSpawnRate = 2.0;
-    final levelSpawnReduction =
-        game.level * 0.15; // 15% faster spawning per level
+    final levelSpawnReduction = game.level * 0.15;
+    final waveSpawnReduction = game.currentWave * 0.3; // 30% faster per wave
     final spawnRate = math.max(
-        baseSpawnRate - levelSpawnReduction, 0.5); // Minimum 0.5 seconds
+        baseSpawnRate - levelSpawnReduction - waveSpawnReduction,
+        0.3); // Minimum 0.3 seconds
 
     spawnTimer = async.Timer.periodic(
         Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
@@ -35,8 +36,11 @@ class GravitySpawnManager {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
     final x = math.Random().nextDouble() * (gameSize.x - 60) + 30;
-    final type =
-        math.Random().nextDouble() < 0.7 ? ObjectType.coin : ObjectType.bomb;
+    // Bomb/coin ratio increases with wave
+    final bombChance = 0.3 + 0.2 * (game.currentWave - 1); // 0.3, 0.5, 0.7
+    final type = math.Random().nextDouble() < (1 - bombChance)
+        ? ObjectType.coin
+        : ObjectType.bomb;
 
     final obj = GameObject(
       position: Vector2(x, -20),
@@ -44,6 +48,10 @@ class GravitySpawnManager {
       level: game.level,
       levelType: LevelType.gravity,
     );
+    // Increase speed per wave
+    if (type == ObjectType.bomb || type == ObjectType.coin) {
+      obj.velocity.y *= (1.0 + 0.2 * (game.currentWave - 1));
+    }
 
     game.add(obj);
     game.gameObjects.add(obj);

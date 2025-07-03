@@ -32,6 +32,14 @@ class MagnetWalkerGame extends FlameGame
   int targetScore = 10;
   bool gameRunning = true;
 
+  // Wave system
+  int currentWave = 1;
+  int scoreThisWave = 0;
+  bool isWaveActive = false;
+  double waveCountdown = 0.0;
+  String? waveMessage;
+  bool isLevelComplete = false;
+
   // Play time tracking
   DateTime? gameStartTime;
   DateTime? pauseStartTime;
@@ -89,8 +97,13 @@ class MagnetWalkerGame extends FlameGame
     startPlayTimeTracking();
 
     // Start spawning objects after everything is loaded
+    currentWave = 1;
+    scoreThisWave = 0;
+    isWaveActive = false;
+    isLevelComplete = false;
+    waveMessage = null;
     await Future.delayed(const Duration(milliseconds: 100));
-    startSpawning();
+    startWave(1);
   }
 
   void startPlayTimeTracking() {
@@ -132,17 +145,96 @@ class MagnetWalkerGame extends FlameGame
     // Keeping it for backward compatibility but it's not used
   }
 
+  void startWave(int wave) {
+    currentWave = wave;
+    score = 0;
+    scoreThisWave = 0;
+    isWaveActive = true;
+    waveMessage = null;
+    gameRunning = true;
+    startSpawning();
+    // Optionally, adjust player, etc.
+  }
+
+  void endWave({bool failed = false}) {
+    isWaveActive = false;
+    gameRunning = false;
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    clearAllObjects(); // Clear all objects immediately
+    if (failed) {
+      showWaveFailedDialog();
+    } else if (currentWave < 3) {
+      waveCountdown = 3.0;
+      waveMessage = 'Wave $currentWave/3 Complete!';
+    } else {
+      // Level complete: show dialog immediately
+      isLevelComplete = true;
+      showLevelCompleteDialog();
+    }
+  }
+
+  void showWaveFailedDialog() {
+    gameUI.showWaveFailedDialog(level, currentWave, () {
+      // Restart level (wave 1)
+      currentWave = 1;
+      score = 0;
+      scoreThisWave = 0;
+      isWaveActive = false;
+      isLevelComplete = false;
+      waveMessage = null;
+      Future.delayed(const Duration(milliseconds: 300), () {
+        startWave(1);
+      });
+    }, () {
+      // Watch ad to restart wave (simulate ad)
+      score = 0;
+      scoreThisWave = 0;
+      isWaveActive = false;
+      isLevelComplete = false;
+      waveMessage = null;
+      Future.delayed(const Duration(milliseconds: 300), () {
+        startWave(currentWave);
+      });
+    });
+  }
+
+  void updateWaveCountdown(double dt) {
+    if (!isWaveActive && waveCountdown > 0) {
+      waveCountdown -= dt;
+      if (waveCountdown <= 0) {
+        if (currentWave < 3) {
+          waveMessage = 'Wave ${currentWave + 1}/3 starting...';
+          Future.delayed(const Duration(seconds: 1), () {
+            startWave(currentWave + 1);
+          });
+        } else {
+          // Level complete
+          isLevelComplete = true;
+          showLevelCompleteDialog();
+        }
+      } else {
+        waveMessage =
+            'Wave ${currentWave + 1}/3 starting in ${waveCountdown.ceil()}';
+      }
+    }
+  }
+
+  void showLevelCompleteDialog() {
+    gameUI.showLevelCompleted(score, level, playTime);
+  }
+
   void collectObject(GameObject obj) {
     if (!obj.isMounted) return;
 
     if (obj.type == ObjectType.coin) {
       score += 10;
+      scoreThisWave += 10;
       levelProgress++;
       createParticles(obj.position, Colors.yellow);
 
-      // Check if player reached 10 points (level completion)
-      if (score >= 10) {
-        levelCompleted();
+      if (scoreThisWave >= 10 && isWaveActive) {
+        endWave();
         return;
       }
 
@@ -153,13 +245,10 @@ class MagnetWalkerGame extends FlameGame
     } else {
       // Handle bomb collision based on level type
       if (currentLevelType == LevelType.gravity) {
-        // In gravity mode, bomb collision = game over
-        gameOver();
+        endWave(failed: true);
         createParticles(obj.position, Colors.red);
       } else {
-        // In survival mode, bombs should be clicked, not collided with
-        // If we reach here, it means the bomb hit the player = game over
-        gameOver();
+        endWave(failed: true);
         createParticles(obj.position, Colors.red);
       }
     }
@@ -200,45 +289,30 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
-  void levelCompleted() {
+  void gameOver() {
+    // Not used for wave fail anymore
     gameRunning = false;
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     playTimeTimer?.cancel();
-
-    // Clear all objects immediately when level ends
     clearAllObjects();
-
-    // Pause play time when showing dialog
     pausePlayTime();
-
-    // Show level completion dialog
-    gameUI.showLevelCompleted(score, level, playTime);
+    // Show game over dialog if needed (handled by endWave now)
   }
 
   void nextLevel() {
     level++;
+    currentWave = 1;
+    score = 0;
+    scoreThisWave = 0;
+    isWaveActive = false;
+    isLevelComplete = false;
+    waveMessage = null;
     levelProgress = 0;
     targetScore = level * 8 + 5;
     player.upgradeMagnet(level);
     currentLevelType = LevelTypeConfig.getLevelType(level);
-    startSpawning(); // Restart timer with new spawn rate
-  }
-
-  void gameOver() {
-    gameRunning = false;
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-    playTimeTimer?.cancel();
-
-    // Clear all objects immediately when game ends
-    clearAllObjects();
-
-    // Pause play time when showing dialog
-    pausePlayTime();
-
-    // Show game over dialog
-    gameUI.showGameOver(score, level, playTime);
+    startWave(1);
   }
 
   void restartGame() {
@@ -269,26 +343,21 @@ class MagnetWalkerGame extends FlameGame
   void continueToNextLevel() {
     // Resume play time before starting new level
     resumePlayTime();
-
     // Increment level and reset score but keep play time
     level++;
+    currentWave = 1;
     score = 0;
+    scoreThisWave = 0;
+    isWaveActive = false;
+    isLevelComplete = false;
+    waveMessage = null;
     levelProgress = 0;
     targetScore = level * 8 + 5;
-    gameRunning = true;
     currentLevelType = LevelTypeConfig.getLevelType(level);
-
-    // Clear all objects using the helper method
     clearAllObjects();
-
-    // Reset player position and upgrade magnet
     player.reset();
     player.upgradeMagnet(level);
-
-    // Restart spawning with faster speed for next level
-    startSpawning();
-
-    // Hide level completion UI
+    startWave(1);
     gameUI.hideLevelCompleted();
   }
 
@@ -338,8 +407,8 @@ class MagnetWalkerGame extends FlameGame
   bool onDragUpdate(DragUpdateEvent event) {
     // Forward drag events to the player for better control
     if (gameRunning) {
-      player.moveHorizontally(event.localDelta.x * 0.5);
-      //player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
+      //player.moveHorizontally(event.localDelta.x * 0.5);
+      player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
     }
     return true;
   }
@@ -371,6 +440,7 @@ class MagnetWalkerGame extends FlameGame
   @override
   void update(double dt) {
     super.update(dt);
+    updateWaveCountdown(dt);
 
     if (gameRunning) {
       // Update magnetic effects
