@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import '../magnet_walker_game.dart';
+import '../managers/ad_manager.dart';
 import '../level_types.dart';
 import 'dart:math' as math;
 import 'package:flame/input.dart';
@@ -1197,126 +1198,92 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void _simulateWatchAdAndGainLife() {
-    // Simulate watching an ad
-    return;
-    showDialog(
-      context: game.buildContext!,
-      barrierDismissible: false,
-      builder: (context) {
-        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          backgroundColor: const Color(0xFF1a1a2e),
-          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Watching Ad...',
-                style: TextStyle(
-                  fontSize: dialogWidth * 0.07,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please wait while the ad loads',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: dialogWidth * 0.05,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    // Show real rewarded ad
+    AdManager.showRewardedAd(
+      onRewarded: () {
+        // Add a life when ad is completed
+        game.livesManager.lives =
+            (game.livesManager.lives + 1).clamp(0, game.livesManager.maxLives);
+        game.livesManager.save();
 
-    // Simulate ad completion after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.of(game.buildContext!).pop(); // Close ad dialog
+        // Reset the no lives dialog flag and game state immediately
+        game.dismissNoLivesDialog();
 
-      // Add a life
-      game.livesManager.lives =
-          (game.livesManager.lives + 1).clamp(0, game.livesManager.maxLives);
-      game.livesManager.save();
-
-      // Show success message
-      showDialog(
-        context: game.buildContext!,
-        builder: (context) {
-          final dialogWidth = MediaQuery.of(context).size.width * 0.85;
-          return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            backgroundColor: const Color(0xFF1a1a2e),
-            contentPadding: EdgeInsets.all(dialogWidth * 0.06),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.greenAccent,
-                  size: 48,
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Ad Completed!',
-                  style: TextStyle(
-                    fontSize: dialogWidth * 0.08,
-                    fontWeight: FontWeight.bold,
+        // Show success message
+        showDialog(
+          context: game.buildContext!,
+          builder: (context) {
+            final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              backgroundColor: const Color(0xFF1a1a2e),
+              contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.check_circle,
                     color: Colors.greenAccent,
+                    size: 48,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'You gained 1 life!',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: dialogWidth * 0.06,
+                  const SizedBox(height: 18),
+                  Text(
+                    'Ad Completed!',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.08,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.greenAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'You gained 1 life!',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: dialogWidth * 0.06,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.greenAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Reset the no lives dialog flag and start the game
+                      game.noLivesDialogVisible = false;
+                      if (game.livesManager.lives > 0) {
+                        // Ensure game state is properly set
+                        game.gameRunning = true;
+                        // Start the game without consuming a life since we just gained one
+                        game.startWaveWithoutConsumingLife(
+                            game.waveManager.currentWave);
+                      }
+                    },
+                    child: Text(
+                      'Start Playing!',
+                      style: TextStyle(
+                        fontSize: dialogWidth * 0.06,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    // Start the game if we now have lives
-                    if (game.livesManager.lives > 0) {
-                      game.tryConsumeLifeAndStartWave(
-                          game.waveManager.currentWave);
-                    }
-                  },
-                  child: Text(
-                    'Start Playing!',
-                    style: TextStyle(
-                      fontSize: dialogWidth * 0.06,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    });
+            );
+          },
+        );
+      },
+    );
   }
 }

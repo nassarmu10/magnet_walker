@@ -16,6 +16,7 @@ import 'spawn_managers/gravity_spawn_manager.dart';
 import 'spawn_managers/survival_spawn_manager.dart';
 import 'managers/lives_manager.dart';
 import 'managers/wave_manager.dart';
+import 'managers/ad_manager.dart';
 
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
@@ -58,6 +59,10 @@ class MagnetWalkerGame extends FlameGame
   Future<void> onLoad() async {
     // Wait for the game to be fully initialized
     await Future.delayed(const Duration(milliseconds: 50));
+
+    // Initialize AdManager
+    await AdManager.initialize();
+    await AdManager.loadRewardedAd();
 
     // Preload images
     try {
@@ -118,14 +123,20 @@ class MagnetWalkerGame extends FlameGame
       tryConsumeLifeAndStartWave(waveManager.currentWave);
     } else {
       // Show no lives dialog after UI is ready
+      noLivesDialogVisible =
+          true; // Set the flag when showing dialog from onLoad
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (gameUI.isMounted && gameUI.game.buildContext != null) {
-          gameUI.showNoLivesDialog();
+          gameUI.showNoLivesDialog(onDialogClosed: () {
+            noLivesDialogVisible = false;
+          });
         } else {
           // If still not ready, try again after a short delay
           Future.delayed(const Duration(milliseconds: 100), () {
             if (gameUI.isMounted) {
-              gameUI.showNoLivesDialog();
+              gameUI.showNoLivesDialog(onDialogClosed: () {
+                noLivesDialogVisible = false;
+              });
             }
           });
         }
@@ -176,6 +187,8 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startWave(int wave) {
+    print(
+        'startWave called with wave: $wave, lives: \\${livesManager.lives}, gameRunning: \\${gameRunning}');
     waveManager.currentWave = wave;
     waveManager.score = 0;
     waveManager.scoreThisWave = 0;
@@ -183,7 +196,11 @@ class MagnetWalkerGame extends FlameGame
     waveManager.targetScore = wave * 8 + 5;
     isWaveActive = true;
     gameRunning = true;
+    waveCountdown = 0;
+    waveMessage = null;
     startSpawning();
+    print(
+        'Wave started successfully - isWaveActive: \\${isWaveActive}, gameRunning: \\${gameRunning}');
     // Optionally, adjust player, etc.
   }
 
@@ -233,12 +250,17 @@ class MagnetWalkerGame extends FlameGame
         tryConsumeLifeAndStartWave(1);
       });
     }, () {
-      // Watch ad to restart wave (simulate ad)
-      waveManager.score = 0;
-      waveManager.scoreThisWave = 0;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        tryConsumeLifeAndStartWave(waveManager.currentWave);
-      });
+      // Watch ad to restart wave
+      AdManager.showRewardedAd(
+        onRewarded: () {
+          // Restart the current wave without consuming a life
+          waveManager.score = 0;
+          waveManager.scoreThisWave = 0;
+          Future.delayed(const Duration(milliseconds: 300), () {
+            startWaveWithoutConsumingLife(waveManager.currentWave);
+          });
+        },
+      );
     });
   }
 
@@ -420,8 +442,8 @@ class MagnetWalkerGame extends FlameGame
   @override
   bool onDragUpdate(DragUpdateEvent event) {
     // Forward drag events to the player for better control
-    if (gameRunning) {
-      //player.moveHorizontally(event.localDelta.x * 0.5);
+    // Allow movement only when game is running and we have lives
+    if (gameRunning && livesManager.lives > 0 && isWaveActive) {
       player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
     }
     return true;
@@ -436,7 +458,10 @@ class MagnetWalkerGame extends FlameGame
   void onTapDown(TapDownEvent event) {
     print('onTapDown called');
     // Existing tap logic here
-    if (gameRunning && currentLevelType == LevelType.survival) {
+    if (gameRunning &&
+        livesManager.lives > 0 &&
+        isWaveActive &&
+        currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted && !obj.collected && obj.type == ObjectType.bomb) {
@@ -458,8 +483,10 @@ class MagnetWalkerGame extends FlameGame
     // Regenerate lives periodically while running
     livesManager.regenerateLivesIfNeeded();
 
-    // Always show 'No Lives Left' dialog if lives == 0
+    // Manage No Lives Left dialog state
     if (livesManager.lives == 0 && !noLivesDialogVisible) {
+      print(
+          'Showing No Lives Left dialog - lives: ${livesManager.lives}, flag: $noLivesDialogVisible');
       noLivesDialogVisible = true;
       gameUI.showNoLivesDialog(onDialogClosed: () {
         noLivesDialogVisible = false;
@@ -467,8 +494,14 @@ class MagnetWalkerGame extends FlameGame
       // Stop all spawning if lives are zero
       gravitySpawnManager.stop();
       survivalSpawnManager.stop();
+    } else if (livesManager.lives > 0 && noLivesDialogVisible) {
+      // If we now have lives but the dialog was visible, reset the flag
+      print(
+          'Resetting No Lives Left dialog flag - lives: ${livesManager.lives}, flag: $noLivesDialogVisible');
+      noLivesDialogVisible = false;
     }
 
+    // Update game objects only when game is running and we have lives
     if (gameRunning && livesManager.lives > 0) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
@@ -499,6 +532,7 @@ class MagnetWalkerGame extends FlameGame
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     playTimeTimer?.cancel();
+    AdManager.disposeAds();
     super.onRemove();
   }
 
@@ -520,11 +554,35 @@ class MagnetWalkerGame extends FlameGame
 
   // Helper to consume a life and start a wave, or show no lives dialog
   void tryConsumeLifeAndStartWave(int wave) {
+    print(
+        'tryConsumeLifeAndStartWave called with wave: $wave, lives: ${livesManager.lives}');
     if (livesManager.tryConsumeLife()) {
+      print('Life consumed successfully, starting wave $wave');
       waveManager.startWave(wave);
       startWave(wave);
     } else {
+      print('Failed to consume life, showing no lives dialog');
       gameUI.showNoLivesDialog();
     }
+  }
+
+  // Helper to start a wave without consuming a life (for ad rewards)
+  void startWaveWithoutConsumingLife(int wave) {
+    print(
+        'startWaveWithoutConsumingLife called with wave: $wave, lives: \\${livesManager.lives}');
+    // Ensure proper game state
+    gameRunning = true;
+    isWaveActive = true;
+    waveCountdown = 0;
+    waveMessage = null;
+    noLivesDialogVisible = false;
+    waveManager.startWave(wave);
+    startWave(wave);
+  }
+
+  // Helper to dismiss any existing dialogs and reset state
+  void dismissNoLivesDialog() {
+    noLivesDialogVisible = false;
+    gameRunning = true;
   }
 }
