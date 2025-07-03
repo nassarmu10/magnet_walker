@@ -64,7 +64,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void moveBy(double deltaX, double deltaY) {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.gravity) {
       // In gravity mode, player moves both horizontally and vertically
@@ -79,7 +80,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void moveHorizontally(double deltaX) {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.gravity) {
       // In gravity mode, player moves horizontally at bottom
@@ -112,7 +114,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void reset() {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.gravity) {
       // In gravity mode, player stays at bottom center

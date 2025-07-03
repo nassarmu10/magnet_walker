@@ -14,6 +14,8 @@ import 'components/game_ui.dart';
 import 'level_types.dart';
 import 'spawn_managers/gravity_spawn_manager.dart';
 import 'spawn_managers/survival_spawn_manager.dart';
+import 'managers/lives_manager.dart';
+import 'managers/wave_manager.dart';
 
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
@@ -27,15 +29,9 @@ class MagnetWalkerGame extends FlameGame
   late LevelType currentLevelType;
 
   // Game state
-  int score = 0;
-  int level = 1;
-  int levelProgress = 0;
-  int targetScore = 10;
   bool gameRunning = true;
 
   // Wave system
-  int currentWave = 1;
-  int scoreThisWave = 0;
   bool isWaveActive = false;
   double waveCountdown = 0.0;
   String? waveMessage;
@@ -53,10 +49,10 @@ class MagnetWalkerGame extends FlameGame
   final List<GameParticle> particles = [];
 
   // Lives system fields
-  int lives = 5;
-  int maxLives = 5;
-  int lifeRegenMinutes = 1;
-  int? lastLifeTimestamp; // Epoch millis
+  late LivesManager livesManager;
+  late WaveManager waveManager;
+
+  bool noLivesDialogVisible = false;
 
   @override
   Future<void> onLoad() async {
@@ -85,18 +81,20 @@ class MagnetWalkerGame extends FlameGame
     survivalSpawnManager = SurvivalSpawnManager(this);
 
     // Set initial level type
-    currentLevelType = LevelTypeConfig.getLevelType(level);
+    currentLevelType = LevelTypeConfig.getLevelType(1);
 
     // Add background first
     background = Background();
     add(background);
 
+    // Initialize wave manager first
+    waveManager = WaveManager();
     // Load saved progress (level and wave)
     await loadProgress();
-    // Load lives system state
-    await loadLives();
-    // Regenerate lives on game start
-    regenerateLivesIfNeeded();
+    // Initialize lives manager
+    livesManager = LivesManager();
+    await livesManager.load();
+    livesManager.regenerateLivesIfNeeded();
 
     // Add player - use camera size for positioning
     final gameSize = camera.viewfinder.visibleGameSize!;
@@ -111,20 +109,25 @@ class MagnetWalkerGame extends FlameGame
     startPlayTimeTracking();
 
     // Start spawning objects after everything is loaded
-    currentWave = currentWave == 0 ? 1 : currentWave; // Ensure at least wave 1
-    scoreThisWave = 0;
     isWaveActive = false;
     isLevelComplete = false;
     waveMessage = null;
     await Future.delayed(const Duration(milliseconds: 100));
     // Only start wave if lives > 0
-    if (lives > 0) {
-      tryConsumeLifeAndStartWave(currentWave);
+    if (livesManager.lives > 0) {
+      tryConsumeLifeAndStartWave(waveManager.currentWave);
     } else {
       // Show no lives dialog after UI is ready
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (gameUI.isMounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (gameUI.isMounted && gameUI.game.buildContext != null) {
           gameUI.showNoLivesDialog();
+        } else {
+          // If still not ready, try again after a short delay
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (gameUI.isMounted) {
+              gameUI.showNoLivesDialog();
+            }
+          });
         }
       });
     }
@@ -154,8 +157,11 @@ class MagnetWalkerGame extends FlameGame
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
 
+    // Do not start spawning if no lives left
+    if (livesManager.lives == 0) return;
+
     // Start the appropriate spawn manager based on level type
-    currentLevelType = LevelTypeConfig.getLevelType(level);
+    currentLevelType = LevelTypeConfig.getLevelType(1);
 
     if (currentLevelType == LevelType.gravity) {
       gravitySpawnManager.startSpawning();
@@ -170,11 +176,12 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startWave(int wave) {
-    currentWave = wave;
-    score = 0;
-    scoreThisWave = 0;
+    waveManager.currentWave = wave;
+    waveManager.score = 0;
+    waveManager.scoreThisWave = 0;
+    waveManager.levelProgress = 0;
+    waveManager.targetScore = wave * 8 + 5;
     isWaveActive = true;
-    waveMessage = null;
     gameRunning = true;
     startSpawning();
     // Optionally, adjust player, etc.
@@ -190,7 +197,7 @@ class MagnetWalkerGame extends FlameGame
     // Animate player back to initial position depending on level type
     final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
     Vector2 initialPosition;
-    final currentLevelType = LevelTypeConfig.getLevelType(level);
+    final currentLevelType = LevelTypeConfig.getLevelType(1);
     if (currentLevelType == LevelType.gravity) {
       // Gravity mode: bottom center
       initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
@@ -202,9 +209,9 @@ class MagnetWalkerGame extends FlameGame
 
     if (failed) {
       showWaveFailedDialog();
-    } else if (currentWave < 3) {
+    } else if (waveManager.currentWave < 3) {
       waveCountdown = 3.0;
-      waveMessage = 'Wave $currentWave/3 Complete!';
+      waveMessage = 'Wave ${waveManager.currentWave}/3 Complete!';
     } else {
       // Level complete: show dialog immediately
       isLevelComplete = true;
@@ -216,26 +223,21 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void showWaveFailedDialog() {
-    gameUI.showWaveFailedDialog(level, currentWave, () {
+    gameUI.showWaveFailedDialog(waveManager.level, waveManager.currentWave, () {
       // Restart level (wave 1)
-      currentWave = 1;
-      score = 0;
-      scoreThisWave = 0;
-      isWaveActive = false;
-      isLevelComplete = false;
-      waveMessage = null;
+      waveManager.currentWave = 1;
+      waveManager.score = 0;
+      waveManager.scoreThisWave = 0;
+      waveManager.levelProgress = 0;
       Future.delayed(const Duration(milliseconds: 300), () {
         tryConsumeLifeAndStartWave(1);
       });
     }, () {
       // Watch ad to restart wave (simulate ad)
-      score = 0;
-      scoreThisWave = 0;
-      isWaveActive = false;
-      isLevelComplete = false;
-      waveMessage = null;
+      waveManager.score = 0;
+      waveManager.scoreThisWave = 0;
       Future.delayed(const Duration(milliseconds: 300), () {
-        tryConsumeLifeAndStartWave(currentWave);
+        tryConsumeLifeAndStartWave(waveManager.currentWave);
       });
     });
   }
@@ -244,10 +246,10 @@ class MagnetWalkerGame extends FlameGame
     if (!isWaveActive && waveCountdown > 0) {
       waveCountdown -= dt;
       if (waveCountdown <= 0) {
-        if (currentWave < 3) {
-          waveMessage = 'Wave ${currentWave + 1}/3 starting...';
+        if (waveManager.currentWave < 3) {
+          waveMessage = 'Wave ${waveManager.currentWave + 1}/3 starting...';
           Future.delayed(const Duration(seconds: 1), () {
-            startWave(currentWave + 1);
+            startWave(waveManager.currentWave + 1);
           });
         } else {
           // Level complete
@@ -256,32 +258,36 @@ class MagnetWalkerGame extends FlameGame
         }
       } else {
         waveMessage =
-            'Wave ${currentWave + 1}/3 starting in ${waveCountdown.ceil()}';
+            'Wave ${waveManager.currentWave + 1}/3 starting in ${waveCountdown.ceil()}';
       }
     }
   }
 
   void showLevelCompleteDialog() {
-    gameUI.showLevelCompleted(score, level, playTime);
+    gameUI.showLevelCompleted(waveManager.score, waveManager.level, playTime);
   }
 
   void collectObject(GameObject obj) {
     if (!obj.isMounted) return;
 
     if (obj.type == ObjectType.coin) {
-      score += 10;
-      scoreThisWave += 10;
-      levelProgress++;
+      waveManager.score += 10;
+      waveManager.scoreThisWave += 10;
+      waveManager.levelProgress++;
       createParticles(obj.position, Colors.yellow);
 
-      if (scoreThisWave >= 10 && isWaveActive) {
+      if (waveManager.scoreThisWave >= 10 && isWaveActive) {
         endWave();
         return;
       }
 
       // Check if player reached target score for current level
-      if (levelProgress >= targetScore) {
-        nextLevel();
+      if (waveManager.levelProgress >= waveManager.targetScore) {
+        // Progress to next level
+        waveManager.nextLevel();
+        // Optionally, show a dialog or start the next wave
+        tryConsumeLifeAndStartWave(waveManager.currentWave);
+        return;
       }
     } else {
       // Handle bomb collision based on level type
@@ -341,27 +347,12 @@ class MagnetWalkerGame extends FlameGame
     // Show game over dialog if needed (handled by endWave now)
   }
 
-  void nextLevel() {
-    level++;
-    currentWave = 1;
-    score = 0;
-    scoreThisWave = 0;
-    isWaveActive = false;
-    isLevelComplete = false;
-    waveMessage = null;
-    levelProgress = 0;
-    targetScore = level * 8 + 5;
-    player.upgradeMagnet(level);
-    currentLevelType = LevelTypeConfig.getLevelType(level);
-    startWave(1);
-  }
-
   void restartGame() {
     // Reset game state
-    score = 0;
-    level = 1;
-    levelProgress = 0;
-    targetScore = 10;
+    waveManager.score = 0;
+    waveManager.level = 1;
+    waveManager.levelProgress = 0;
+    waveManager.targetScore = 10;
     gameRunning = true;
     playTime = Duration.zero;
     gameStartTime = null; // Reset start time for new game
@@ -381,30 +372,6 @@ class MagnetWalkerGame extends FlameGame
     gameUI.hideGameOver();
 
     // Save progress after restart
-    saveProgress();
-  }
-
-  void continueToNextLevel() {
-    // Resume play time before starting new level
-    resumePlayTime();
-    // Increment level and reset score but keep play time
-    level++;
-    currentWave = 1;
-    score = 0;
-    scoreThisWave = 0;
-    isWaveActive = false;
-    isLevelComplete = false;
-    waveMessage = null;
-    levelProgress = 0;
-    targetScore = level * 8 + 5;
-    currentLevelType = LevelTypeConfig.getLevelType(level);
-    clearAllObjects();
-    player.reset();
-    player.upgradeMagnet(level);
-    startWave(1);
-    gameUI.hideLevelCompleted();
-
-    // Save progress after level changes
     saveProgress();
   }
 
@@ -489,9 +456,20 @@ class MagnetWalkerGame extends FlameGame
     super.update(dt);
     updateWaveCountdown(dt);
     // Regenerate lives periodically while running
-    regenerateLivesIfNeeded();
+    livesManager.regenerateLivesIfNeeded();
 
-    if (gameRunning) {
+    // Always show 'No Lives Left' dialog if lives == 0
+    if (livesManager.lives == 0 && !noLivesDialogVisible) {
+      noLivesDialogVisible = true;
+      gameUI.showNoLivesDialog(onDialogClosed: () {
+        noLivesDialogVisible = false;
+      });
+      // Stop all spawning if lives are zero
+      gravitySpawnManager.stop();
+      survivalSpawnManager.stop();
+    }
+
+    if (gameRunning && livesManager.lives > 0) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
@@ -527,7 +505,7 @@ class MagnetWalkerGame extends FlameGame
   // Save current level and wave to SharedPreferences
   Future<void> saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('saved_level', level);
+    await prefs.setInt('saved_level', waveManager.level);
   }
 
   // Load saved level and wave from SharedPreferences
@@ -536,60 +514,14 @@ class MagnetWalkerGame extends FlameGame
     final savedLevel = prefs.getInt('saved_level');
     final savedWave = prefs.getInt('saved_wave');
     if (savedLevel != null && savedWave != null) {
-      level = savedLevel;
-    }
-  }
-
-  // Save lives and last life timestamp to SharedPreferences
-  Future<void> saveLives() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('lives', lives);
-    if (lastLifeTimestamp != null) {
-      await prefs.setInt('last_life_timestamp', lastLifeTimestamp!);
-    }
-  }
-
-  // Load lives and last life timestamp from SharedPreferences
-  Future<void> loadLives() async {
-    final prefs = await SharedPreferences.getInstance();
-    lives = prefs.getInt('lives') ?? maxLives;
-    lastLifeTimestamp = prefs.getInt('last_life_timestamp');
-  }
-
-  // Call this to update lives based on elapsed time
-  void regenerateLivesIfNeeded() {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    if (lives >= maxLives) {
-      // If already at max, reset timer
-      lastLifeTimestamp = now;
-      saveLives();
-      return;
-    }
-    if (lastLifeTimestamp == null) {
-      lastLifeTimestamp = now;
-      saveLives();
-      return;
-    }
-    final regenMillis = lifeRegenMinutes * 60 * 1000;
-    int elapsed = now - lastLifeTimestamp!;
-    int livesToAdd = elapsed ~/ regenMillis;
-    if (livesToAdd > 0) {
-      lives = (lives + livesToAdd).clamp(0, maxLives);
-      // Set timestamp for next life (if not at max)
-      if (lives < maxLives) {
-        lastLifeTimestamp = lastLifeTimestamp! + livesToAdd * regenMillis;
-      } else {
-        lastLifeTimestamp = now;
-      }
-      saveLives();
+      waveManager.level = savedLevel;
     }
   }
 
   // Helper to consume a life and start a wave, or show no lives dialog
   void tryConsumeLifeAndStartWave(int wave) {
-    if (lives > 0) {
-      lives--;
-      saveLives();
+    if (livesManager.tryConsumeLife()) {
+      waveManager.startWave(wave);
       startWave(wave);
     } else {
       gameUI.showNoLivesDialog();

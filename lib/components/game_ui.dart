@@ -285,7 +285,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Heart and lives counter (top right)
     livesText = TextComponent(
-      text: '❤️ ${game.lives}',
+      text: '❤️ ${game.livesManager.lives}',
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: TextStyle(
@@ -330,11 +330,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     glowIntensity = (math.sin(pulseTime) * 0.5 + 0.5) * 0.3 + 0.7;
 
     // Update text content with wave information
-    scoreText.text = 'Score: ${game.score}';
-    levelText.text = 'Level: ${game.level} (Wave ${game.currentWave}/3)';
+    scoreText.text = 'Score: ${game.waveManager.score}';
+    levelText.text =
+        'Level: ${game.waveManager.level} (Wave ${game.waveManager.currentWave}/3)';
 
     // Update level type display
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     // Update instructions based on level type with modern styling
     final instructions = LevelTypeConfig.getLevelInstructions(currentLevelType);
@@ -355,7 +357,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     timeBg.paint.color = Color(0xFF44aaff).withOpacity(glowOpacity);
 
     // Update lives counter
-    livesText.text = '❤️ ${game.lives}';
+    livesText.text = '❤️ ${game.livesManager.lives}';
 
     super.update(dt);
   }
@@ -491,8 +493,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Show game over dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = game.buildContext;
+      if (context == null) return;
       showDialog(
-        context: game.buildContext!,
+        context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -612,8 +616,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Show level completion dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = game.buildContext;
+      if (context == null) return;
       showDialog(
-        context: game.buildContext!,
+        context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -712,7 +718,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFF00ff88),
                       () {
                         Navigator.of(context).pop();
-                        game.continueToNextLevel();
+                        game.waveManager.nextLevel();
+                        game.tryConsumeLifeAndStartWave(
+                            game.waveManager.currentWave);
                       },
                       buttonFontSize,
                       buttonPaddingH,
@@ -732,8 +740,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   void showWaveFailedDialog(int level, int wave, VoidCallback onRestartLevel,
       VoidCallback onWatchAd) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = game.buildContext;
+      if (context == null) return;
       showDialog(
-        context: game.buildContext!,
+        context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -938,11 +948,20 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   // Stub for lives dialog
   void showLivesDialog() {
-    final context = game.buildContext!;
-    final lives = game.lives;
-    final maxLives = game.maxLives;
-    final regenMinutes = game.lifeRegenMinutes;
-    final lastLifeTimestamp = game.lastLifeTimestamp;
+    final context = game.buildContext;
+    if (context == null) {
+      // If context is not available yet, schedule to show later
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (game.buildContext != null) {
+          showLivesDialog();
+        }
+      });
+      return;
+    }
+    final lives = game.livesManager.lives;
+    final maxLives = game.livesManager.maxLives;
+    final regenMinutes = game.livesManager.lifeRegenMinutes;
+    final lastLifeTimestamp = game.livesManager.lastLifeTimestamp;
     final now = DateTime.now().millisecondsSinceEpoch;
     final regenMillis = regenMinutes * 60 * 1000;
     int millisLeft = 0;
@@ -1057,10 +1076,42 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
   }
 
-  void showNoLivesDialog() {
-    final context = game.buildContext!;
+  void showNoLivesDialog({VoidCallback? onDialogClosed}) {
+    final context = game.buildContext;
+    if (context == null) {
+      // If context is not available yet, schedule to show later
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (game.buildContext != null) {
+          showNoLivesDialog(onDialogClosed: onDialogClosed);
+        }
+      });
+      return;
+    }
+
+    // Calculate progress for next life
+    final lives = game.livesManager.lives;
+    final maxLives = game.livesManager.maxLives;
+    final regenMinutes = game.livesManager.lifeRegenMinutes;
+    final lastLifeTimestamp = game.livesManager.lastLifeTimestamp;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final regenMillis = regenMinutes * 60 * 1000;
+    int millisLeft = 0;
+    double percent = 1.0;
+    String timeLeftStr = '';
+
+    if (lives < maxLives && lastLifeTimestamp != null) {
+      millisLeft = (lastLifeTimestamp + regenMillis) - now;
+      if (millisLeft < 0) millisLeft = 0;
+      percent = 1.0 - (millisLeft / regenMillis).clamp(0.0, 1.0);
+      final secondsLeft = (millisLeft / 1000).ceil();
+      final minutes = (secondsLeft ~/ 60).toString().padLeft(2, '0');
+      final seconds = (secondsLeft % 60).toString().padLeft(2, '0');
+      timeLeftStr = '$minutes:$seconds';
+    }
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final dialogWidth = MediaQuery.of(context).size.width * 0.85;
         return AlertDialog(
@@ -1088,7 +1139,28 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 18),
+              // Progress bar for next life
+              Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: percent,
+                    minHeight: 12,
+                    backgroundColor: Colors.red[200]!.withOpacity(0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Next life in $timeLeftStr',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: dialogWidth * 0.05,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
+              // Watch Ad button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1100,11 +1172,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
+                    // Simulate watching an ad and gaining a life
                     Navigator.of(context).pop();
-                    showLivesDialog();
+                    _simulateWatchAdAndGainLife();
+                    if (onDialogClosed != null) onDialogClosed();
                   },
                   child: Text(
-                    'Get Lives',
+                    'Watch Ad for 1 Life',
                     style: TextStyle(
                       fontSize: dialogWidth * 0.06,
                       fontWeight: FontWeight.bold,
@@ -1117,6 +1191,132 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
           ),
         );
       },
+    ).then((_) {
+      if (onDialogClosed != null) onDialogClosed();
+    });
+  }
+
+  void _simulateWatchAdAndGainLife() {
+    // Simulate watching an ad
+    return;
+    showDialog(
+      context: game.buildContext!,
+      barrierDismissible: false,
+      builder: (context) {
+        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          backgroundColor: const Color(0xFF1a1a2e),
+          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Watching Ad...',
+                style: TextStyle(
+                  fontSize: dialogWidth * 0.07,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please wait while the ad loads',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: dialogWidth * 0.05,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
+
+    // Simulate ad completion after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.of(game.buildContext!).pop(); // Close ad dialog
+
+      // Add a life
+      game.livesManager.lives =
+          (game.livesManager.lives + 1).clamp(0, game.livesManager.maxLives);
+      game.livesManager.save();
+
+      // Show success message
+      showDialog(
+        context: game.buildContext!,
+        builder: (context) {
+          final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            backgroundColor: const Color(0xFF1a1a2e),
+            contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.greenAccent,
+                  size: 48,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Ad Completed!',
+                  style: TextStyle(
+                    fontSize: dialogWidth * 0.08,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.greenAccent,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You gained 1 life!',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: dialogWidth * 0.06,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.greenAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    // Start the game if we now have lives
+                    if (game.livesManager.lives > 0) {
+                      game.tryConsumeLifeAndStartWave(
+                          game.waveManager.currentWave);
+                    }
+                  },
+                  child: Text(
+                    'Start Playing!',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 }
