@@ -162,6 +162,20 @@ class MagnetWalkerGame extends FlameGame
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     clearAllObjects(); // Clear all objects immediately
+
+    // Animate player back to initial position depending on level type
+    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    Vector2 initialPosition;
+    final currentLevelType = LevelTypeConfig.getLevelType(level);
+    if (currentLevelType == LevelType.gravity) {
+      // Gravity mode: bottom center
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
+    } else {
+      // Survival mode: center
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+    }
+    player.animateToPosition(initialPosition, 2.7); // 2.7 seconds animation
+
     if (failed) {
       showWaveFailedDialog();
     } else if (currentWave < 3) {

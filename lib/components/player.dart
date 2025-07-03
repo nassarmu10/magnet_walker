@@ -10,6 +10,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   late Paint magnetFieldPaint;
   late Paint playerGlowPaint;
   SpriteComponent? earthSpriteComponent;
+  Vector2? _targetPosition;
+  double? _moveDuration;
+  double _moveElapsed = 0;
 
   Player({required super.position})
       : super(
@@ -112,7 +115,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final currentLevelType = LevelTypeConfig.getLevelType(game.level);
 
     if (currentLevelType == LevelType.gravity) {
-      // In gravity mode, player stays at bottom
+      // In gravity mode, player stays at bottom center
       position = Vector2(gameSize.x / 2, gameSize.y - 117);
     } else {
       // In survival mode, player starts at center
@@ -120,5 +123,30 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     }
 
     magnetRadius = 80.0;
+  }
+
+  // Animate the player to a target position over a duration (in seconds)
+  void animateToPosition(Vector2 target, double duration) {
+    _targetPosition = target.clone();
+    _moveDuration = duration;
+    _moveElapsed = 0;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    // Animate movement if needed
+    if (_targetPosition != null && _moveDuration != null) {
+      _moveElapsed += dt;
+      final t = (_moveElapsed / _moveDuration!).clamp(0.0, 1.0);
+      // Manually interpolate between position and _targetPosition!
+      position = position + (_targetPosition! - position) * t;
+      if (t >= 1.0) {
+        position = _targetPosition!;
+        _targetPosition = null;
+        _moveDuration = null;
+        _moveElapsed = 0;
+      }
+    }
   }
 }
