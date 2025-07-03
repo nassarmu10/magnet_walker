@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../magnet_walker_game.dart';
 import '../level_types.dart';
 import 'dart:math' as math;
+import 'package:flame/input.dart';
 
 // Custom rounded rectangle component for modern UI
 class RoundedRectComponent extends Component {
@@ -37,6 +38,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent levelTypeText;
   late TextComponent playTimeText;
   late TextComponent instructionsText;
+  late TextComponent livesText;
   bool gameOverVisible = false;
   bool isInitialized = false;
 
@@ -49,6 +51,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   // Animation properties
   double pulseTime = 0.0;
   double glowIntensity = 0.0;
+
+  late ButtonComponent livesButton;
 
   @override
   Future<void> onLoad() async {
@@ -279,6 +283,41 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(instructionsText);
 
+    // Heart and lives counter (top right)
+    livesText = TextComponent(
+      text: '❤️ ${game.lives}',
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: TextStyle(
+          fontFamily: 'Roboto',
+          color: Colors.redAccent,
+          fontSize: headerHeight * 0.32,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            const Shadow(
+              offset: Offset(0, 0),
+              blurRadius: 6,
+              color: Colors.black54,
+            ),
+          ],
+        ),
+      ),
+      priority: 10,
+    );
+    livesButton = ButtonComponent(
+      position: Vector2(headerMarginX + headerWidth - 10, headerMarginY + 10),
+      size: Vector2(headerHeight * 1.1, headerHeight * 0.6),
+      anchor: Anchor.topRight,
+      button: RectangleComponent(
+        size: Vector2(headerHeight * 1.1, headerHeight * 0.6),
+        paint: Paint()..color = const Color(0x00000000), // transparent
+      ),
+      children: [livesText],
+      onPressed: showLivesDialog,
+      priority: 10,
+    );
+    add(livesButton);
+
     isInitialized = true;
   }
 
@@ -314,6 +353,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     scoreBg.paint.color = Color(0xFF00ff88).withOpacity(glowOpacity);
     levelBg.paint.color = Color(0xFF8844ff).withOpacity(glowOpacity);
     timeBg.paint.color = Color(0xFF44aaff).withOpacity(glowOpacity);
+
+    // Update lives counter
+    livesText.text = '❤️ ${game.lives}';
 
     super.update(dt);
   }
@@ -892,5 +934,189 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   void hideLevelCompleted() {
     gameOverVisible = false;
+  }
+
+  // Stub for lives dialog
+  void showLivesDialog() {
+    final context = game.buildContext!;
+    final lives = game.lives;
+    final maxLives = game.maxLives;
+    final regenMinutes = game.lifeRegenMinutes;
+    final lastLifeTimestamp = game.lastLifeTimestamp;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final regenMillis = regenMinutes * 60 * 1000;
+    int millisLeft = 0;
+    double percent = 1.0;
+    String timeLeftStr = '';
+    if (lives < maxLives && lastLifeTimestamp != null) {
+      millisLeft = (lastLifeTimestamp + regenMillis) - now;
+      if (millisLeft < 0) millisLeft = 0;
+      percent = 1.0 - (millisLeft / regenMillis).clamp(0.0, 1.0);
+      final secondsLeft = (millisLeft / 1000).ceil();
+      final minutes = (secondsLeft ~/ 60).toString().padLeft(2, '0');
+      final seconds = (secondsLeft % 60).toString().padLeft(2, '0');
+      timeLeftStr = '$minutes:$seconds';
+    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          backgroundColor: const Color(0xFF1a1a2e),
+          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '❤️ $lives / $maxLives',
+                style: TextStyle(
+                  fontSize: dialogWidth * 0.13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                  shadows: [
+                    const Shadow(
+                      offset: Offset(0, 0),
+                      blurRadius: 8,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              if (lives < maxLives)
+                Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: percent,
+                      minHeight: 12,
+                      backgroundColor: Colors.red[200]!.withOpacity(0.2),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.redAccent),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Next life in $timeLeftStr',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: dialogWidth * 0.05,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Text(
+                  'You are full of lives! 🎉',
+                  style: TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: dialogWidth * 0.06,
+                  ),
+                ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.pinkAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    // Stub for watch ad logic
+                    Navigator.of(context).pop();
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        content: const Text('Watch Ad feature coming soon!'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Watch Ad for 1 Life',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void showNoLivesDialog() {
+    final context = game.buildContext!;
+    showDialog(
+      context: context,
+      builder: (context) {
+        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          backgroundColor: const Color(0xFF1a1a2e),
+          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'No Lives Left!',
+                style: TextStyle(
+                  fontSize: dialogWidth * 0.09,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'You have no lives left. Please wait for a new life or watch an ad to get one instantly.',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: dialogWidth * 0.055,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.pinkAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    showLivesDialog();
+                  },
+                  child: Text(
+                    'Get Lives',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

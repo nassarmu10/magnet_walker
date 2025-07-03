@@ -52,6 +52,12 @@ class MagnetWalkerGame extends FlameGame
   final List<GameObject> gameObjects = [];
   final List<GameParticle> particles = [];
 
+  // Lives system fields
+  int lives = 5;
+  int maxLives = 5;
+  int lifeRegenMinutes = 1;
+  int? lastLifeTimestamp; // Epoch millis
+
   @override
   Future<void> onLoad() async {
     // Wait for the game to be fully initialized
@@ -87,6 +93,10 @@ class MagnetWalkerGame extends FlameGame
 
     // Load saved progress (level and wave)
     await loadProgress();
+    // Load lives system state
+    await loadLives();
+    // Regenerate lives on game start
+    regenerateLivesIfNeeded();
 
     // Add player - use camera size for positioning
     final gameSize = camera.viewfinder.visibleGameSize!;
@@ -107,7 +117,17 @@ class MagnetWalkerGame extends FlameGame
     isLevelComplete = false;
     waveMessage = null;
     await Future.delayed(const Duration(milliseconds: 100));
-    startWave(currentWave);
+    // Only start wave if lives > 0
+    if (lives > 0) {
+      tryConsumeLifeAndStartWave(currentWave);
+    } else {
+      // Show no lives dialog after UI is ready
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (gameUI.isMounted) {
+          gameUI.showNoLivesDialog();
+        }
+      });
+    }
   }
 
   void startPlayTimeTracking() {
@@ -205,7 +225,7 @@ class MagnetWalkerGame extends FlameGame
       isLevelComplete = false;
       waveMessage = null;
       Future.delayed(const Duration(milliseconds: 300), () {
-        startWave(1);
+        tryConsumeLifeAndStartWave(1);
       });
     }, () {
       // Watch ad to restart wave (simulate ad)
@@ -215,7 +235,7 @@ class MagnetWalkerGame extends FlameGame
       isLevelComplete = false;
       waveMessage = null;
       Future.delayed(const Duration(milliseconds: 300), () {
-        startWave(currentWave);
+        tryConsumeLifeAndStartWave(currentWave);
       });
     });
   }
@@ -468,6 +488,8 @@ class MagnetWalkerGame extends FlameGame
   void update(double dt) {
     super.update(dt);
     updateWaveCountdown(dt);
+    // Regenerate lives periodically while running
+    regenerateLivesIfNeeded();
 
     if (gameRunning) {
       // Update magnetic effects
@@ -515,6 +537,62 @@ class MagnetWalkerGame extends FlameGame
     final savedWave = prefs.getInt('saved_wave');
     if (savedLevel != null && savedWave != null) {
       level = savedLevel;
+    }
+  }
+
+  // Save lives and last life timestamp to SharedPreferences
+  Future<void> saveLives() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('lives', lives);
+    if (lastLifeTimestamp != null) {
+      await prefs.setInt('last_life_timestamp', lastLifeTimestamp!);
+    }
+  }
+
+  // Load lives and last life timestamp from SharedPreferences
+  Future<void> loadLives() async {
+    final prefs = await SharedPreferences.getInstance();
+    lives = prefs.getInt('lives') ?? maxLives;
+    lastLifeTimestamp = prefs.getInt('last_life_timestamp');
+  }
+
+  // Call this to update lives based on elapsed time
+  void regenerateLivesIfNeeded() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (lives >= maxLives) {
+      // If already at max, reset timer
+      lastLifeTimestamp = now;
+      saveLives();
+      return;
+    }
+    if (lastLifeTimestamp == null) {
+      lastLifeTimestamp = now;
+      saveLives();
+      return;
+    }
+    final regenMillis = lifeRegenMinutes * 60 * 1000;
+    int elapsed = now - lastLifeTimestamp!;
+    int livesToAdd = elapsed ~/ regenMillis;
+    if (livesToAdd > 0) {
+      lives = (lives + livesToAdd).clamp(0, maxLives);
+      // Set timestamp for next life (if not at max)
+      if (lives < maxLives) {
+        lastLifeTimestamp = lastLifeTimestamp! + livesToAdd * regenMillis;
+      } else {
+        lastLifeTimestamp = now;
+      }
+      saveLives();
+    }
+  }
+
+  // Helper to consume a life and start a wave, or show no lives dialog
+  void tryConsumeLifeAndStartWave(int wave) {
+    if (lives > 0) {
+      lives--;
+      saveLives();
+      startWave(wave);
+    } else {
+      gameUI.showNoLivesDialog();
     }
   }
 }
