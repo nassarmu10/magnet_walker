@@ -4,6 +4,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'components/player.dart';
 import 'components/game_object.dart';
@@ -84,6 +85,9 @@ class MagnetWalkerGame extends FlameGame
     background = Background();
     add(background);
 
+    // Load saved progress (level and wave)
+    await loadProgress();
+
     // Add player - use camera size for positioning
     final gameSize = camera.viewfinder.visibleGameSize!;
     player = Player(position: Vector2(gameSize.x / 2, gameSize.y - 117));
@@ -97,13 +101,13 @@ class MagnetWalkerGame extends FlameGame
     startPlayTimeTracking();
 
     // Start spawning objects after everything is loaded
-    currentWave = 1;
+    currentWave = currentWave == 0 ? 1 : currentWave; // Ensure at least wave 1
     scoreThisWave = 0;
     isWaveActive = false;
     isLevelComplete = false;
     waveMessage = null;
     await Future.delayed(const Duration(milliseconds: 100));
-    startWave(1);
+    startWave(currentWave);
   }
 
   void startPlayTimeTracking() {
@@ -186,6 +190,9 @@ class MagnetWalkerGame extends FlameGame
       isLevelComplete = true;
       showLevelCompleteDialog();
     }
+
+    // Save progress after wave ends
+    saveProgress();
   }
 
   void showWaveFailedDialog() {
@@ -352,6 +359,9 @@ class MagnetWalkerGame extends FlameGame
 
     // Hide game over UI
     gameUI.hideGameOver();
+
+    // Save progress after restart
+    saveProgress();
   }
 
   void continueToNextLevel() {
@@ -373,6 +383,9 @@ class MagnetWalkerGame extends FlameGame
     player.upgradeMagnet(level);
     startWave(1);
     gameUI.hideLevelCompleted();
+
+    // Save progress after level changes
+    saveProgress();
   }
 
   void pausePlayTime() {
@@ -487,5 +500,21 @@ class MagnetWalkerGame extends FlameGame
     survivalSpawnManager.stop();
     playTimeTimer?.cancel();
     super.onRemove();
+  }
+
+  // Save current level and wave to SharedPreferences
+  Future<void> saveProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('saved_level', level);
+  }
+
+  // Load saved level and wave from SharedPreferences
+  Future<void> loadProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLevel = prefs.getInt('saved_level');
+    final savedWave = prefs.getInt('saved_wave');
+    if (savedLevel != null && savedWave != null) {
+      level = savedLevel;
+    }
   }
 }
