@@ -176,9 +176,6 @@ class MagnetWalkerGame extends FlameGame
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
 
-    // Do not start spawning if no lives left
-    if (livesManager.lives == 0) return;
-
     // Use the current level for level type
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
 
@@ -195,12 +192,6 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startWave(int wave) {
-    if (livesManager.lives == 0) {
-      print('startWave called with zero lives! This should not happen.');
-      return;
-    }
-    print(
-        'startWave called with wave: $wave, lives: \\${livesManager.lives}, gameRunning: \\${gameRunning}');
     waveManager.currentWave = wave;
     waveManager.score = 0;
     waveManager.scoreThisWave = 0;
@@ -211,8 +202,6 @@ class MagnetWalkerGame extends FlameGame
     waveCountdown = 0;
     waveMessage = null;
     startSpawning();
-    print(
-        'Wave started successfully - isWaveActive: \\${isWaveActive}, gameRunning: \\${gameRunning}');
     // Optionally, adjust player, etc.
   }
 
@@ -244,14 +233,20 @@ class MagnetWalkerGame extends FlameGame
         wave: waveManager.currentWave,
         playTime: playTime,
         onRestartLevel: () {
-          // Restart level (wave 1)
-          waveManager.currentWave = 1;
-          waveManager.score = 0;
-          waveManager.scoreThisWave = 0;
-          waveManager.levelProgress = 0;
-          Future.delayed(const Duration(milliseconds: 300), () {
-            tryConsumeLifeAndStartWave(1);
-          });
+          // Check if we have lives before restarting
+          if (livesManager.lives == 0) {
+            // Show no lives dialog if no lives available
+            gameUI.showNoLivesDialog();
+          } else {
+            // Restart level (wave 1) - this will consume a life
+            waveManager.currentWave = 1;
+            waveManager.score = 0;
+            waveManager.scoreThisWave = 0;
+            waveManager.levelProgress = 0;
+            Future.delayed(const Duration(milliseconds: 300), () {
+              tryConsumeLifeAndStartWave(1);
+            });
+          }
         },
         onWatchAd: () {
           // Watch ad to restart wave
@@ -265,14 +260,6 @@ class MagnetWalkerGame extends FlameGame
               });
             },
           );
-        },
-        onPlayAgain: () {
-          // Always show no lives dialog if no lives, otherwise restart game
-          if (livesManager.lives == 0) {
-            gameUI.showNoLivesDialog();
-          } else {
-            restartGame();
-          }
         },
       );
     } else if (waveManager.currentWave < 3) {
@@ -496,12 +483,12 @@ class MagnetWalkerGame extends FlameGame
   @override
   bool onDragUpdate(DragUpdateEvent event) {
     // Forward drag events to the player for better control
-    // Allow movement only when game is running and we have lives
+    // Allow movement only when game is running and wave is active
     print('onDragUpdate called');
     print(isWaveActive);
     print(gameRunning);
     print(livesManager.lives);
-    if (gameRunning && livesManager.lives > 0 && isWaveActive) {
+    if (gameRunning && isWaveActive) {
       player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
     }
     return true;
@@ -519,10 +506,7 @@ class MagnetWalkerGame extends FlameGame
     print(gameRunning);
     print(livesManager.lives);
     // Existing tap logic here
-    if (gameRunning &&
-        livesManager.lives > 0 &&
-        isWaveActive &&
-        currentLevelType == LevelType.survival) {
+    if (gameRunning && isWaveActive && currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted && !obj.collected && obj.type == ObjectType.bomb) {
@@ -558,8 +542,8 @@ class MagnetWalkerGame extends FlameGame
       });
     }
 
-    // Update game objects only when game is running and we have lives
-    if (gameRunning && livesManager.lives > 0) {
+    // Update game objects only when game is running
+    if (gameRunning) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {

@@ -14,7 +14,6 @@ class GravitySpawnManager {
   GravitySpawnManager(this.game);
 
   void startSpawning() {
-    if (game.livesManager.lives == 0) return;
     spawnTimer?.cancel();
 
     // Make spawn rate depend on wave

@@ -490,7 +490,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     required Duration playTime,
     required VoidCallback onRestartLevel,
     required VoidCallback onWatchAd,
-    required VoidCallback onPlayAgain,
   }) {
     gameOverVisible = true;
 
@@ -586,53 +585,35 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
               ),
             ),
             actions: [
-              Column(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Top row: Restart Level and Watch Ad
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(
-                        child: _buildActionButton(
-                          'RESTART LEVEL',
-                          const Color(0xFF666666),
-                          () {
-                            Navigator.of(context).pop();
-                            onRestartLevel();
-                          },
-                          buttonFontSize,
-                          buttonPaddingH,
-                          buttonPaddingV,
-                        ),
-                      ),
-                      SizedBox(width: dialogWidth * 0.04),
-                      Expanded(
-                        child: _buildActionButton(
-                          'WATCH AD',
-                          const Color(0xFFff8844),
-                          () {
-                            Navigator.of(context).pop();
-                            onWatchAd();
-                          },
-                          buttonFontSize,
-                          buttonPaddingH,
-                          buttonPaddingV,
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: _buildActionButton(
+                      'RESTART LEVEL',
+                      const Color(0xFF666666),
+                      () {
+                        Navigator.of(context).pop();
+                        onRestartLevel();
+                      },
+                      buttonFontSize,
+                      buttonPaddingH,
+                      buttonPaddingV,
+                    ),
                   ),
-                  SizedBox(height: dialogWidth * 0.04),
-                  // Bottom row: Play Again (full width)
-                  _buildActionButton(
-                    'PLAY AGAIN',
-                    const Color(0xFF44aaff),
-                    () {
-                      Navigator.of(context).pop();
-                      onPlayAgain();
-                    },
-                    buttonFontSize,
-                    buttonPaddingH,
-                    buttonPaddingV,
+                  SizedBox(width: dialogWidth * 0.04),
+                  Expanded(
+                    child: _buildActionButton(
+                      'WATCH AD',
+                      const Color(0xFFff8844),
+                      () {
+                        Navigator.of(context).pop();
+                        onWatchAd();
+                      },
+                      buttonFontSize,
+                      buttonPaddingH,
+                      buttonPaddingV,
+                    ),
                   ),
                 ],
               ),

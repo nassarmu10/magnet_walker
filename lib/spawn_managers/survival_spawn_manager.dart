@@ -14,7 +14,6 @@ class SurvivalSpawnManager {
   SurvivalSpawnManager(this.game);
 
   void startSpawning() {
-    if (game.livesManager.lives == 0) return;
     spawnTimer?.cancel();
 
     // Spawn rate for survival mode (slightly faster than gravity)
