@@ -482,8 +482,16 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     canvas.drawRRect(headerRect, glowPaint);
   }
 
-  // Enhanced dialog methods with modern styling
-  void showGameOver(int finalScore, int finalLevel, Duration playTime) {
+  // Unified failure dialog that handles all failure scenarios
+  void showFailureDialog({
+    required int score,
+    required int level,
+    required int wave,
+    required Duration playTime,
+    required VoidCallback onRestartLevel,
+    required VoidCallback onWatchAd,
+    required VoidCallback onPlayAgain,
+  }) {
     gameOverVisible = true;
 
     // Format play time
@@ -492,7 +500,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     final timeString =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-    // Show game over dialog using Flutter's overlay
+    // Show unified failure dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = game.buildContext;
       if (context == null) return;
@@ -503,8 +511,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
           final screenWidth = MediaQuery.of(context).size.width;
           final dialogWidth = screenWidth * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = dialogWidth * 0.09;
+          final titleFontSize = dialogWidth * 0.08;
           final statFontSize = dialogWidth * 0.06;
+          final bodyFontSize = dialogWidth * 0.05;
           final buttonFontSize = dialogWidth * 0.055;
           final buttonPaddingV = dialogWidth * 0.045;
           final buttonPaddingH = dialogWidth * 0.08;
@@ -513,18 +522,18 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(dialogWidth * 0.07),
               side: BorderSide(
-                color: const Color(0xFF44aaff).withOpacity(0.5),
+                color: const Color(0xFFff4444).withOpacity(0.5),
                 width: 2,
               ),
             ),
             title: Text(
-              'GAME OVER',
+              'WAVE FAILED!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: titleFontSize,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFff4444),
-                letterSpacing: 2.0,
+                letterSpacing: 1.5,
                 shadows: const [
                   Shadow(
                     offset: Offset(0, 0),
@@ -540,64 +549,92 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Stats section
                   _buildStatRow('⏱️ TIME', timeString, const Color(0xFF44aaff),
                       statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
-                  _buildStatRow('⭐ SCORE', '$finalScore',
-                      const Color(0xFF00ff88), statFontSize),
+                  _buildStatRow('⭐ SCORE', '$score', const Color(0xFF00ff88),
+                      statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
-                  _buildStatRow('🚀 LEVEL', '$finalLevel',
-                      const Color(0xFF8844ff), statFontSize),
-                  SizedBox(height: dialogWidth * 0.07),
+                  _buildStatRow('🚀 LEVEL', '$level', const Color(0xFF8844ff),
+                      statFontSize),
+                  SizedBox(height: dialogWidth * 0.04),
+                  _buildStatRow('🌊 WAVE', '$wave/3', const Color(0xFFff8844),
+                      statFontSize),
+                  SizedBox(height: dialogWidth * 0.05),
+                  // Explanation section
+                  Container(
+                    padding: EdgeInsets.all(dialogWidth * 0.045),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF44aaff).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(dialogWidth * 0.04),
+                      border: Border.all(
+                        color: const Color(0xFF44aaff).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'You failed wave $wave of level $level. Choose your next action:',
+                      style: TextStyle(
+                        fontSize: bodyFontSize,
+                        color: const Color(0xFF44aaff),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ],
               ),
             ),
             actions: [
-              Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(dialogWidth * 0.15),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF44aaff), Color(0xFF0088cc)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF44aaff).withOpacity(0.4),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
+              Column(
+                children: [
+                  // Top row: Restart Level and Watch Ad
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          'RESTART LEVEL',
+                          const Color(0xFF666666),
+                          () {
+                            Navigator.of(context).pop();
+                            onRestartLevel();
+                          },
+                          buttonFontSize,
+                          buttonPaddingH,
+                          buttonPaddingV,
+                        ),
+                      ),
+                      SizedBox(width: dialogWidth * 0.04),
+                      Expanded(
+                        child: _buildActionButton(
+                          'WATCH AD',
+                          const Color(0xFFff8844),
+                          () {
+                            Navigator.of(context).pop();
+                            onWatchAd();
+                          },
+                          buttonFontSize,
+                          buttonPaddingH,
+                          buttonPaddingV,
+                        ),
                       ),
                     ],
                   ),
-                  child: ElevatedButton(
-                    onPressed: () {
+                  SizedBox(height: dialogWidth * 0.04),
+                  // Bottom row: Play Again (full width)
+                  _buildActionButton(
+                    'PLAY AGAIN',
+                    const Color(0xFF44aaff),
+                    () {
                       Navigator.of(context).pop();
-                      game.handlePlayAgain();
+                      onPlayAgain();
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: buttonPaddingH,
-                        vertical: buttonPaddingV,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(dialogWidth * 0.15),
-                      ),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'PLAY AGAIN',
-                        style: TextStyle(
-                          fontSize: buttonFontSize,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ),
+                    buttonFontSize,
+                    buttonPaddingH,
+                    buttonPaddingV,
                   ),
-                ),
+                ],
               ),
             ],
           );
@@ -722,129 +759,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                         game.waveManager.nextLevel();
                         game.tryConsumeLifeAndStartWave(
                             game.waveManager.currentWave);
-                      },
-                      buttonFontSize,
-                      buttonPaddingH,
-                      buttonPaddingV,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      );
-    });
-  }
-
-  // New wave failed dialog with modern styling (from the second PR)
-  void showWaveFailedDialog(int level, int wave, VoidCallback onRestartLevel,
-      VoidCallback onWatchAd) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = game.buildContext;
-      if (context == null) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final dialogWidth = screenWidth * 0.85;
-          final padding = dialogWidth * 0.06;
-          final titleFontSize = dialogWidth * 0.08;
-          final bodyFontSize = dialogWidth * 0.05;
-          final buttonFontSize = dialogWidth * 0.055;
-          final buttonPaddingV = dialogWidth * 0.045;
-          final buttonPaddingH = dialogWidth * 0.08;
-          return AlertDialog(
-            backgroundColor: const Color(0xFF1a1a2e),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(dialogWidth * 0.07),
-              side: BorderSide(
-                color: const Color(0xFFff4444).withOpacity(0.5),
-                width: 2,
-              ),
-            ),
-            title: Text(
-              'WAVE FAILED!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: titleFontSize,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFff4444),
-                letterSpacing: 1.5,
-                shadows: const [
-                  Shadow(
-                    offset: Offset(0, 0),
-                    blurRadius: 10,
-                    color: Color(0xFFff4444),
-                  ),
-                ],
-              ),
-            ),
-            content: Container(
-              width: dialogWidth,
-              padding: EdgeInsets.all(padding),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'You failed wave $wave of level $level.',
-                    style: TextStyle(
-                      fontSize: bodyFontSize,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF88aacc),
-                      letterSpacing: 0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: dialogWidth * 0.05),
-                  Container(
-                    padding: EdgeInsets.all(dialogWidth * 0.045),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF44aaff).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(dialogWidth * 0.04),
-                      border: Border.all(
-                        color: const Color(0xFF44aaff).withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      'Would you like to restart the level or watch an ad to retry this wave?',
-                      style: TextStyle(
-                        fontSize: bodyFontSize,
-                        color: const Color(0xFF44aaff),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      'RESTART LEVEL',
-                      const Color(0xFF666666),
-                      () {
-                        Navigator.of(context).pop();
-                        onRestartLevel();
-                      },
-                      buttonFontSize,
-                      buttonPaddingH,
-                      buttonPaddingV,
-                    ),
-                  ),
-                  SizedBox(width: dialogWidth * 0.04),
-                  Expanded(
-                    child: _buildActionButton(
-                      'WATCH AD',
-                      const Color(0xFFff8844),
-                      () {
-                        Navigator.of(context).pop();
-                        onWatchAd();
                       },
                       buttonFontSize,
                       buttonPaddingH,

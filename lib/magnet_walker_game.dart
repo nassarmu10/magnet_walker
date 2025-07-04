@@ -101,9 +101,17 @@ class MagnetWalkerGame extends FlameGame
     await livesManager.load();
     livesManager.regenerateLivesIfNeeded();
 
-    // Add player - use camera size for positioning
+    // Add player - position based on current level type
     final gameSize = camera.viewfinder.visibleGameSize!;
-    player = Player(position: Vector2(gameSize.x / 2, gameSize.y - 117));
+    Vector2 initialPosition;
+    if (currentLevelType == LevelType.gravity) {
+      // Gravity mode: bottom center
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
+    } else {
+      // Survival mode: center
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+    }
+    player = Player(position: initialPosition);
     add(player);
 
     // Add UI last to ensure game size is available
@@ -229,8 +237,44 @@ class MagnetWalkerGame extends FlameGame
     player.animateToPosition(initialPosition, 2.7); // 2.7 seconds animation
 
     if (failed) {
-      // Show Game Over dialog on failure
-      gameUI.showGameOver(waveManager.score, waveManager.level, playTime);
+      // Show unified failure dialog
+      gameUI.showFailureDialog(
+        score: waveManager.score,
+        level: waveManager.level,
+        wave: waveManager.currentWave,
+        playTime: playTime,
+        onRestartLevel: () {
+          // Restart level (wave 1)
+          waveManager.currentWave = 1;
+          waveManager.score = 0;
+          waveManager.scoreThisWave = 0;
+          waveManager.levelProgress = 0;
+          Future.delayed(const Duration(milliseconds: 300), () {
+            tryConsumeLifeAndStartWave(1);
+          });
+        },
+        onWatchAd: () {
+          // Watch ad to restart wave
+          AdManager.showRewardedAd(
+            onRewarded: () {
+              // Restart the current wave without consuming a life
+              waveManager.score = 0;
+              waveManager.scoreThisWave = 0;
+              Future.delayed(const Duration(milliseconds: 300), () {
+                startWaveWithoutConsumingLife(waveManager.currentWave);
+              });
+            },
+          );
+        },
+        onPlayAgain: () {
+          // Always show no lives dialog if no lives, otherwise restart game
+          if (livesManager.lives == 0) {
+            gameUI.showNoLivesDialog();
+          } else {
+            restartGame();
+          }
+        },
+      );
     } else if (waveManager.currentWave < 3) {
       waveCountdown = 3.0;
       waveMessage = 'Wave ${waveManager.currentWave}/3 Complete!';
@@ -242,31 +286,6 @@ class MagnetWalkerGame extends FlameGame
 
     // Save progress after wave ends
     saveProgress();
-  }
-
-  void showWaveFailedDialog() {
-    gameUI.showWaveFailedDialog(waveManager.level, waveManager.currentWave, () {
-      // Restart level (wave 1)
-      waveManager.currentWave = 1;
-      waveManager.score = 0;
-      waveManager.scoreThisWave = 0;
-      waveManager.levelProgress = 0;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        tryConsumeLifeAndStartWave(1);
-      });
-    }, () {
-      // Watch ad to restart wave
-      AdManager.showRewardedAd(
-        onRewarded: () {
-          // Restart the current wave without consuming a life
-          waveManager.score = 0;
-          waveManager.scoreThisWave = 0;
-          Future.delayed(const Duration(milliseconds: 300), () {
-            startWaveWithoutConsumingLife(waveManager.currentWave);
-          });
-        },
-      );
-    });
   }
 
   void updateWaveCountdown(double dt) {
@@ -394,7 +413,10 @@ class MagnetWalkerGame extends FlameGame
 
     // Restart timers
     startPlayTimeTracking();
-    startSpawning();
+
+    // Stop any existing spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
 
     // Hide game over UI
     gameUI.hideGameOver();
@@ -522,6 +544,20 @@ class MagnetWalkerGame extends FlameGame
     // Regenerate lives periodically while running
     livesManager.regenerateLivesIfNeeded();
 
+    // Check if we need to show no lives dialog
+    if (livesManager.lives == 0 &&
+        !noLivesDialogVisible &&
+        !gameUI.gameOverVisible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (gameUI.isMounted && this.buildContext != null) {
+          noLivesDialogVisible = true;
+          gameUI.showNoLivesDialog(onDialogClosed: () {
+            noLivesDialogVisible = false;
+          });
+        }
+      });
+    }
+
     // Update game objects only when game is running and we have lives
     if (gameRunning && livesManager.lives > 0) {
       // Update magnetic effects
@@ -590,7 +626,14 @@ class MagnetWalkerGame extends FlameGame
   // Helper to dismiss any existing dialogs and reset state
   void dismissNoLivesDialog() {
     noLivesDialogVisible = false;
-    gameRunning = true;
+    // Only set gameRunning to true if we have lives
+    if (livesManager.lives > 0) {
+      gameRunning = true;
+    } else {
+      // If no lives, keep game in a paused state
+      gameRunning = false;
+      isWaveActive = false;
+    }
   }
 
   // Helper to handle Play Again from Game Over dialog
