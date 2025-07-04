@@ -571,7 +571,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      game.restartGame();
+                      game.handlePlayAgain();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,

@@ -10,7 +10,7 @@ class LivesManager {
   LivesManager({
     this.lives = 5,
     this.maxLives = 5,
-    this.lifeRegenMinutes = 5,
+    this.lifeRegenMinutes = 1,
     int? lastLifeTimestamp,
   }) : lastLifeTimestamp =
             lastLifeTimestamp ?? DateTime.now().millisecondsSinceEpoch;
