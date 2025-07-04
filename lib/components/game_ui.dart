@@ -1258,13 +1258,11 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop();
-                      // Reset the no lives dialog flag and start the game
+                      Navigator.of(context, rootNavigator: true)
+                          .popUntil((route) => route.isFirst);
+                      // Reset dialog flag and start the game
                       game.noLivesDialogVisible = false;
                       if (game.livesManager.lives > 0) {
-                        // Ensure game state is properly set
-                        game.gameRunning = true;
-                        // Start the game without consuming a life since we just gained one
                         game.startWaveWithoutConsumingLife(
                             game.waveManager.currentWave);
                       }

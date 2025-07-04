@@ -443,6 +443,10 @@ class MagnetWalkerGame extends FlameGame
   bool onDragUpdate(DragUpdateEvent event) {
     // Forward drag events to the player for better control
     // Allow movement only when game is running and we have lives
+    print('onDragUpdate called');
+    print(isWaveActive);
+    print(gameRunning);
+    print(livesManager.lives);
     if (gameRunning && livesManager.lives > 0 && isWaveActive) {
       player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
     }
@@ -457,6 +461,9 @@ class MagnetWalkerGame extends FlameGame
   @override
   void onTapDown(TapDownEvent event) {
     print('onTapDown called');
+    print(isWaveActive);
+    print(gameRunning);
+    print(livesManager.lives);
     // Existing tap logic here
     if (gameRunning &&
         livesManager.lives > 0 &&
