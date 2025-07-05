@@ -199,6 +199,24 @@ class MagnetWalkerGame extends FlameGame
     await _updatePlayerSkin();
   }
 
+  // Update player position based on current level type
+  void _updatePlayerPositionForLevelType() {
+    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
+    Vector2 initialPosition;
+
+    if (currentLevelType == LevelType.gravity) {
+      // Gravity mode: bottom center
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
+    } else {
+      // Survival mode: center
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+    }
+
+    // Animate player to new position
+    player.animateToPosition(initialPosition, 2.7);
+  }
+
   void startPlayTimeTracking() {
     // If this is the first time starting, set the start time
     if (gameStartTime == null) {
@@ -245,7 +263,11 @@ class MagnetWalkerGame extends FlameGame
     waveCountdown = 0;
     waveMessage = null;
     startSpawning();
-    // Optionally, adjust player, etc.
+
+    // Ensure player is in correct position for current level type
+    if (wave == 1) {
+      _updatePlayerPositionForLevelType();
+    }
   }
 
   // Move to the next level
@@ -254,6 +276,9 @@ class MagnetWalkerGame extends FlameGame
     waveManager.currentWave = 1;
     wavesCompletedInLevel = 0;
     waveManager.resetWaveScore();
+
+    // Update player position for new level type
+    _updatePlayerPositionForLevelType();
   }
 
   void endWave({bool failed = false}) {
