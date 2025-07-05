@@ -34,6 +34,8 @@ class GravitySpawnManager {
   }
 
   void spawnObject() {
+    print('Spawning object called');
+    print(game.waveManager.currentWave);
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
     final x = math.Random().nextDouble() * (gameSize.x - 60) + 30;

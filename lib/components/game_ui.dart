@@ -39,6 +39,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent levelText;
   late TextComponent levelTypeText;
   late TextComponent playTimeText;
+  late TextComponent targetScoreText;
   late TextComponent instructionsText;
   late TextComponent livesText;
   bool gameOverVisible = false;
@@ -50,6 +51,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late RoundedRectComponent levelBg;
   late RoundedRectComponent timeBg;
   late ButtonComponent skinStoreButton;
+  late RoundedRectComponent targetScoreBg;
 
   // Animation properties
   double pulseTime = 0.0;
@@ -215,6 +217,45 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(timeBg);
 
+    // Responsive Target Score container
+    final targetScorePadding = gameSize.x * 0.03;
+    final targetScoreRectHeight = headerHeight * 0.32;
+    final targetScoreTextStr = 'Target: 13';
+    final targetScoreTextStyle = TextStyle(
+      fontFamily: 'Roboto',
+      color: const Color(0xFFff8844),
+      fontSize: headerHeight * 0.16,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 1.2,
+      shadows: [
+        const Shadow(
+          offset: Offset(0, 0),
+          blurRadius: 6,
+          color: Color(0xFFff8844),
+        ),
+        const Shadow(
+          offset: Offset(1, 1),
+          blurRadius: 3,
+          color: Colors.black87,
+        ),
+      ],
+    );
+    final targetScoreTextPainter = TextPainter(
+      text: TextSpan(text: targetScoreTextStr, style: targetScoreTextStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final targetScoreRectWidth =
+        targetScoreTextPainter.width + targetScorePadding * 2;
+    final targetScoreRectY = headerMarginY + headerHeight * 0.62;
+    targetScoreBg = RoundedRectComponent(
+      position: Vector2(headerMarginX + headerWidth * 0.02, targetScoreRectY),
+      size: Vector2(targetScoreRectWidth, targetScoreRectHeight),
+      paint: Paint()..color = const Color(0xFFff8844).withOpacity(0.15),
+      radius: targetScoreRectHeight * 0.3,
+      priority: -1,
+    );
+    add(targetScoreBg);
+
     // Score text with neon green theme - centered in score container
     scoreText = TextComponent(
       text: 'Score: 0',
@@ -256,6 +297,20 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       anchor: Anchor.center,
     );
     add(playTimeText);
+
+    // Target score text with orange theme - centered in target score container
+    targetScoreText = TextComponent(
+      text: 'Target: 13',
+      position: Vector2(
+        targetScoreBg.position.x + targetScoreBg.size.x / 2,
+        targetScoreBg.position.y + targetScoreBg.size.y / 2,
+      ),
+      textRenderer: TextPaint(
+        style: targetScoreTextStyle,
+      ),
+      anchor: Anchor.center,
+    );
+    add(targetScoreText);
 
     // Modern instructions at the bottom
     instructionsText = TextComponent(
@@ -321,32 +376,32 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(livesButton);
 
-  //   skinStoreButton = ButtonComponent(
-  //   position: Vector2(headerMarginX + 10, headerMarginY + 10),
-  //   size: Vector2(headerHeight * 0.8, headerHeight * 0.6),
-  //   anchor: Anchor.topLeft,
-  //   button: RectangleComponent(
-  //     size: Vector2(headerHeight * 0.8, headerHeight * 0.6),
-  //     paint: Paint()
-  //       ..color = const Color(0xFF8844ff).withOpacity(0.8)
-  //       ..style = PaintingStyle.fill,
-  //   ),
-  //   children: [
-  //     TextComponent(
-  //       text: '👕',
-  //       anchor: Anchor.center,
-  //       textRenderer: TextPaint(
-  //         style: TextStyle(
-  //           fontSize: headerHeight * 0.25,
-  //         ),
-  //       ),
-  //       position: Vector2(headerHeight * 0.4, headerHeight * 0.3),
-  //     ),
-  //   ],
-  //   onPressed: showSkinStore,
-  //   priority: 10,
-  // );
-  // add(skinStoreButton);
+    //   skinStoreButton = ButtonComponent(
+    //   position: Vector2(headerMarginX + 10, headerMarginY + 10),
+    //   size: Vector2(headerHeight * 0.8, headerHeight * 0.6),
+    //   anchor: Anchor.topLeft,
+    //   button: RectangleComponent(
+    //     size: Vector2(headerHeight * 0.8, headerHeight * 0.6),
+    //     paint: Paint()
+    //       ..color = const Color(0xFF8844ff).withOpacity(0.8)
+    //       ..style = PaintingStyle.fill,
+    //   ),
+    //   children: [
+    //     TextComponent(
+    //       text: '👕',
+    //       anchor: Anchor.center,
+    //       textRenderer: TextPaint(
+    //         style: TextStyle(
+    //           fontSize: headerHeight * 0.25,
+    //         ),
+    //       ),
+    //       position: Vector2(headerHeight * 0.4, headerHeight * 0.3),
+    //     ),
+    //   ],
+    //   onPressed: showSkinStore,
+    //   priority: 10,
+    // );
+    // add(skinStoreButton);
 
     isInitialized = true;
   }
@@ -384,9 +439,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     glowIntensity = (math.sin(pulseTime) * 0.5 + 0.5) * 0.3 + 0.7;
 
     // Update text content with wave information
-    scoreText.text = 'Score: ${game.waveManager.score}';
+    scoreText.text = 'Total: ${game.totalScore}';
     levelText.text =
         'Level: ${game.waveManager.level} (Wave ${game.waveManager.currentWave}/3)';
+
+    // Update target score display
+    targetScoreText.text =
+        'Wave: ${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
 
     // Update level type display
     final currentLevelType =
@@ -409,6 +468,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     scoreBg.paint.color = Color(0xFF00ff88).withOpacity(glowOpacity);
     levelBg.paint.color = Color(0xFF8844ff).withOpacity(glowOpacity);
     timeBg.paint.color = Color(0xFF44aaff).withOpacity(glowOpacity);
+    targetScoreBg.paint.color = Color(0xFFff8844).withOpacity(glowOpacity);
 
     // Update lives counter
     livesText.text = '❤️ ${game.livesManager.lives}';
@@ -790,7 +850,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFF00ff88),
                       () {
                         Navigator.of(context).pop();
-                        game.waveManager.nextLevel();
+                        game.nextLevel();
                         game.tryConsumeLifeAndStartWave(
                             game.waveManager.currentWave);
                       },
