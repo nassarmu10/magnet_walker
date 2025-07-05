@@ -10,6 +10,10 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   late Paint magnetFieldPaint;
   late Paint playerGlowPaint;
   SpriteComponent? earthSpriteComponent;
+  Vector2? _targetPosition;
+  double? _moveDuration;
+  double _moveElapsed = 0;
+  String _currentSkinPath = 'player.png'; // Track current skin
 
   Player({required super.position})
       : super(
@@ -31,15 +35,41 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       ..color = Colors.blue.withOpacity(0.5)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
 
-    // Load Earth sprite
-    final earthImage = await game.images.load('player.png');
-    earthSpriteComponent = SpriteComponent(
-      sprite: Sprite(earthImage),
-      size: Vector2.all(radius * 5),
-      anchor: Anchor.center,
-      priority: 1,
-    );
-    add(earthSpriteComponent!);
+    // Load initial skin (will be updated by game)
+    await _loadSkin(_currentSkinPath);
+  }
+
+  Future<void> _loadSkin(String skinPath) async {
+    try {
+      // Remove existing sprite component
+      if (earthSpriteComponent != null) {
+        remove(earthSpriteComponent!);
+      }
+
+      // Load new skin
+      final skinImage = await game.images.load(skinPath);
+      earthSpriteComponent = SpriteComponent(
+        sprite: Sprite(skinImage),
+        size: Vector2.all(radius * 5),
+        anchor: Anchor.center,
+        priority: 1,
+      );
+      add(earthSpriteComponent!);
+      _currentSkinPath = skinPath;
+    } catch (e) {
+      print('Failed to load skin $skinPath: $e');
+      // Fallback to default skin if loading fails
+      if (skinPath != 'player.png') {
+        await _loadSkin('player.png');
+      }
+    }
+  }
+
+  // Method to update the player's skin
+  Future<void> updateSkin(String skinPath) async {
+    if (_currentSkinPath != skinPath) {
+      await _loadSkin(skinPath);
+    }
   }
 
   @override
@@ -51,17 +81,17 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       magnetFieldPaint,
     );
 
-    // Draw glow behind the Earth
+    // Draw glow behind the skin
     canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
 
-    // The Earth sprite is rendered by the SpriteComponent (added as a child)
-    // No need to draw the circle or border anymore
+    // The skin sprite is rendered by the SpriteComponent (added as a child)
   }
 
   void moveBy(double deltaX, double deltaY) {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.gravity) {
       // In gravity mode, player moves both horizontally and vertically
@@ -76,7 +106,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void moveHorizontally(double deltaX) {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.gravity) {
       // In gravity mode, player moves horizontally at bottom
@@ -109,10 +140,11 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void reset() {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final currentLevelType = LevelTypeConfig.getLevelType(game.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.gravity) {
-      // In gravity mode, player stays at bottom
+      // In gravity mode, player stays at bottom center
       position = Vector2(gameSize.x / 2, gameSize.y - 117);
     } else {
       // In survival mode, player starts at center
@@ -120,5 +152,30 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     }
 
     magnetRadius = 80.0;
+  }
+
+  // Animate the player to a target position over a duration (in seconds)
+  void animateToPosition(Vector2 target, double duration) {
+    _targetPosition = target.clone();
+    _moveDuration = duration;
+    _moveElapsed = 0;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    // Animate movement if needed
+    if (_targetPosition != null && _moveDuration != null) {
+      _moveElapsed += dt;
+      final t = (_moveElapsed / _moveDuration!).clamp(0.0, 1.0);
+      // Manually interpolate between position and _targetPosition!
+      position = position + (_targetPosition! - position) * t;
+      if (t >= 1.0) {
+        position = _targetPosition!;
+        _targetPosition = null;
+        _moveDuration = null;
+        _moveElapsed = 0;
+      }
+    }
   }
 }
