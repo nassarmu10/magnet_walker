@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class MenuScreen extends StatelessWidget {
   final VoidCallback onPlay;
   final VoidCallback onSettings;
+  final VoidCallback onSkins;
 
   const MenuScreen({
     Key? key,
     required this.onPlay,
     required this.onSettings,
+    required this.onSkins,
   }) : super(key: key);
 
   @override
@@ -61,7 +63,35 @@ class MenuScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: screenSize.width * 0.7,
+              child: ElevatedButton.icon(
+                onPressed: onSkins,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8844ff),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 8,
+                ),
+                icon: const Text(
+                  '👕',
+                  style: TextStyle(fontSize: 20),
+                ),
+                label: const Text(
+                  'Skins',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: screenSize.width * 0.7,
               child: OutlinedButton(

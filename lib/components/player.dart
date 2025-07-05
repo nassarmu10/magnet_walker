@@ -13,6 +13,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Vector2? _targetPosition;
   double? _moveDuration;
   double _moveElapsed = 0;
+  String _currentSkinPath = 'player.png'; // Track current skin
 
   Player({required super.position})
       : super(
@@ -34,15 +35,41 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       ..color = Colors.blue.withOpacity(0.5)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
 
-    // Load Earth sprite
-    final earthImage = await game.images.load('player.png');
-    earthSpriteComponent = SpriteComponent(
-      sprite: Sprite(earthImage),
-      size: Vector2.all(radius * 5),
-      anchor: Anchor.center,
-      priority: 1,
-    );
-    add(earthSpriteComponent!);
+    // Load initial skin (will be updated by game)
+    await _loadSkin(_currentSkinPath);
+  }
+
+  Future<void> _loadSkin(String skinPath) async {
+    try {
+      // Remove existing sprite component
+      if (earthSpriteComponent != null) {
+        remove(earthSpriteComponent!);
+      }
+
+      // Load new skin
+      final skinImage = await game.images.load(skinPath);
+      earthSpriteComponent = SpriteComponent(
+        sprite: Sprite(skinImage),
+        size: Vector2.all(radius * 5),
+        anchor: Anchor.center,
+        priority: 1,
+      );
+      add(earthSpriteComponent!);
+      _currentSkinPath = skinPath;
+    } catch (e) {
+      print('Failed to load skin $skinPath: $e');
+      // Fallback to default skin if loading fails
+      if (skinPath != 'player.png') {
+        await _loadSkin('player.png');
+      }
+    }
+  }
+
+  // Method to update the player's skin
+  Future<void> updateSkin(String skinPath) async {
+    if (_currentSkinPath != skinPath) {
+      await _loadSkin(skinPath);
+    }
   }
 
   @override
@@ -54,11 +81,10 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       magnetFieldPaint,
     );
 
-    // Draw glow behind the Earth
+    // Draw glow behind the skin
     canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
 
-    // The Earth sprite is rendered by the SpriteComponent (added as a child)
-    // No need to draw the circle or border anymore
+    // The skin sprite is rendered by the SpriteComponent (added as a child)
   }
 
   void moveBy(double deltaX, double deltaY) {

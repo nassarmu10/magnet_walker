@@ -17,6 +17,8 @@ import 'spawn_managers/survival_spawn_manager.dart';
 import 'managers/lives_manager.dart';
 import 'managers/wave_manager.dart';
 import 'managers/ad_manager.dart';
+import 'skins/skin_manager.dart';
+
 
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
@@ -53,6 +55,9 @@ class MagnetWalkerGame extends FlameGame
   late LivesManager livesManager;
   late WaveManager waveManager;
 
+  // ADD THIS: Skin system
+  late SkinManager skinManager;
+
   bool noLivesDialogVisible = false;
 
   @override
@@ -63,21 +68,24 @@ class MagnetWalkerGame extends FlameGame
     // Initialize AdManager
     await AdManager.initialize();
     await AdManager.loadRewardedAd();
+    await AdManager.loadInterstitialAd();
+
+    // Initialize skin manager
+    skinManager = SkinManager();
+    await skinManager.initialize();
 
     // Preload images
     try {
       await images.load('rocket.png');
-      print('Rocket image preloaded successfully');
+      await images.load('rocket-2.png');
+      print('Rocket images preloaded successfully');
     } catch (e) {
-      print('Failed to preload rocket image: $e');
+      print('Failed to preload rocket images: $e');
     }
 
-    try {
-      await images.load('rocket-2.png');
-      print('Rocket image preloaded successfully');
-    } catch (e) {
-      print('Failed to preload rocket image: $e');
-    }
+    // Preload all skin images
+    await _preloadSkinImages();
+
     // Set up camera with proper size
     camera.viewfinder.visibleGameSize = Vector2(375, 667);
 
@@ -114,6 +122,9 @@ class MagnetWalkerGame extends FlameGame
     player = Player(position: initialPosition);
     add(player);
 
+    // Apply current skin to player
+    await _updatePlayerSkin();
+
     // Add UI last to ensure game size is available
     gameUI = GameUI();
     add(gameUI);
@@ -131,8 +142,7 @@ class MagnetWalkerGame extends FlameGame
       tryConsumeLifeAndStartWave(waveManager.currentWave);
     } else {
       // Show no lives dialog after UI is ready
-      noLivesDialogVisible =
-          true; // Set the flag when showing dialog from onLoad
+      noLivesDialogVisible = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (gameUI.isMounted && gameUI.game.buildContext != null) {
           gameUI.showNoLivesDialog(onDialogClosed: () {
@@ -150,6 +160,38 @@ class MagnetWalkerGame extends FlameGame
         }
       });
     }
+  }
+
+  Future<void> _preloadSkinImages() async {
+    final skinImages = [
+      'player.png', // default
+      'player_mars.png',
+      'player_venus.png',
+      'player_jupiter.png',
+      'player_saturn.png',
+      'player_neptune.png',
+      'player_sun.png',
+      'player_blackhole.png',
+    ];
+
+    for (final imageName in skinImages) {
+      try {
+        await images.load(imageName);
+        print('Preloaded skin image: $imageName');
+      } catch (e) {
+        print('Failed to preload skin image $imageName: $e');
+      }
+    }
+  }
+
+  Future<void> _updatePlayerSkin() async {
+    final selectedSkin = skinManager.selectedSkin;
+    await player.updateSkin(selectedSkin.imagePath);
+  }
+
+  // Method to be called when skin changes
+  Future<void> onSkinChanged() async {
+    await _updatePlayerSkin();
   }
 
   void startPlayTimeTracking() {

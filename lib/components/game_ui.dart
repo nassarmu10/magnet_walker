@@ -6,6 +6,7 @@ import '../managers/ad_manager.dart';
 import '../level_types.dart';
 import 'dart:math' as math;
 import 'package:flame/input.dart';
+import '../skins/skin_store_screen.dart';
 
 // Custom rounded rectangle component for modern UI
 class RoundedRectComponent extends Component {
@@ -48,6 +49,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late RoundedRectComponent scoreBg;
   late RoundedRectComponent levelBg;
   late RoundedRectComponent timeBg;
+  late ButtonComponent skinStoreButton;
 
   // Animation properties
   double pulseTime = 0.0;
@@ -106,13 +108,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       color: const Color(0xFF00ff88),
       fontSize: headerHeight * 0.22, // Responsive font size
       fontWeight: FontWeight.w700,
-      shadows: [
-        const Shadow(
+      shadows: const [
+        Shadow(
           offset: Offset(0, 0),
           blurRadius: 8,
           color: Color(0xFF00ff88),
         ),
-        const Shadow(
+        Shadow(
           offset: Offset(1, 1),
           blurRadius: 4,
           color: Colors.black87,
@@ -319,8 +321,59 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(livesButton);
 
+  //   skinStoreButton = ButtonComponent(
+  //   position: Vector2(headerMarginX + 10, headerMarginY + 10),
+  //   size: Vector2(headerHeight * 0.8, headerHeight * 0.6),
+  //   anchor: Anchor.topLeft,
+  //   button: RectangleComponent(
+  //     size: Vector2(headerHeight * 0.8, headerHeight * 0.6),
+  //     paint: Paint()
+  //       ..color = const Color(0xFF8844ff).withOpacity(0.8)
+  //       ..style = PaintingStyle.fill,
+  //   ),
+  //   children: [
+  //     TextComponent(
+  //       text: '👕',
+  //       anchor: Anchor.center,
+  //       textRenderer: TextPaint(
+  //         style: TextStyle(
+  //           fontSize: headerHeight * 0.25,
+  //         ),
+  //       ),
+  //       position: Vector2(headerHeight * 0.4, headerHeight * 0.3),
+  //     ),
+  //   ],
+  //   onPressed: showSkinStore,
+  //   priority: 10,
+  // );
+  // add(skinStoreButton);
+
     isInitialized = true;
   }
+
+  // void showSkinStore() {
+  //   final context = game.buildContext;
+  //   if (context == null) {
+  //     // If context is not available yet, schedule to show later
+  //     Future.delayed(const Duration(milliseconds: 500), () {
+  //       if (game.buildContext != null) {
+  //         showSkinStore();
+  //       }
+  //     });
+  //     return;
+  //   }
+
+  //   Navigator.of(context).push(
+  //     MaterialPageRoute(
+  //       builder: (context) => SkinStoreScreen(
+  //         skinManager: game.skinManager,
+  //         onSkinChanged: () {
+  //           game.onSkinChanged();
+  //         },
+  //       ),
+  //     ),
+  //   );
+  // }
 
   @override
   void update(double dt) {
