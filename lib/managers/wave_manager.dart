@@ -1,3 +1,5 @@
+import 'dart:math';
+
 class WaveManager {
   int level;
   int currentWave;
@@ -10,14 +12,18 @@ class WaveManager {
     this.level = 1,
     this.currentWave = 1,
     this.waveScore = 0,
-    this.waveTarget = 10,
+    this.waveTarget = 1, //TODO: Change to formula
   });
 
   // Start a new wave
   void startWave(int wave) {
     currentWave = wave;
     waveScore = 0;
-    waveTarget = 10; // Each wave needs 10 coins to complete
+    // Calculate wave target based on level using the new formula
+    waveTarget = 1; //TODO: Change to formula
+    // waveTarget = level <= 3
+    //     ? (3 + level)
+    //     : min(8 + (level * 2), 25 + (level * 0.5)).round();
   }
 
   // Add score to current wave
