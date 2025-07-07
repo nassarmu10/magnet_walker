@@ -66,14 +66,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     if (isInitialized) return;
 
     // Use camera size instead of game size
-    final gameSize = game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
 
     // REDESIGNED: Single header container with two rows
     final headerMarginX = gameSize.x * 0.03; // 3% margin
     final headerMarginY = gameSize.y * 0.02; // 2% from top
     final headerWidth = gameSize.x * 0.94; // 94% width
     final headerHeight = gameSize.y * 0.14; // 14% height
-    
+
     headerBg = RoundedRectComponent(
       position: Vector2(headerMarginX, headerMarginY),
       size: Vector2(headerWidth, headerHeight),
@@ -97,7 +97,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // REDESIGNED: Top row background (Score, Level, Lives)
     final topRowHeight = headerHeight * 0.45;
     final topRowY = headerMarginY + headerHeight * 0.08;
-    
+
     topRowBg = RoundedRectComponent(
       position: Vector2(headerMarginX + 8, topRowY),
       size: Vector2(headerWidth - 16, topRowHeight),
@@ -110,7 +110,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // REDESIGNED: Bottom row background (Target, Time)
     final bottomRowHeight = headerHeight * 0.35;
     final bottomRowY = topRowY + topRowHeight + 8;
-    
+
     bottomRowBg = RoundedRectComponent(
       position: Vector2(headerMarginX + 8, bottomRowY),
       size: Vector2(headerWidth - 16, bottomRowHeight),
@@ -204,7 +204,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       anchor: Anchor.centerRight,
       priority: 10,
     );
-    
+
     livesButton = ButtonComponent(
       position: Vector2(topRowRightX - 20, topRowCenterY),
       size: Vector2(60, topRowHeight),
@@ -345,19 +345,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Update text content with wave information
     scoreText.text = 'Score: ${game.totalScore}';
-    levelText.text = 'Level ${game.waveManager.level} (Wave ${game.waveManager.currentWave}/3)';
+    levelText.text =
+        'Level ${game.waveManager.level} (Wave ${game.waveManager.currentWave}/3)';
 
     // Update target score display
-    targetScoreText.text = 'Target: ${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
+    targetScoreText.text =
+        'Target: ${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
 
     // Update play time display
     final minutes = game.playTime.inMinutes;
     final seconds = game.playTime.inSeconds % 60;
-    final timeString = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final timeString =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     playTimeText.text = 'Time: $timeString';
 
     // Update instructions based on level type
-    final currentLevelType = LevelTypeConfig.getLevelType(game.waveManager.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
     final instructions = LevelTypeConfig.getLevelInstructions(currentLevelType);
     instructionsText.text = instructions;
 
@@ -368,7 +372,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Update lives counter in button
     if (livesButton.children.isNotEmpty) {
-      (livesButton.children.first as TextComponent).text = '❤️ ${game.livesManager.lives}';
+      (livesButton.children.first as TextComponent).text =
+          '❤️ ${game.livesManager.lives}';
     }
 
     super.update(dt);
@@ -388,7 +393,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Show wave message/countdown overlay with modern styling
     if (game.waveMessage != null && game.waveMessage!.isNotEmpty) {
-      final gameSize = game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+      final gameSize = game.canvasSize;
 
       // Modern wave message design
       final message = game.waveMessage!;
@@ -411,7 +416,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
           ),
         ],
       );
-      
+
       final textPainter = TextPainter(
         text: TextSpan(text: message, style: messageTextStyle),
         textAlign: TextAlign.center,
@@ -470,8 +475,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void _renderModernDecorations(Canvas canvas) {
-    final gameSize = game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    
+    final gameSize = game.canvasSize;
+
     // Subtle corner decorations
     final decorPaint = Paint()
       ..color = Colors.white.withOpacity(0.1)
@@ -485,12 +490,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Top-right corner decoration
     final topRight = Offset(gameSize.x * 0.97 - 8, gameSize.y * 0.02 + 8);
-    canvas.drawLine(topRight, Offset(topRight.dx - 15, topRight.dy), decorPaint);
-    canvas.drawLine(topRight, Offset(topRight.dx, topRight.dy + 15), decorPaint);
+    canvas.drawLine(
+        topRight, Offset(topRight.dx - 15, topRight.dy), decorPaint);
+    canvas.drawLine(
+        topRight, Offset(topRight.dx, topRight.dy + 15), decorPaint);
   }
 
   void _renderGlowEffects(Canvas canvas) {
-    final gameSize = game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
 
     // Header border glow with multiple layers
     final headerMarginX = gameSize.x * 0.03;

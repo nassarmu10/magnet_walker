@@ -93,7 +93,7 @@ class MagnetWalkerGame extends FlameGame
     await _preloadSkinImages();
 
     // Set up camera with proper size
-    camera.viewfinder.visibleGameSize = Vector2(375, 667);
+    // camera.viewfinder.visibleGameSize = Vector2(375, 667);
 
     // Initialize spawn managers
     gravitySpawnManager = GravitySpawnManager(this);
@@ -116,7 +116,7 @@ class MagnetWalkerGame extends FlameGame
     livesManager.regenerateLivesIfNeeded();
 
     // Add player - position based on current level type
-    final gameSize = camera.viewfinder.visibleGameSize!;
+    final gameSize = canvasSize;
     Vector2 initialPosition;
     if (currentLevelType == LevelType.gravity) {
       // Gravity mode: bottom center
@@ -202,7 +202,7 @@ class MagnetWalkerGame extends FlameGame
 
   // Update player position based on current level type
   void _updatePlayerPositionForLevelType() {
-    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = canvasSize;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     Vector2 initialPosition;
 
@@ -283,7 +283,7 @@ class MagnetWalkerGame extends FlameGame
 
     // NEW: Check for newly available skins (not auto-unlock, just available for purchase)
     final newlyAvailableSkins = _checkForNewAvailableSkins(waveManager.level);
-    
+
     // NEW: Show notification for newly available skins
     if (newlyAvailableSkins.isNotEmpty) {
       _showNewSkinsAvailableNotification(newlyAvailableSkins);
@@ -298,14 +298,14 @@ class MagnetWalkerGame extends FlameGame
 
   List<Skin> _checkForNewAvailableSkins(int currentLevel) {
     final newlyAvailable = <Skin>[];
-    
+
     for (final skin in skinManager.skins) {
       // If skin is not unlocked and requires exactly this level, it's newly available
       if (!skin.isUnlocked && skin.price == currentLevel) {
         newlyAvailable.add(skin);
       }
     }
-    
+
     return newlyAvailable;
   }
 
@@ -320,7 +320,7 @@ class MagnetWalkerGame extends FlameGame
         builder: (context) {
           final screenWidth = MediaQuery.of(context).size.width;
           final dialogWidth = screenWidth * 0.85;
-          
+
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -331,7 +331,9 @@ class MagnetWalkerGame extends FlameGame
               ),
             ),
             title: Text(
-              newSkins.length > 1 ? 'NEW SKINS AVAILABLE!' : 'NEW SKIN AVAILABLE!',
+              newSkins.length > 1
+                  ? 'NEW SKINS AVAILABLE!'
+                  : 'NEW SKIN AVAILABLE!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: dialogWidth * 0.08,
@@ -354,110 +356,110 @@ class MagnetWalkerGame extends FlameGame
                 children: [
                   // Show newly available skins
                   ...newSkins.map((skin) => Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.pinkAccent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.pinkAccent.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.pinkAccent.withOpacity(0.4),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ],
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.pinkAccent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.pinkAccent.withOpacity(0.3),
                           ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/${skin.imagePath}',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        Colors.pinkAccent.withOpacity(0.3),
-                                        Colors.pinkAccent.withOpacity(0.1)
-                                      ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.pinkAccent.withOpacity(0.4),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/${skin.imagePath}',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: RadialGradient(
+                                          colors: [
+                                            Colors.pinkAccent.withOpacity(0.3),
+                                            Colors.pinkAccent.withOpacity(0.1)
+                                          ],
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.public,
+                                        color: Colors.pinkAccent,
+                                        size: 20,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    skin.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
                                     ),
                                   ),
-                                  child: const Icon(
-                                    Icons.public,
-                                    color: Colors.pinkAccent,
-                                    size: 20,
+                                  Text(
+                                    skin.description,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.7),
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                );
-                              },
+                                ],
+                              ),
                             ),
-                          ),
+                            // Watch ad icon
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.pinkAccent,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'AD',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                skin.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                skin.description,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Watch ad icon
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.pinkAccent,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.play_arrow,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 2),
-                              Text(
-                                'AD',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
+                      )),
                   const SizedBox(height: 16),
                   Text(
                     'Watch ads to unlock these ${newSkins.length > 1 ? 'skins' : 'skin'} in the Skin Store!',
@@ -528,7 +530,7 @@ class MagnetWalkerGame extends FlameGame
   void _openSkinStore() {
     final context = buildContext;
     if (context == null) return;
-    
+
     // You can either navigate to skin store or show a message
     // This depends on how your app navigation is set up
     ScaffoldMessenger.of(context).showSnackBar(
@@ -548,7 +550,7 @@ class MagnetWalkerGame extends FlameGame
     clearAllObjects(); // Clear all objects immediately
 
     // Animate player back to initial position depending on level type
-    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = canvasSize;
     Vector2 initialPosition;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     if (currentLevelType == LevelType.gravity) {
