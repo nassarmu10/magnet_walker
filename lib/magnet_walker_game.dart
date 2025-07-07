@@ -282,6 +282,9 @@ class MagnetWalkerGame extends FlameGame
 
     // Update player position for new level type
     _updatePlayerPositionForLevelType();
+
+    // Save progress immediately after advancing to a new level
+    saveProgress();
   }
 
   void endWave({bool failed = false}) {
@@ -634,19 +637,23 @@ class MagnetWalkerGame extends FlameGame
     super.onRemove();
   }
 
-  // Save current level and wave to SharedPreferences
+  // Save current level and total score to SharedPreferences
   Future<void> saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('saved_level', waveManager.level);
+    await prefs.setInt('saved_total_score', totalScore);
   }
 
-  // Load saved level and wave from SharedPreferences
+  // Load saved level and total score from SharedPreferences
   Future<void> loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
     final savedLevel = prefs.getInt('saved_level');
-    final savedWave = prefs.getInt('saved_wave');
-    if (savedLevel != null && savedWave != null) {
+    final savedTotalScore = prefs.getInt('saved_total_score');
+    if (savedLevel != null) {
       waveManager.level = savedLevel;
+    }
+    if (savedTotalScore != null) {
+      totalScore = savedTotalScore;
     }
   }
 
