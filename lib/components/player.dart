@@ -15,6 +15,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   double _moveElapsed = 0;
   String _currentSkinPath = 'player.png'; // Track current skin
 
+  // Flag to indicate if animating to initial position
+  bool isAnimatingToPosition = false;
+
   Player({required super.position})
       : super(
           radius: 15,
@@ -88,6 +91,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void moveBy(double deltaX, double deltaY) {
+    if (isAnimatingToPosition) return;
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
     final currentLevelType =
@@ -95,8 +99,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
     if (currentLevelType == LevelType.gravity) {
       // In gravity mode, player moves both horizontally and vertically
-      position.x = (position.x + deltaX).clamp(30.0, gameSize.x - 30);
-      position.y = (position.y + deltaY).clamp(30.0, gameSize.y - 30);
+      // Allow more movement range for better control
+      position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
+      position.y = (position.y + deltaY).clamp(20.0, gameSize.y - 20);
     } else if (currentLevelType == LevelType.survival) {
       // In survival mode, player stays stationary in center
       // No movement allowed
@@ -104,6 +109,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void moveHorizontally(double deltaX) {
+    if (isAnimatingToPosition) return;
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
     final currentLevelType =
@@ -159,6 +165,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     _targetPosition = target.clone();
     _moveDuration = duration;
     _moveElapsed = 0;
+    isAnimatingToPosition = true;
   }
 
   @override
@@ -175,6 +182,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
         _targetPosition = null;
         _moveDuration = null;
         _moveElapsed = 0;
+        isAnimatingToPosition = false;
       }
     }
   }

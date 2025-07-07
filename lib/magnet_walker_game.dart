@@ -258,16 +258,19 @@ class MagnetWalkerGame extends FlameGame
 
   void startWave(int wave) {
     waveManager.startWave(wave);
-    isWaveActive = true;
-    gameRunning = true;
-    waveCountdown = 0;
-    waveMessage = null;
-    startSpawning();
+
+    // Show countdown for all waves, including wave 1
+    waveCountdown = 3.0;
+    isWaveActive = false;
+    gameRunning = false;
+    waveMessage = 'Wave $wave/3 starting in 3';
 
     // Ensure player is in correct position for current level type
     if (wave == 1) {
       _updatePlayerPositionForLevelType();
     }
+
+    // The actual wave will start after countdown in updateWaveCountdown
   }
 
   // Move to the next level
@@ -345,9 +348,9 @@ class MagnetWalkerGame extends FlameGame
         isLevelComplete = true;
         showLevelCompleteDialog();
       } else {
-        // More waves to go
-        waveCountdown = 3.0;
-        waveMessage = 'Wave ${waveManager.currentWave}/3 Complete!';
+        // More waves to go - start countdown for next wave
+        waveManager.currentWave++;
+        startWave(waveManager.currentWave);
       }
     }
 
@@ -359,19 +362,14 @@ class MagnetWalkerGame extends FlameGame
     if (!isWaveActive && waveCountdown > 0) {
       waveCountdown -= dt;
       if (waveCountdown <= 0) {
-        if (wavesCompletedInLevel < wavesNeededToNextLevel) {
-          waveMessage = 'Wave ${waveManager.currentWave + 1}/3 starting...';
-          Future.delayed(const Duration(seconds: 1), () {
-            startWave(waveManager.currentWave + 1);
-          });
-        } else {
-          // Level complete
-          isLevelComplete = true;
-          showLevelCompleteDialog();
-        }
+        // Start the actual wave
+        isWaveActive = true;
+        gameRunning = true;
+        waveMessage = null;
+        startSpawning();
       } else {
         waveMessage =
-            'Wave ${waveManager.currentWave + 1}/3 starting in ${waveCountdown.ceil()}';
+            'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
       }
     }
   }
@@ -550,12 +548,9 @@ class MagnetWalkerGame extends FlameGame
   bool onDragUpdate(DragUpdateEvent event) {
     // Forward drag events to the player for better control
     // Allow movement only when game is running and wave is active
-    print('onDragUpdate called');
-    print(isWaveActive);
-    print(gameRunning);
-    print(livesManager.lives);
     if (gameRunning && isWaveActive) {
-      player.moveBy(event.localDelta.x * 0.5, event.localDelta.y * 0.5);
+      // Increase movement speed and responsiveness
+      player.moveBy(event.localDelta.x * 1, event.localDelta.y * 1);
     }
     return true;
   }
@@ -567,10 +562,6 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void onTapDown(TapDownEvent event) {
-    print('onTapDown called');
-    print(isWaveActive);
-    print(gameRunning);
-    print(livesManager.lives);
     // Existing tap logic here
     if (gameRunning && isWaveActive && currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
