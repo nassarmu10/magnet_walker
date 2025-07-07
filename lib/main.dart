@@ -112,6 +112,7 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
         MaterialPageRoute(
           builder: (context) => SkinStoreScreen(
             skinManager: skinManager,
+            currentLevel: _showGame ? game.waveManager.level : 1,
             onSkinChanged: () {
               // Update game skin if game is loaded
               if (_showGame) {
