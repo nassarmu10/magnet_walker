@@ -6,6 +6,7 @@ import 'package:magnet_walker/skins/skin_model.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flame_audio/flame_audio.dart';
 
 import 'components/player.dart';
 import 'components/game_object.dart';
@@ -542,6 +543,11 @@ class MagnetWalkerGame extends FlameGame
     );
   }
 
+  // Helper to play audio
+  void playSound(String fileName) {
+    FlameAudio.play(fileName);
+  }
+
   void endWave({bool failed = false}) {
     isWaveActive = false;
     gameRunning = false;
@@ -563,6 +569,7 @@ class MagnetWalkerGame extends FlameGame
     player.animateToPosition(initialPosition, 2.7); // 2.7 seconds animation
 
     if (failed) {
+      playSound('lose.mp3');
       // Show unified failure dialog
       gameUI.showFailureDialog(
         score: totalScore,
@@ -633,6 +640,7 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void showLevelCompleteDialog() {
+    playSound('win.mp3');
     gameUI.showLevelCompleted(totalScore, waveManager.level, playTime);
   }
 
@@ -643,6 +651,7 @@ class MagnetWalkerGame extends FlameGame
       totalScore += 1;
       waveManager.addWaveScore(1);
       createParticles(obj.position, Colors.yellow);
+      playSound('coin.wav');
 
       if (waveManager.isWaveComplete() && isWaveActive) {
         endWave();
@@ -653,9 +662,11 @@ class MagnetWalkerGame extends FlameGame
       if (currentLevelType == LevelType.gravity) {
         endWave(failed: true);
         createParticles(obj.position, Colors.red);
+        playSound('bomb.wav');
       } else {
         endWave(failed: true);
         createParticles(obj.position, Colors.red);
+        playSound('bomb.wav');
       }
     }
 
@@ -669,6 +680,7 @@ class MagnetWalkerGame extends FlameGame
       createParticles(bomb.position, Colors.red);
       bomb.removeFromParent();
       gameObjects.remove(bomb);
+      playSound('bomb.wav');
     }
   }
 
@@ -946,5 +958,10 @@ class MagnetWalkerGame extends FlameGame
     } else {
       gameUI.showNoLivesDialog();
     }
+  }
+
+  // Play button sound on tap
+  void playButtonSound() {
+    playSound('button.mp3');
   }
 }
