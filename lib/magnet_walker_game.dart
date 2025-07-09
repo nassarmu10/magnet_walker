@@ -40,6 +40,8 @@ class MagnetWalkerGame extends FlameGame
   double waveCountdown = 0.0;
   String? waveMessage;
   bool isLevelComplete = false;
+  bool isPaused = false;
+  VoidCallback? onExitToMenu;
 
   // Score and level progression
   int totalScore =
@@ -66,6 +68,59 @@ class MagnetWalkerGame extends FlameGame
   late SkinManager skinManager;
 
   bool noLivesDialogVisible = false;
+
+  // Method to set the exit callback
+  void setExitCallback(VoidCallback callback) {
+    onExitToMenu = callback;
+  }
+
+  // Method to pause the game (freezes all game logic)
+  void pauseGame() {
+    isPaused = true;
+    pausePlayTime();
+    
+    // Stop all spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    
+    // The game objects will remain in their current positions
+    // because the update loop will be skipped
+  }
+
+  // Method to resume the game
+  void resumeGame() {
+    isPaused = false;
+    resumePlayTime();
+    
+    // Resume spawning only if wave is active
+    if (isWaveActive && gameRunning) {
+      startSpawning();
+    }
+  }
+
+  // Method to exit to menu
+  void exitToMainMenu() {
+    // Reset game state
+    isPaused = false;
+    gameRunning = false;
+    isWaveActive = false;
+    
+    // Stop all timers and spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    playTimeTimer?.cancel();
+    
+    // Clear all objects
+    clearAllObjects();
+    
+    // Save progress
+    saveProgress();
+    
+    // Call the exit callback
+    if (onExitToMenu != null) {
+      onExitToMenu!();
+    }
+  }
 
   @override
   Future<void> onLoad() async {
@@ -135,6 +190,9 @@ class MagnetWalkerGame extends FlameGame
     // Add UI last to ensure game size is available
     gameUI = GameUI();
     add(gameUI);
+    gameUI.setExitCallback(() {
+      exitToMainMenu();
+    });
 
     // Start play time tracking
     startPlayTimeTracking();
@@ -816,6 +874,7 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   bool onDragUpdate(DragUpdateEvent event) {
+    if (isPaused) return false;
     // Forward drag events to the player for better control
     // Allow movement only when game is running and wave is active
     if (gameRunning && isWaveActive) {
@@ -832,6 +891,7 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void onTapDown(TapDownEvent event) {
+    if (isPaused) return;
     // Existing tap logic here
     if (gameRunning && isWaveActive && currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
@@ -850,15 +910,16 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void update(double dt) {
-    super.update(dt);
-    updateWaveCountdown(dt);
-    // Regenerate lives periodically while running
+    // Handle wave countdown even when paused (but don't start spawning if paused)
+    if (!isPaused) {
+      updateWaveCountdown(dt);
+    }
+    
+    // Regenerate lives periodically while running (even when paused)
     livesManager.regenerateLivesIfNeeded();
 
-    // Check if we need to show no lives dialog
-    if (livesManager.lives == 0 &&
-        !noLivesDialogVisible &&
-        !gameUI.gameOverVisible) {
+    // Check if we need to show no lives dialog (only when not paused)
+    if (!isPaused && livesManager.lives == 0 && !noLivesDialogVisible && !gameUI.gameOverVisible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (gameUI.isMounted && this.buildContext != null) {
           noLivesDialogVisible = true;
@@ -869,8 +930,8 @@ class MagnetWalkerGame extends FlameGame
       });
     }
 
-    // Update game objects only when game is running
-    if (gameRunning) {
+    // Only update game logic when not paused
+    if (!isPaused && gameRunning) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
@@ -883,7 +944,6 @@ class MagnetWalkerGame extends FlameGame
         if (!particle.isMounted) {
           return true;
         }
-        // Also remove particles with invalid life values
         if (particle.life <= 0) {
           particle.removeFromParent();
           return true;
@@ -893,7 +953,13 @@ class MagnetWalkerGame extends FlameGame
 
       gameObjects.removeWhere((obj) => !obj.isMounted);
     }
+
+    // Always call super.update, but game objects won't update if paused
+    if (!isPaused) {
+      super.update(dt);
+    }
   }
+
 
   @override
   void onRemove() {

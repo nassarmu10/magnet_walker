@@ -61,6 +61,19 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
     setState(() {
       _showGame = true;
     });
+    
+    // Set up the exit callback after the game is created
+    game.setExitCallback(() {
+      _exitGame();
+    });
+  }
+
+  void _exitGame() {
+    setState(() {
+      _showGame = false;
+    });
+    // Create a new game instance for next time
+    game = MagnetWalkerGame();
   }
 
   void _showSettings() {
