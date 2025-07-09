@@ -38,6 +38,9 @@ class MagnetWalkerGame extends FlameGame
   // Audio settings
   bool sfxEnabled = true;
 
+  // Callback for game restart
+  VoidCallback? onGameRestart;
+
   // Wave system
   bool isWaveActive = false;
   double waveCountdown = 0.0;
@@ -558,6 +561,16 @@ class MagnetWalkerGame extends FlameGame
     sfxEnabled = enabled;
   }
 
+  // Method to stop game music
+  void stopGameMusic() {
+    FlameAudio.bgm.stop();
+  }
+
+  // Method to restart game music
+  void restartGameMusic() {
+    FlameAudio.bgm.play('game_music.mp3');
+  }
+
   void endWave({bool failed = false}) {
     isWaveActive = false;
     gameRunning = false;
@@ -580,6 +593,8 @@ class MagnetWalkerGame extends FlameGame
 
     if (failed) {
       playSound('lose.mp3');
+      // Stop game music when player loses
+      stopGameMusic();
       // Show unified failure dialog
       gameUI.showFailureDialog(
         score: totalScore,
@@ -597,10 +612,11 @@ class MagnetWalkerGame extends FlameGame
             Future.delayed(const Duration(milliseconds: 300), () {
               tryConsumeLifeAndStartWave(1);
             });
+            // Notify main wrapper about game restart
+            onGameRestart?.call();
           }
         },
         onWatchAd: () {
-          // Watch ad to restart wave
           AdManager.showRewardedAd(
             onRewarded: () {
               // Restart the current wave without consuming a life
@@ -610,6 +626,49 @@ class MagnetWalkerGame extends FlameGame
               Future.delayed(const Duration(milliseconds: 300), () {
                 startWaveWithoutConsumingLife(currentWave);
               });
+              // Notify main wrapper about game restart
+              onGameRestart?.call();
+            },
+            onFailed: () {
+              final context = gameUI.game.buildContext;
+              if (context != null) {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('No Ad Available'),
+                    content: const Text(
+                        'No ad is available right now. Please try again later.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Re-show the failure dialog
+                          gameUI.showFailureDialog(
+                            score: totalScore,
+                            level: waveManager.level,
+                            wave: waveManager.currentWave,
+                            playTime: playTime,
+                            onRestartLevel: () {
+                              if (livesManager.lives == 0) {
+                                gameUI.showNoLivesDialog();
+                              } else {
+                                waveManager.startWave(1);
+                                Future.delayed(
+                                    const Duration(milliseconds: 300), () {
+                                  tryConsumeLifeAndStartWave(1);
+                                });
+                                onGameRestart?.call();
+                              }
+                            },
+                            onWatchAd: () {/* recursion handled */},
+                          );
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              }
             },
           );
         },
@@ -757,6 +816,9 @@ class MagnetWalkerGame extends FlameGame
 
     // Start the first wave or show no lives dialog
     startGameOrShowNoLivesDialog();
+
+    // Notify main wrapper about game restart
+    onGameRestart?.call();
   }
 
   void startGameOrShowNoLivesDialog() {

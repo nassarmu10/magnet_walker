@@ -1223,6 +1223,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
           },
         );
       },
+      onFailed: () {},
     );
   }
 }
