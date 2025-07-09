@@ -35,6 +35,9 @@ class MagnetWalkerGame extends FlameGame
   // Game state
   bool gameRunning = true;
 
+  // Audio settings
+  bool sfxEnabled = true;
+
   // Wave system
   bool isWaveActive = false;
   double waveCountdown = 0.0;
@@ -545,7 +548,14 @@ class MagnetWalkerGame extends FlameGame
 
   // Helper to play audio
   void playSound(String fileName) {
-    FlameAudio.play(fileName);
+    if (sfxEnabled) {
+      FlameAudio.play(fileName);
+    }
+  }
+
+  // Method to update SFX setting
+  void setSfxEnabled(bool enabled) {
+    sfxEnabled = enabled;
   }
 
   void endWave({bool failed = false}) {
