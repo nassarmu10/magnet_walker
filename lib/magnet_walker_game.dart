@@ -3,6 +3,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:magnet_walker/skins/skin_model.dart';
+import 'package:magnet_walker/skins/skin_store_screen.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -374,237 +375,416 @@ class MagnetWalkerGame extends FlameGame
     return newlyAvailable;
   }
 
-  void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
-    // Show notification after a short delay
-    Future.delayed(const Duration(seconds: 2), () {
+ void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
+    // IMPORTANT: Pause the game when showing skin notification
+    pauseGame();
+    
+    // Show notification after a short delay to ensure game is properly paused
+    Future.delayed(const Duration(milliseconds: 500), () {
       final context = buildContext;
-      if (context == null || newSkins.isEmpty) return;
+      if (context == null || newSkins.isEmpty) {
+        // Resume game if we can't show dialog
+        resumeGame();
+        return;
+      }
 
       showDialog(
         context: context,
+        barrierDismissible: false, // Prevent dismissing by tapping outside
         builder: (context) {
           final screenWidth = MediaQuery.of(context).size.width;
-          final dialogWidth = screenWidth * 0.85;
+          final dialogWidth = screenWidth * 0.9; // Made slightly wider
+          final padding = dialogWidth * 0.05;
+          final titleFontSize = dialogWidth * 0.09;
+          final bodyFontSize = dialogWidth * 0.045;
+          final buttonFontSize = dialogWidth * 0.055;
 
-          return AlertDialog(
-            backgroundColor: const Color(0xFF1a1a2e),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(dialogWidth * 0.07),
-              side: BorderSide(
-                color: Colors.pinkAccent.withOpacity(0.5),
-                width: 2,
+          return WillPopScope(
+            onWillPop: () async => false, // Prevent back button
+            child: AlertDialog(
+              backgroundColor: const Color(0xFF1a1a2e),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(dialogWidth * 0.06),
+                side: BorderSide(
+                  color: Colors.amber.withOpacity(0.8),
+                  width: 3,
+                ),
               ),
-            ),
-            title: Text(
-              newSkins.length > 1
-                  ? 'NEW SKINS AVAILABLE!'
-                  : 'NEW SKIN AVAILABLE!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: dialogWidth * 0.08,
-                fontWeight: FontWeight.bold,
-                color: Colors.pinkAccent,
-                letterSpacing: 1.5,
-                shadows: const [
-                  Shadow(
-                    offset: Offset(0, 0),
-                    blurRadius: 10,
-                    color: Colors.pinkAccent,
+              title: Column(
+                children: [
+                  // Celebration icon
+                  Container(
+                    padding: EdgeInsets.all(padding),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.amber.withOpacity(0.3),
+                          Colors.amber.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.amber,
+                      size: titleFontSize * 0.8,
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.5),
+                  Text(
+                    'CONGRATULATIONS!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                      letterSpacing: 2.0,
+                      shadows: const [
+                        Shadow(
+                          offset: Offset(0, 0),
+                          blurRadius: 15,
+                          color: Colors.amber,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.3),
+                  Text(
+                    'Level ${waveManager.level} Reached!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: bodyFontSize * 1.2,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                 ],
               ),
-            ),
-            content: Container(
-              width: dialogWidth,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Show newly available skins
-                  ...newSkins.map((skin) => Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.pinkAccent.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.pinkAccent.withOpacity(0.3),
-                          ),
+              content: Container(
+                width: dialogWidth,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Unlock message
+                    Container(
+                      padding: EdgeInsets.all(padding * 0.8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.amber.withOpacity(0.2),
+                            Colors.amber.withOpacity(0.05),
+                          ],
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
+                        borderRadius: BorderRadius.circular(dialogWidth * 0.04),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.4),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            newSkins.length > 1
+                                ? '🎉 ${newSkins.length} NEW SKINS UNLOCKED! 🎉'
+                                : '🎉 NEW SKIN UNLOCKED! 🎉',
+                            style: TextStyle(
+                              fontSize: bodyFontSize * 1.1,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                              letterSpacing: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: padding * 0.5),
+                          Text(
+                            'You can now purchase ${newSkins.length > 1 ? 'these awesome skins' : 'this awesome skin'} with ads!',
+                            style: TextStyle(
+                              fontSize: bodyFontSize,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: padding),
+                    
+                    // Show newly available skins in a scrollable container
+                    if (newSkins.isNotEmpty)
+                      Container(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.15,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: newSkins.map((skin) => Container(
+                              margin: EdgeInsets.symmetric(vertical: padding * 0.2),
+                              padding: EdgeInsets.all(padding * 0.6),
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.pinkAccent.withOpacity(0.4),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/images/${skin.imagePath}',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: RadialGradient(
-                                          colors: [
-                                            Colors.pinkAccent.withOpacity(0.3),
-                                            Colors.pinkAccent.withOpacity(0.1)
-                                          ],
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.public,
-                                        color: Colors.pinkAccent,
-                                        size: 20,
-                                      ),
-                                    );
-                                  },
+                                color: Colors.deepPurple.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(dialogWidth * 0.03),
+                                border: Border.all(
+                                  color: Colors.deepPurple.withOpacity(0.3),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Text(
-                                    skin.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                  // Skin image
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.deepPurple.withOpacity(0.4),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/${skin.imagePath}',
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              gradient: RadialGradient(
+                                                colors: [
+                                                  Colors.deepPurple.withOpacity(0.3),
+                                                  Colors.deepPurple.withOpacity(0.1)
+                                                ],
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.public,
+                                              color: Colors.deepPurple,
+                                              size: 20,
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
                                   ),
-                                  Text(
-                                    skin.description,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12,
+                                  SizedBox(width: padding * 0.8),
+                                  // Skin info
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          skin.name,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: bodyFontSize,
+                                          ),
+                                        ),
+                                        Text(
+                                          skin.description,
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.7),
+                                            fontSize: bodyFontSize * 0.8,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  // Watch ad icon
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: padding * 0.4,
+                                      vertical: padding * 0.2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.pinkAccent,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.play_arrow,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'AD',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: bodyFontSize * 0.7,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                            // Watch ad icon
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.pinkAccent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 2),
-                                  Text(
-                                    'AD',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            )).toList(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                Column(
+                  children: [
+                    // Go to store button
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                          gradient: const LinearGradient(
+                            colors: [Colors.pinkAccent, Colors.deepPurple],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.pinkAccent.withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                      )),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Watch ads to unlock these ${newSkins.length > 1 ? 'skins' : 'skin'} in the Skin Store!',
-                    style: TextStyle(
-                      color: Colors.pinkAccent.withOpacity(0.8),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _openSkinStore();
+                            // Don't resume game yet - let skin store handle it
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: padding,
+                              vertical: padding * 0.8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.store,
+                            color: Colors.white,
+                            size: buttonFontSize,
+                          ),
+                          label: Text(
+                            'OPEN SKIN STORE',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                    SizedBox(height: padding * 0.6),
+                    // Close button
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            // Resume the game
+                            resumeGame();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: padding,
+                              vertical: padding * 0.8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.close,
+                            color: Colors.white.withOpacity(0.8),
+                            size: buttonFontSize,
+                          ),
+                          label: Text(
+                            'CONTINUE PLAYING',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white.withOpacity(0.8),
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: padding * 0.4),
+                    // Small hint text
+                    Text(
+                      '💡 You can always access skins from the main menu',
+                      style: TextStyle(
+                        fontSize: bodyFontSize * 0.8,
+                        color: Colors.white.withOpacity(0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ],
             ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[600],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'LATER',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pinkAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        // Open skin store directly to the "Available" tab
-                        _openSkinStore();
-                      },
-                      child: const Text(
-                        'SKIN STORE',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           );
         },
-      );
+      ).then((_) {
+        // Ensure game is resumed if dialog is closed unexpectedly
+        if (isPaused) {
+          resumeGame();
+        }
+      });
     });
   }
+
 
   void _openSkinStore() {
     final context = buildContext;
     if (context == null) return;
 
-    // You can either navigate to skin store or show a message
-    // This depends on how your app navigation is set up
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Open the menu to access the Skin Store!'),
-        backgroundColor: Colors.pinkAccent,
-        duration: Duration(seconds: 3),
+    // Navigate to skin store screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SkinStoreScreen(
+          skinManager: skinManager,
+          currentLevel: waveManager.level,
+          onSkinChanged: () {
+            onSkinChanged();
+          },
+        ),
       ),
-    );
+    ).then((_) {
+      // Resume game when returning from skin store
+      if (isPaused) {
+        resumeGame();
+      }
+    });
   }
 
   // Helper to play audio

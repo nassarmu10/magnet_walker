@@ -466,6 +466,13 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.cyanAccent),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.cyanAccent),
+          onPressed: () {
+            // Properly handle back navigation
+            Navigator.of(context).pop();
+          },
+        ),
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.cyanAccent,
