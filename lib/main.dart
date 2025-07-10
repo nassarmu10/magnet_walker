@@ -58,10 +58,6 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
-    // Play menu music if enabled
-    if (_menuMusicEnabled) {
-      FlameAudio.bgm.play('menu_music.mp3');
-    }
   }
 
   Future<void> _initializeSkinManager() async {
@@ -89,6 +85,10 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
     });
     // Create a new game instance for next time
     game = MagnetWalkerGame();
+    // Play menu music after settings are loaded
+    if (_menuMusicEnabled) {
+      FlameAudio.bgm.play('menu_music.mp3');
+    }
   }
 
   void _startGame() {
@@ -103,6 +103,15 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
     });
     // Set initial SFX setting in the game
     game.setSfxEnabled(_sfxEnabled);
+    // Set callback for game restart
+    game.onGameRestart = _onGameRestart;
+  }
+
+  void _onGameRestart() {
+    // Restart game music if enabled
+    if (_musicEnabled) {
+      FlameAudio.bgm.play('game_music.mp3');
+    }
   }
 
   void _returnToMenu() {

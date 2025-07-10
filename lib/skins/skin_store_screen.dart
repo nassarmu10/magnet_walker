@@ -82,7 +82,8 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
     final rarityEmoji = _getRarityEmoji(skin.rarity);
     final isSelected = widget.skinManager.selectedSkinId == skin.id;
     final isLoadingThisSkin = _isLoading && _loadingSkinId == skin.id;
-    final canPurchase = widget.skinManager.isSkinAvailableForPurchase(skin.id, widget.currentLevel);
+    final canPurchase = widget.skinManager
+        .isSkinAvailableForPurchase(skin.id, widget.currentLevel);
 
     return Container(
       margin: const EdgeInsets.all(6.0),
@@ -97,9 +98,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected 
-              ? Colors.cyanAccent 
-              : rarityColor.withOpacity(0.3),
+          color: isSelected ? Colors.cyanAccent : rarityColor.withOpacity(0.3),
           width: isSelected ? 2 : 1,
         ),
         boxShadow: [
@@ -118,7 +117,10 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [rarityColor.withOpacity(0.3), rarityColor.withOpacity(0.1)],
+                colors: [
+                  rarityColor.withOpacity(0.3),
+                  rarityColor.withOpacity(0.1)
+                ],
               ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
@@ -148,7 +150,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
               ],
             ),
           ),
-          
+
           // Skin image
           Expanded(
             flex: 2,
@@ -185,7 +187,10 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: RadialGradient(
-                              colors: [rarityColor.withOpacity(0.3), rarityColor.withOpacity(0.1)],
+                              colors: [
+                                rarityColor.withOpacity(0.3),
+                                rarityColor.withOpacity(0.1)
+                              ],
                             ),
                           ),
                           child: Icon(
@@ -201,7 +206,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
               ),
             ),
           ),
-          
+
           // Skin info
           Expanded(
             flex: 2,
@@ -234,12 +239,13 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                     ),
                   ),
                   const SizedBox(height: 4),
-                  
+
                   // Action button
                   SizedBox(
                     width: double.infinity,
                     height: 28,
-                    child: _buildActionButton(skin, canPurchase, isLoadingThisSkin),
+                    child: _buildActionButton(
+                        skin, canPurchase, isLoadingThisSkin),
                   ),
                 ],
               ),
@@ -250,7 +256,8 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
     );
   }
 
-  Widget _buildActionButton(Skin skin, bool canPurchase, bool isLoadingThisSkin) {
+  Widget _buildActionButton(
+      Skin skin, bool canPurchase, bool isLoadingThisSkin) {
     if (skin.isUnlocked) {
       // Already owned
       final isSelected = widget.skinManager.selectedSkinId == skin.id;
@@ -288,10 +295,10 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4),
         ),
-        child: isLoadingThisSkin 
+        child: isLoadingThisSkin
             ? const SizedBox(
-                width: 12, 
-                height: 12, 
+                width: 12,
+                height: 12,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -383,6 +390,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
           _unlockSkin(skin);
         }
       },
+      onFailed: () {},
     );
 
     // Reset loading state after timeout
@@ -394,7 +402,8 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Ad request timed out for ${skin.name}. Please try again.'),
+            content: Text(
+                'Ad request timed out for ${skin.name}. Please try again.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -408,7 +417,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
       _isLoading = false;
       _loadingSkinId = '';
     });
-    
+
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -429,8 +438,10 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
   @override
   Widget build(BuildContext context) {
     final unlockedSkins = widget.skinManager.getUnlockedSkins();
-    final availableForPurchase = widget.skinManager.getAvailableForPurchase(widget.currentLevel);
-    final lockedByLevel = widget.skinManager.getLockedByLevel(widget.currentLevel);
+    final availableForPurchase =
+        widget.skinManager.getAvailableForPurchase(widget.currentLevel);
+    final lockedByLevel =
+        widget.skinManager.getLockedByLevel(widget.currentLevel);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0a0a1a),
@@ -512,7 +523,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
               return _buildSkinCard(unlockedSkins[index]);
             },
           ),
-          
+
           // Available for purchase tab
           availableForPurchase.isEmpty
               ? Center(
@@ -556,7 +567,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                     return _buildSkinCard(availableForPurchase[index]);
                   },
                 ),
-          
+
           // Locked by level tab
           lockedByLevel.isEmpty
               ? Center(
