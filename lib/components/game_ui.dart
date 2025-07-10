@@ -71,40 +71,51 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // Use camera size instead of game size
     final gameSize = game.canvasSize;
 
-    // Add pause button in top-right corner
+    // Move pause button to bottom-right corner
     pauseButton = ButtonComponent(
-      position: Vector2(gameSize.x - 56, 16),
-      size: Vector2(40, 40),
-      anchor: Anchor.topLeft,
+      position: Vector2(gameSize.x - 16, gameSize.y - 40), // Bottom-right corner
+      size: Vector2(50, 50), // Made it slightly larger
+      anchor: Anchor.bottomRight,
       button: RectangleComponent(
-        size: Vector2(40, 40),
+        size: Vector2(50, 50),
         paint: Paint()..color = Colors.transparent,
       ),
       children: [
-        // Background circle
+        // Background circle with better visibility
         CircleComponent(
-          radius: 20,
+          radius: 25,
           paint: Paint()
-            ..color = const Color(0xFF1a1a2e).withOpacity(0.9),
-          position: Vector2(20, 20),
+            ..color = const Color(0xFF1a1a2e).withOpacity(0.95), // More opaque
+          position: Vector2(25, 25),
           anchor: Anchor.center,
         ),
-        // Pause icon (two rectangles)
+        // Add border for better visibility
+        CircleComponent(
+          radius: 25,
+          paint: Paint()
+            ..color = Colors.cyanAccent.withOpacity(0.8)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+          position: Vector2(25, 25),
+          anchor: Anchor.center,
+        ),
+        // Pause icon (two rectangles) - made slightly larger
         RectangleComponent(
-          position: Vector2(14, 12),
-          size: Vector2(4, 16),
+          position: Vector2(18, 17),
+          size: Vector2(5, 16),
           paint: Paint()..color = Colors.white,
         ),
         RectangleComponent(
-          position: Vector2(22, 12),
-          size: Vector2(4, 16),
+          position: Vector2(27, 17),
+          size: Vector2(5, 16),
           paint: Paint()..color = Colors.white,
         ),
       ],
       onPressed: () {
+        print('Pause button pressed!'); // Debug log
         showPauseDialog();
       },
-      priority: 20,
+      priority: 25, // Higher priority to ensure it's on top
     );
     add(pauseButton);
 
@@ -381,20 +392,51 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void showPauseDialog() {
-    if (isPaused) return; // Prevent multiple dialogs
+    print('showPauseDialog called, isPaused: $isPaused'); // Debug log
+    
+    if (isPaused) {
+      print('Already paused, returning');
+      return; // Prevent multiple dialogs
+    }
 
-    // Pause the game
+    // Pause the game immediately
     isPaused = true;
     game.pauseGame();
+    print('Game paused successfully');
 
-    final context = game.buildContext;
-    if (context == null) return;
+    // Use a post-frame callback to ensure the context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = game.buildContext;
+      print('Context available: ${context != null}');
+      
+      if (context == null) {
+        print('Context is null, retrying...');
+        // If context is not available, try again after a short delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          final retryContext = game.buildContext;
+          if (retryContext != null) {
+            _showPauseDialogWithContext(retryContext);
+          } else {
+            print('Context still null after retry, resuming game');
+            // If we still can't get context, resume the game
+            resumeGame();
+          }
+        });
+        return;
+      }
+      
+      _showPauseDialogWithContext(context);
+    });
+  }
 
+  void _showPauseDialogWithContext(BuildContext context) {
+    print('Showing pause dialog with context');
+    
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (BuildContext context) {
-        final screenWidth = MediaQuery.of(context).size.width;
+      builder: (BuildContext dialogContext) {
+        final screenWidth = MediaQuery.of(dialogContext).size.width;
         final dialogWidth = screenWidth * 0.8;
         final padding = dialogWidth * 0.06;
         final titleFontSize = dialogWidth * 0.08;
@@ -402,138 +444,149 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         final buttonPaddingV = dialogWidth * 0.045;
         final buttonPaddingH = dialogWidth * 0.08;
 
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1a1a2e),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(dialogWidth * 0.07),
-            side: BorderSide(
-              color: Colors.cyanAccent.withOpacity(0.5),
-              width: 2,
+        return WillPopScope(
+          onWillPop: () async => false, // Prevent back button from closing dialog
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1a1a2e),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(dialogWidth * 0.07),
+              side: BorderSide(
+                color: Colors.cyanAccent.withOpacity(0.5),
+                width: 2,
+              ),
             ),
-          ),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.pause_circle_filled,
-                color: Colors.cyanAccent,
-                size: titleFontSize * 0.8,
-              ),
-              SizedBox(width: padding * 0.5),
-              Text(
-                'GAME PAUSED',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.cyanAccent,
-                  letterSpacing: 1.5,
-                  shadows: const [
-                    Shadow(
-                      offset: Offset(0, 0),
-                      blurRadius: 10,
-                      color: Colors.cyanAccent,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: Container(
-            width: dialogWidth,
-            padding: EdgeInsets.all(padding),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Game status info
-                Container(
-                  padding: EdgeInsets.all(padding * 0.8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF44aaff).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(dialogWidth * 0.04),
-                    border: Border.all(
-                      color: const Color(0xFF44aaff).withOpacity(0.3),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildStatRow('LEVEL', '${game.waveManager.level}', 
-                          const Color(0xFF8844ff), buttonFontSize * 0.9),
-                      SizedBox(height: padding * 0.3),
-                      _buildStatRow('WAVE', '${game.waveManager.currentWave}/3', 
-                          const Color(0xFFff8844), buttonFontSize * 0.9),
-                      SizedBox(height: padding * 0.3),
-                      _buildStatRow('SCORE', '${game.totalScore}', 
-                          const Color(0xFF00ff88), buttonFontSize * 0.9),
+                Icon(
+                  Icons.pause_circle_filled,
+                  color: Colors.cyanAccent,
+                  size: titleFontSize * 0.8,
+                ),
+                SizedBox(width: padding * 0.5),
+                Text(
+                  'GAME PAUSED',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.cyanAccent,
+                    letterSpacing: 1.5,
+                    shadows: const [
+                      Shadow(
+                        offset: Offset(0, 0),
+                        blurRadius: 10,
+                        color: Colors.cyanAccent,
+                      ),
                     ],
                   ),
                 ),
-                SizedBox(height: padding),
-                Text(
-                  'Choose an option to continue:',
-                  style: TextStyle(
-                    fontSize: buttonFontSize * 0.9,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
+            content: Container(
+              width: dialogWidth,
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Game status info
+                  Container(
+                    padding: EdgeInsets.all(padding * 0.8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF44aaff).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(dialogWidth * 0.04),
+                      border: Border.all(
+                        color: const Color(0xFF44aaff).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildStatRow('LEVEL', '${game.waveManager.level}', 
+                            const Color(0xFF8844ff), buttonFontSize * 0.9),
+                        SizedBox(height: padding * 0.3),
+                        _buildStatRow('WAVE', '${game.waveManager.currentWave}/3', 
+                            const Color(0xFFff8844), buttonFontSize * 0.9),
+                        SizedBox(height: padding * 0.3),
+                        _buildStatRow('SCORE', '${game.totalScore}', 
+                            const Color(0xFF00ff88), buttonFontSize * 0.9),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: padding),
+                  Text(
+                    'Choose an option to continue:',
+                    style: TextStyle(
+                      fontSize: buttonFontSize * 0.9,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              Column(
+                children: [
+                  // Continue button
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildPauseActionButton(
+                      'CONTINUE GAME',
+                      const Color(0xFF00ff88),
+                      Icons.play_arrow,
+                      () {
+                        print('Continue button pressed');
+                        Navigator.of(dialogContext).pop();
+                        resumeGame();
+                      },
+                      buttonFontSize,
+                      buttonPaddingH,
+                      buttonPaddingV,
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.5),
+                  // Exit to menu button
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildPauseActionButton(
+                      'EXIT TO MENU',
+                      const Color(0xFFff4444),
+                      Icons.home, // Changed icon to home
+                      () {
+                        print('Exit to menu button pressed');
+                        Navigator.of(dialogContext).pop();
+                        exitToMenu();
+                      },
+                      buttonFontSize,
+                      buttonPaddingH,
+                      buttonPaddingV,
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.3),
+                  // Warning text
+                  Text(
+                    '⚠️ Exiting will lose current wave progress',
+                    style: TextStyle(
+                      fontSize: buttonFontSize * 0.7,
+                      color: const Color(0xFFff4444).withOpacity(0.8),
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ],
           ),
-          actions: [
-            Column(
-              children: [
-                // Continue button
-                SizedBox(
-                  width: double.infinity,
-                  child: _buildPauseActionButton(
-                    'CONTINUE GAME',
-                    const Color(0xFF00ff88),
-                    Icons.play_arrow,
-                    () {
-                      Navigator.of(context).pop();
-                      resumeGame();
-                    },
-                    buttonFontSize,
-                    buttonPaddingH,
-                    buttonPaddingV,
-                  ),
-                ),
-                SizedBox(height: padding * 0.5),
-                // Exit to menu button
-                SizedBox(
-                  width: double.infinity,
-                  child: _buildPauseActionButton(
-                    'EXIT TO MENU',
-                    const Color(0xFFff4444),
-                    Icons.exit_to_app,
-                    () {
-                      Navigator.of(context).pop();
-                      exitToMenu();
-                    },
-                    buttonFontSize,
-                    buttonPaddingH,
-                    buttonPaddingV,
-                  ),
-                ),
-                SizedBox(height: padding * 0.3),
-                // Warning text
-                Text(
-                  '⚠️ Exiting will lose current wave progress',
-                  style: TextStyle(
-                    fontSize: buttonFontSize * 0.7,
-                    color: const Color(0xFFff4444).withOpacity(0.8),
-                    fontStyle: FontStyle.italic,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ],
         );
       },
-    );
+    ).then((_) {
+      // Ensure the game is resumed if dialog is dismissed unexpectedly
+      if (isPaused) {
+        print('Dialog dismissed unexpectedly, resuming game');
+        resumeGame();
+      }
+    });
   }
 
   // Helper method for pause dialog action buttons

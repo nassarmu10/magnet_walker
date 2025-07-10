@@ -231,10 +231,6 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
             child: GameWidget(game: game),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _returnToMenu,
-          child: const Icon(Icons.home),
-        ),
       );
     } else if (_showSettings) {
       return SettingsScreen(
