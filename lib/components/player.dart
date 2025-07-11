@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../magnet_walker_game.dart';
 import '../level_types.dart';
+import '../config/game_config.dart';
 import 'game_object.dart';
 
 class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
-  double magnetRadius = 80.0;
+  double magnetRadius = GameConfig.baseMagnetRadius;
   late Paint magnetFieldPaint;
   late Paint playerGlowPaint;
   SpriteComponent? playerSpriteComponent;
@@ -20,7 +21,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   Player({required super.position})
       : super(
-          radius: 15,
+          radius: GameConfig.playerRadius,
           anchor: Anchor.center,
         );
 
@@ -122,7 +123,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
     if (distance < magnetRadius && distance > 0) {
       final direction = (position - obj.position)..normalize();
-      final force = 1000 * (1 - distance / magnetRadius);
+      final force = GameConfig.magneticForce * (1 - distance / magnetRadius);
 
       obj.velocity += direction * force * dt;
       obj.isMagnetized = true;
@@ -132,8 +133,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void upgradeMagnet(int level) {
-    //magnetRadius = math.min(120.0, 80.0 + level * 3);
-    magnetRadius = 80.0 + level * 3;
+    magnetRadius = math.min(GameConfig.maxMagnetRadius,
+        GameConfig.baseMagnetRadius + level * GameConfig.magnetRadiusPerLevel);
   }
 
   void reset() {
@@ -141,11 +142,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
     if (currentLevelType == LevelType.gravity) {
-      position = Vector2(gameSize.x / 2, gameSize.y - 117);
+      position = Vector2(
+          gameSize.x / 2, gameSize.y - GameConfig.gravityModeBottomOffset);
     } else {
       position = Vector2(gameSize.x / 2, gameSize.y / 2);
     }
-    magnetRadius = 80.0;
+    magnetRadius = GameConfig.baseMagnetRadius;
   }
 
   // Animate the player to a target position over a duration (in seconds)
@@ -154,6 +156,23 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     _moveDuration = duration;
     _moveElapsed = 0;
     isAnimatingToPosition = true;
+  }
+
+  // Convenience method to animate to initial position
+  void animateToInitialPosition() {
+    final gameSize = game.canvasSize;
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
+    Vector2 initialPosition;
+
+    if (currentLevelType == LevelType.gravity) {
+      initialPosition = Vector2(
+          gameSize.x / 2, gameSize.y - GameConfig.gravityModeBottomOffset);
+    } else {
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+    }
+
+    animateToPosition(initialPosition, GameConfig.playerAnimationDuration);
   }
 
   @override

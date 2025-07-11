@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import '../config/game_config.dart';
 
 class LivesManager {
   int lives;
@@ -8,9 +9,9 @@ class LivesManager {
   int lastLifeTimestamp; // Epoch millis
 
   LivesManager({
-    this.lives = 5,
-    this.maxLives = 5,
-    this.lifeRegenMinutes = 1,
+    this.lives = GameConfig.maxLives,
+    this.maxLives = GameConfig.maxLives,
+    this.lifeRegenMinutes = GameConfig.lifeRegenMinutes,
     int? lastLifeTimestamp,
   }) : lastLifeTimestamp =
             lastLifeTimestamp ?? DateTime.now().millisecondsSinceEpoch;
@@ -18,7 +19,7 @@ class LivesManager {
   // Load lives and last life timestamp from SharedPreferences
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    lives = prefs.getInt('lives') ?? maxLives;
+    lives = prefs.getInt('lives') ?? GameConfig.maxLives;
     lastLifeTimestamp = prefs.getInt('last_life_timestamp') ??
         DateTime.now().millisecondsSinceEpoch;
   }

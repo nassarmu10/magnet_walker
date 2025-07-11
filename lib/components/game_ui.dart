@@ -73,7 +73,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // Move pause button to bottom-right corner
     pauseButton = ButtonComponent(
-      position: Vector2(gameSize.x - 16, gameSize.y - 40), // Bottom-right corner
+      position:
+          Vector2(gameSize.x - 16, gameSize.y - 40), // Bottom-right corner
       size: Vector2(50, 50), // Made it slightly larger
       anchor: Anchor.bottomRight,
       button: RectangleComponent(
@@ -393,7 +394,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   void showPauseDialog() {
     print('showPauseDialog called, isPaused: $isPaused'); // Debug log
-    
+
     if (isPaused) {
       print('Already paused, returning');
       return; // Prevent multiple dialogs
@@ -408,7 +409,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = game.buildContext;
       print('Context available: ${context != null}');
-      
+
       if (context == null) {
         print('Context is null, retrying...');
         // If context is not available, try again after a short delay
@@ -424,14 +425,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         });
         return;
       }
-      
+
       _showPauseDialogWithContext(context);
     });
   }
 
   void _showPauseDialogWithContext(BuildContext context) {
     print('Showing pause dialog with context');
-    
+
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
@@ -445,7 +446,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         final buttonPaddingH = dialogWidth * 0.08;
 
         return WillPopScope(
-          onWillPop: () async => false, // Prevent back button from closing dialog
+          onWillPop: () async =>
+              false, // Prevent back button from closing dialog
           child: AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -501,13 +503,16 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                     ),
                     child: Column(
                       children: [
-                        _buildStatRow('LEVEL', '${game.waveManager.level}', 
+                        _buildStatRow('LEVEL', '${game.waveManager.level}',
                             const Color(0xFF8844ff), buttonFontSize * 0.9),
                         SizedBox(height: padding * 0.3),
-                        _buildStatRow('WAVE', '${game.waveManager.currentWave}/3', 
-                            const Color(0xFFff8844), buttonFontSize * 0.9),
+                        _buildStatRow(
+                            'WAVE',
+                            '${game.waveManager.currentWave}/3',
+                            const Color(0xFFff8844),
+                            buttonFontSize * 0.9),
                         SizedBox(height: padding * 0.3),
-                        _buildStatRow('SCORE', '${game.totalScore}', 
+                        _buildStatRow('SCORE', '${game.totalScore}',
                             const Color(0xFF00ff88), buttonFontSize * 0.9),
                       ],
                     ),
@@ -591,14 +596,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   // Helper method for pause dialog action buttons
   Widget _buildPauseActionButton(
-    String text, 
-    Color color, 
-    IconData icon,
-    VoidCallback onPressed,
-    double fontSize, 
-    double paddingH, 
-    double paddingV
-  ) {
+      String text,
+      Color color,
+      IconData icon,
+      VoidCallback onPressed,
+      double fontSize,
+      double paddingH,
+      double paddingV) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(fontSize * 1.2),
@@ -618,7 +622,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
+          padding:
+              EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(fontSize * 1.2),
           ),
@@ -862,7 +867,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     required VoidCallback onRestartLevel,
     required VoidCallback onWatchAd,
   }) {
+    if (gameOverVisible) {
+      print('showFailureDialog: already visible, skipping.');
+      return;
+    }
     gameOverVisible = true;
+    print('showFailureDialog called - gameOverVisible: true');
+    print('showFailureDialog stack: ' +
+        StackTrace.current.toString().split('\n').take(5).join(' | '));
 
     // Format play time
     final minutes = playTime.inMinutes;
@@ -1109,8 +1121,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       () {
                         Navigator.of(context).pop();
                         game.nextLevel();
-                        game.tryConsumeLifeAndStartWave(
-                            game.waveManager.currentWave);
                       },
                       buttonFontSize,
                       buttonPaddingH,
@@ -1207,6 +1217,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   void hideGameOver() {
     gameOverVisible = false;
+    print('hideGameOver called - gameOverVisible: $gameOverVisible');
+  }
+
+  void hideFailureDialog() {
+    gameOverVisible = false;
+    print('hideFailureDialog called - gameOverVisible: false');
+    print('hideFailureDialog stack: ' +
+        StackTrace.current.toString().split('\n').take(5).join(' | '));
   }
 
   void hideLevelCompleted() {
@@ -1527,10 +1545,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                           .popUntil((route) => route.isFirst);
                       // Reset dialog flag and start the game
                       game.noLivesDialogVisible = false;
-                      if (game.livesManager.lives > 0) {
-                        game.startWaveWithoutConsumingLife(
-                            game.waveManager.currentWave);
-                      }
                     },
                     child: Text(
                       'Start Playing!',

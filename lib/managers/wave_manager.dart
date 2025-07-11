@@ -1,4 +1,4 @@
-import 'dart:math';
+import '../config/game_config.dart';
 
 class WaveManager {
   int level;
@@ -12,7 +12,7 @@ class WaveManager {
     this.level = 1,
     this.currentWave = 1,
     this.waveScore = 0,
-    this.waveTarget = 1, //TODO: Change to formula
+    this.waveTarget = 1,
   });
 
   // Start a new wave
@@ -20,10 +20,7 @@ class WaveManager {
     currentWave = wave;
     waveScore = 0;
     // Calculate wave target based on level using the new formula
-    waveTarget = 1; //TODO: Change to formula
-    // waveTarget = level <= 3
-    //     ? (3 + level)
-    //     : min(8 + (level * 2), 25 + (level * 0.5)).round();
+    waveTarget = 1; //GameConfig.calculateWaveTarget(level);
   }
 
   // Add score to current wave

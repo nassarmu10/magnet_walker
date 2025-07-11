@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../magnet_walker_game.dart';
 import '../level_types.dart';
+import '../config/game_config.dart';
 import 'dart:math' as math;
 
 enum ObjectType { coin, bomb }
@@ -26,7 +27,9 @@ class GameObject extends CircleComponent
     required this.level,
     required this.levelType,
   }) : super(
-          radius: type == ObjectType.coin ? 8 : 12,
+          radius: type == ObjectType.coin
+              ? GameConfig.coinRadius
+              : GameConfig.bombRadius,
         );
 
   @override
@@ -43,7 +46,7 @@ class GameObject extends CircleComponent
         print('Rocket sprite loaded successfully: $chosen');
         bombSpriteComponent = SpriteComponent(
           sprite: bombSprite,
-          size: Vector2.all(radius * 4), // Make rocket 4x bigger (was 2x)
+          size: Vector2.all(radius * GameConfig.rocketSpriteScale),
           anchor: Anchor.center, // Ensure it's centered
         );
         print('Adding bomb sprite component');
@@ -59,16 +62,17 @@ class GameObject extends CircleComponent
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
       // Base speed increases with level
-      final baseSpeed = 50.0;
-      final levelSpeedMultiplier = 1.0 + (level * 0.3); // 30% faster per level
+      final baseSpeed = GameConfig.baseGravitySpeed;
+      final levelSpeedMultiplier =
+          1.0 + (level * GameConfig.gravitySpeedMultiplier);
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
       // Objects move toward player
-      final gameSize =
-          game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+      final gameSize = game.canvasSize;
       final playerPos = game.player.position;
       final direction = (playerPos - position)..normalize();
-      final speed = 80.0 + (level * 10.0); // Speed increases with level
+      final speed = GameConfig.baseSurvivalSpeed +
+          (level * GameConfig.survivalSpeedPerLevel);
       velocity = direction * speed;
     }
 
@@ -91,17 +95,17 @@ class GameObject extends CircleComponent
 
     // Update pulse time for survival mode
     if (levelType == LevelType.survival) {
-      pulseTime += dt * 3.0; // Pulse speed
+      pulseTime += dt * GameConfig.pulseSpeed;
     }
 
     // Apply pulse effect to bomb sprite component and rotate toward player
     if (type == ObjectType.bomb && bombSpriteComponent != null) {
       double pulseScale = 1.0;
       if (levelType == LevelType.survival) {
-        pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
+        pulseScale = 1.0 + GameConfig.pulseScale * math.sin(pulseTime);
       }
       bombSpriteComponent!.size =
-          Vector2.all(radius * 4 * pulseScale); // Use 4x scaling
+          Vector2.all(radius * GameConfig.rocketSpriteScale * pulseScale);
 
       // Calculate angle to point toward player
       final player = game.player;
@@ -136,21 +140,21 @@ class GameObject extends CircleComponent
     }
 
     // Remove if off screen (different logic per level type)
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
     if (levelType == LevelType.gravity) {
       // Remove if below screen
-      if (position.y > gameSize.y + 50) {
+      if (position.y > gameSize.y + GameConfig.offscreenBuffer) {
         removeFromParent();
       }
     } else if (levelType == LevelType.survival) {
       // Remove if too far from player or off screen
       final distanceToPlayer = position.distanceTo(player.position);
-      if (distanceToPlayer > gameSize.x * 1.5 ||
-          position.x < -50 ||
-          position.x > gameSize.x + 50 ||
-          position.y < -50 ||
-          position.y > gameSize.y + 50) {
+      if (distanceToPlayer >
+              gameSize.x * GameConfig.survivalDistanceMultiplier ||
+          position.x < -GameConfig.offscreenBuffer ||
+          position.x > gameSize.x + GameConfig.offscreenBuffer ||
+          position.y < -GameConfig.offscreenBuffer ||
+          position.y > gameSize.y + GameConfig.offscreenBuffer) {
         removeFromParent();
       }
     }
@@ -165,24 +169,24 @@ class GameObject extends CircleComponent
     // Calculate pulse effect for survival mode
     double pulseScale = 1.0;
     if (levelType == LevelType.survival) {
-      pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
+      pulseScale = 1.0 + GameConfig.pulseScale * math.sin(pulseTime);
     }
 
     // Draw glow effect if magnetized or in survival mode
     if (isMagnetized || levelType == LevelType.survival) {
       final pulseGlowPaint = Paint()
         ..color = (type == ObjectType.coin ? Colors.amber : Colors.red)
-            .withOpacity(0.3)
+            .withOpacity(GameConfig.glowIntensity)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
 
       // Adjust glow size based on object type
       double glowRadius;
       if (type == ObjectType.bomb && bombSpriteComponent != null) {
         // For rockets, make glow slightly larger than the sprite
-        glowRadius = radius * pulseScale + 8;
+        glowRadius = radius * pulseScale + GameConfig.objectGlowRadius + 3;
       } else {
         // For coins and fallback bombs, use original size
-        glowRadius = radius * pulseScale + 5;
+        glowRadius = radius * pulseScale + GameConfig.objectGlowRadius;
       }
 
       canvas.drawCircle(Offset.zero, glowRadius, pulseGlowPaint);
