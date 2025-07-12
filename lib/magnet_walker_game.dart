@@ -1162,16 +1162,17 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void update(double dt) {
-    // Handle wave countdown even when paused (but don't start spawning if paused)
     if (!isPaused) {
+      super.update(dt);
       updateWaveCountdown(dt);
     }
-    
-    // Regenerate lives periodically while running (even when paused)
+    // Regenerate lives periodically while running
     livesManager.regenerateLivesIfNeeded();
 
-    // Check if we need to show no lives dialog (only when not paused)
-    if (!isPaused && livesManager.lives == 0 && !noLivesDialogVisible && !gameUI.gameOverVisible) {
+    // Check if we need to show no lives dialog
+    if (livesManager.lives == 0 &&
+        !noLivesDialogVisible &&
+        !gameUI.gameOverVisible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (gameUI.isMounted && this.buildContext != null) {
           noLivesDialogVisible = true;
@@ -1182,8 +1183,8 @@ class MagnetWalkerGame extends FlameGame
       });
     }
 
-    // Only update game logic when not paused
-    if (!isPaused && gameRunning) {
+    // Update game objects only when game is running
+    if (gameRunning) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
@@ -1196,6 +1197,7 @@ class MagnetWalkerGame extends FlameGame
         if (!particle.isMounted) {
           return true;
         }
+        // Also remove particles with invalid life values
         if (particle.life <= 0) {
           particle.removeFromParent();
           return true;
@@ -1204,11 +1206,6 @@ class MagnetWalkerGame extends FlameGame
       });
 
       gameObjects.removeWhere((obj) => !obj.isMounted);
-    }
-
-    // Always call super.update, but game objects won't update if paused
-    if (!isPaused) {
-      super.update(dt);
     }
   }
 
