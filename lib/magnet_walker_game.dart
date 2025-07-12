@@ -85,11 +85,11 @@ class MagnetWalkerGame extends FlameGame
   void pauseGame() {
     isPaused = true;
     pausePlayTime();
-    
+
     // Stop all spawning
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    
+
     // The game objects will remain in their current positions
     // because the update loop will be skipped
   }
@@ -98,7 +98,7 @@ class MagnetWalkerGame extends FlameGame
   void resumeGame() {
     isPaused = false;
     resumePlayTime();
-    
+
     // Resume spawning only if wave is active
     if (isWaveActive && gameRunning) {
       startSpawning();
@@ -111,18 +111,18 @@ class MagnetWalkerGame extends FlameGame
     isPaused = false;
     gameRunning = false;
     isWaveActive = false;
-    
+
     // Stop all timers and spawning
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     playTimeTimer?.cancel();
-    
+
     // Clear all objects
     clearAllObjects();
-    
+
     // Save progress
     saveProgress();
-    
+    stopGameMusic();
     // Call the exit callback
     if (onExitToMenu != null) {
       onExitToMenu!();
@@ -375,10 +375,10 @@ class MagnetWalkerGame extends FlameGame
     return newlyAvailable;
   }
 
- void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
+  void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
     // IMPORTANT: Pause the game when showing skin notification
     pauseGame();
-    
+
     // Show notification after a short delay to ensure game is properly paused
     Future.delayed(const Duration(milliseconds: 500), () {
       final context = buildContext;
@@ -512,7 +512,7 @@ class MagnetWalkerGame extends FlameGame
                       ),
                     ),
                     SizedBox(height: padding),
-                    
+
                     // Show newly available skins in a scrollable container
                     if (newSkins.isNotEmpty)
                       Container(
@@ -521,116 +521,132 @@ class MagnetWalkerGame extends FlameGame
                         ),
                         child: SingleChildScrollView(
                           child: Column(
-                            children: newSkins.map((skin) => Container(
-                              margin: EdgeInsets.symmetric(vertical: padding * 0.2),
-                              padding: EdgeInsets.all(padding * 0.6),
-                              decoration: BoxDecoration(
-                                color: Colors.deepPurple.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(dialogWidth * 0.03),
-                                border: Border.all(
-                                  color: Colors.deepPurple.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  // Skin image
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.deepPurple.withOpacity(0.4),
-                                          blurRadius: 8,
-                                          spreadRadius: 1,
+                            children: newSkins
+                                .map((skin) => Container(
+                                      margin: EdgeInsets.symmetric(
+                                          vertical: padding * 0.2),
+                                      padding: EdgeInsets.all(padding * 0.6),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Colors.deepPurple.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(
+                                            dialogWidth * 0.03),
+                                        border: Border.all(
+                                          color: Colors.deepPurple
+                                              .withOpacity(0.3),
                                         ),
-                                      ],
-                                    ),
-                                    child: ClipOval(
-                                      child: Image.asset(
-                                        'assets/images/${skin.imagePath}',
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Skin image
+                                          Container(
+                                            width: 40,
+                                            height: 40,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              gradient: RadialGradient(
-                                                colors: [
-                                                  Colors.deepPurple.withOpacity(0.3),
-                                                  Colors.deepPurple.withOpacity(0.1)
-                                                ],
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.deepPurple
+                                                      .withOpacity(0.4),
+                                                  blurRadius: 8,
+                                                  spreadRadius: 1,
+                                                ),
+                                              ],
+                                            ),
+                                            child: ClipOval(
+                                              child: Image.asset(
+                                                'assets/images/${skin.imagePath}',
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      gradient: RadialGradient(
+                                                        colors: [
+                                                          Colors.deepPurple
+                                                              .withOpacity(0.3),
+                                                          Colors.deepPurple
+                                                              .withOpacity(0.1)
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.public,
+                                                      color: Colors.deepPurple,
+                                                      size: 20,
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             ),
-                                            child: const Icon(
-                                              Icons.public,
-                                              color: Colors.deepPurple,
-                                              size: 20,
+                                          ),
+                                          SizedBox(width: padding * 0.8),
+                                          // Skin info
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  skin.name,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: bodyFontSize,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  skin.description,
+                                                  style: TextStyle(
+                                                    color: Colors.white
+                                                        .withOpacity(0.7),
+                                                    fontSize:
+                                                        bodyFontSize * 0.8,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ),
-                                          );
-                                        },
+                                          ),
+                                          // Watch ad icon
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: padding * 0.4,
+                                              vertical: padding * 0.2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.pinkAccent,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.play_arrow,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'AD',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize:
+                                                        bodyFontSize * 0.7,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ),
-                                  SizedBox(width: padding * 0.8),
-                                  // Skin info
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          skin.name,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: bodyFontSize,
-                                          ),
-                                        ),
-                                        Text(
-                                          skin.description,
-                                          style: TextStyle(
-                                            color: Colors.white.withOpacity(0.7),
-                                            fontSize: bodyFontSize * 0.8,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Watch ad icon
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: padding * 0.4,
-                                      vertical: padding * 0.2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.pinkAccent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.play_arrow,
-                                          color: Colors.white,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'AD',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: bodyFontSize * 0.7,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )).toList(),
+                                    ))
+                                .toList(),
                           ),
                         ),
                       ),
@@ -645,7 +661,8 @@ class MagnetWalkerGame extends FlameGame
                       width: double.infinity,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                          borderRadius:
+                              BorderRadius.circular(buttonFontSize * 1.2),
                           gradient: const LinearGradient(
                             colors: [Colors.pinkAccent, Colors.deepPurple],
                           ),
@@ -671,7 +688,8 @@ class MagnetWalkerGame extends FlameGame
                               vertical: padding * 0.8,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                              borderRadius:
+                                  BorderRadius.circular(buttonFontSize * 1.2),
                             ),
                           ),
                           icon: Icon(
@@ -697,7 +715,8 @@ class MagnetWalkerGame extends FlameGame
                       width: double.infinity,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                          borderRadius:
+                              BorderRadius.circular(buttonFontSize * 1.2),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.3),
                             width: 2,
@@ -717,7 +736,8 @@ class MagnetWalkerGame extends FlameGame
                               vertical: padding * 0.8,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(buttonFontSize * 1.2),
+                              borderRadius:
+                                  BorderRadius.circular(buttonFontSize * 1.2),
                             ),
                           ),
                           icon: Icon(
@@ -763,13 +783,13 @@ class MagnetWalkerGame extends FlameGame
     });
   }
 
-
   void _openSkinStore() {
     final context = buildContext;
     if (context == null) return;
 
     // Navigate to skin store screen
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => SkinStoreScreen(
           skinManager: skinManager,
@@ -779,7 +799,8 @@ class MagnetWalkerGame extends FlameGame
           },
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       // Resume game when returning from skin store
       if (isPaused) {
         resumeGame();
@@ -947,7 +968,7 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void showLevelCompleteDialog() {
-    playSound('win.mp3');
+    playSound('win.wav');
     gameUI.showLevelCompleted(totalScore, waveManager.level, playTime);
   }
 
@@ -1208,7 +1229,6 @@ class MagnetWalkerGame extends FlameGame
       gameObjects.removeWhere((obj) => !obj.isMounted);
     }
   }
-
 
   @override
   void onRemove() {
