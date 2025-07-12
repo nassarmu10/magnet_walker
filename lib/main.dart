@@ -1,48 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flame/game.dart';
-import 'package:magnet_walker/managers/ad_manager.dart';
-import 'magnet_walker_game.dart';
-import 'menu_screen.dart';
-import 'skins/skin_store_screen.dart';
-import 'skins/skin_manager.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'menu_screen.dart';
 import 'settings_screen.dart';
+import 'skins/skin_store_screen.dart';
+import 'skins/skin_manager.dart';
+import 'game_screen.dart';
+import 'managers/ad_manager.dart';
 
 void main() {
   runApp(const MagnetWalkerApp());
 }
 
-class MagnetWalkerApp extends StatelessWidget {
+class MagnetWalkerApp extends StatefulWidget {
   const MagnetWalkerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Magnet Walker',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        fontFamily: 'Arial',
-      ),
-      home: const MainMenuWrapper(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+  State<MagnetWalkerApp> createState() => _MagnetWalkerAppState();
 }
 
-class MainMenuWrapper extends StatefulWidget {
-  const MainMenuWrapper({super.key});
-
-  @override
-  State<MainMenuWrapper> createState() => _MainMenuWrapperState();
-}
-
-class _MainMenuWrapperState extends State<MainMenuWrapper> {
-  bool _showGame = false;
-  late MagnetWalkerGame game;
+class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
   late SkinManager skinManager;
-  bool _showSettings = false;
   bool _musicEnabled = true;
   bool _menuMusicEnabled = true;
   bool _sfxEnabled = true;
@@ -50,19 +29,10 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
   @override
   void initState() {
     super.initState();
-    game = MagnetWalkerGame();
-    skinManager = SkinManager();
-    _initializeSkinManager();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _loadSettings();
-    // Lock to portrait mode
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-  }
-
-  Future<void> _initializeSkinManager() async {
-    await skinManager.initialize();
-    setState(() {}); // Refresh UI after skin manager is ready
+    skinManager = SkinManager();
+    skinManager.initialize();
   }
 
   Future<void> _loadSettings() async {
@@ -72,187 +42,57 @@ class _MainMenuWrapperState extends State<MainMenuWrapper> {
       _menuMusicEnabled = prefs.getBool('menu_music_enabled') ?? true;
       _sfxEnabled = prefs.getBool('sfx_enabled') ?? true;
     });
-    
-    // Set up the exit callback after the game is created
-    game.setExitCallback(() {
-      _exitGame();
-    });
-  }
 
-  void _exitGame() {
-    setState(() {
-      _showGame = false;
-    });
-    // Create a new game instance for next time
-    game = MagnetWalkerGame();
-    // Play menu music after settings are loaded
     if (_menuMusicEnabled) {
       FlameAudio.bgm.play('menu_music.mp3');
     }
   }
 
-  void _startGame() {
-    setState(() {
-      _showGame = true;
-      // Stop menu music
-      FlameAudio.bgm.stop();
-      // Play game music only if enabled
-      if (_musicEnabled) {
-        FlameAudio.bgm.play('game_music.mp3');
-      }
-    });
-    // Set initial SFX setting in the game
-    game.setSfxEnabled(_sfxEnabled);
-    // Set callback for game restart
-    game.onGameRestart = _onGameRestart;
-  }
-
-  void _onGameRestart() {
-    // Restart game music if enabled
-    if (_musicEnabled) {
-      FlameAudio.bgm.play('game_music.mp3');
-    }
-  }
-
-  void _returnToMenu() {
-    setState(() {
-      _showGame = false;
-      // Stop game music and play menu music if enabled
-      FlameAudio.bgm.stop();
-      if (_menuMusicEnabled) {
-        FlameAudio.bgm.play('menu_music.mp3');
-      }
-    });
-  }
-
-  void _showSettingsScreen() {
-    setState(() {
-      _showSettings = true;
-    });
-  }
-
-  void _hideSettingsScreen() {
-    setState(() {
-      _showSettings = false;
-    });
-  }
-
-  void _onMusicChanged(bool enabled) {
-    setState(() {
-      _musicEnabled = enabled;
-    });
-    // If game is currently running and music is disabled, stop game music
-    if (_showGame) {
-      if (enabled) {
-        FlameAudio.bgm.play('game_music.mp3');
-      } else {
-        FlameAudio.bgm.stop();
-      }
-    }
-  }
-
-  void _onMenuMusicChanged(bool enabled) {
-    setState(() {
-      _menuMusicEnabled = enabled;
-    });
-    // If we're in the menu, start/stop menu music immediately
-    if (!_showGame) {
-      if (enabled) {
-        FlameAudio.bgm.play('menu_music.mp3');
-      } else {
-        FlameAudio.bgm.stop();
-      }
-    }
-  }
-
-  void _onSfxChanged(bool enabled) {
-    setState(() {
-      _sfxEnabled = enabled;
-    });
-    // Update game SFX setting if game is running
-    if (_showGame) {
-      game.setSfxEnabled(enabled);
-    }
-  }
-
-  void _showSkins() async {
-    // Ensure ads are initialized before showing skin store
-    if (!AdManager.isAdsInitialized) {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text('Initializing ads...'),
-            ],
-          ),
-        ),
-      );
-
-      // Initialize ads
-      await AdManager.initialize();
-      await AdManager.loadRewardedAd();
-
-      // Close loading dialog
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    }
-
-    if (mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SkinStoreScreen(
-            skinManager: skinManager,
-            currentLevel: _showGame ? game.waveManager.level : 1,
-            onSkinChanged: () {
-              // Update game skin if game is loaded
-              if (_showGame) {
-                game.onSkinChanged();
-              }
-            },
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_showGame) {
-      return Scaffold(
-        body: Container(
-          color: Colors.black,
-          child: SafeArea(
-            child: GameWidget(game: game),
-          ),
-        ),
-      );
-    } else if (_showSettings) {
-      return SettingsScreen(
-        musicEnabled: _musicEnabled,
-        menuMusicEnabled: _menuMusicEnabled,
-        sfxEnabled: _sfxEnabled,
-        onMusicChanged: _onMusicChanged,
-        onMenuMusicChanged: _onMenuMusicChanged,
-        onSfxChanged: _onSfxChanged,
-        onBack: _hideSettingsScreen,
-      );
-    } else {
-      return MenuScreen(
-        onPlay: _startGame,
-        onSettings: _showSettingsScreen,
-        onSkins: _showSkins,
-      );
-    }
+    return MaterialApp(
+      title: 'Magnet Walker',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.blue, fontFamily: 'Arial'),
+      routes: {
+        '/': (context) => MenuScreen(
+              onSettings: () => Navigator.pushNamed(context, '/settings'),
+              onPlay: () => Navigator.pushReplacementNamed(context, '/game'),
+              onSkins: () async {
+                if (!AdManager.isAdsInitialized) {
+                  await AdManager.initialize();
+                  await AdManager.loadRewardedAd();
+                }
+                Navigator.pushNamed(context, '/skins');
+              },
+            ),
+        '/game': (context) => GameScreen(
+              musicEnabled: _musicEnabled,
+              sfxEnabled: _sfxEnabled,
+              menuMusicEnabled: _menuMusicEnabled,
+            ),
+        '/settings': (context) => SettingsScreen(
+              musicEnabled: _musicEnabled,
+              menuMusicEnabled: _menuMusicEnabled,
+              sfxEnabled: _sfxEnabled,
+              onMusicChanged: (val) => setState(() => _musicEnabled = val),
+              onMenuMusicChanged: (val) =>
+                  setState(() => _menuMusicEnabled = val),
+              onSfxChanged: (val) => setState(() => _sfxEnabled = val),
+              onBack: () => Navigator.pop(context),
+            ),
+        '/skins': (context) => SkinStoreScreen(
+              skinManager: skinManager,
+              currentLevel: 1,
+              onSkinChanged: () {}, // You can access Game here if needed
+            ),
+      },
+    );
   }
 
   @override
   void dispose() {
+    FlameAudio.bgm.stop();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,

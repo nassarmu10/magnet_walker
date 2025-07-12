@@ -1,3 +1,4 @@
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -97,8 +98,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.music_note, color: Colors.purpleAccent),
                       SizedBox(width: 12),
                       Text('Menu Music',
@@ -113,6 +114,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       widget.onMenuMusicChanged(value);
                       final prefs = await SharedPreferences.getInstance();
                       prefs.setBool('menu_music_enabled', value);
+                      if (value) {
+                        FlameAudio.bgm.play('menu_music.mp3');
+                      } else {
+                        FlameAudio.bgm.stop();
+                      }
                     },
                   ),
                 ],

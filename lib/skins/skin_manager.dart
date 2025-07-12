@@ -87,11 +87,11 @@ class SkinManager {
 
   List<Skin> get skins => List.unmodifiable(_skins);
   String get selectedSkinId => _selectedSkinId;
-  
+
   Skin get selectedSkin => _skins.firstWhere(
-    (skin) => skin.id == _selectedSkinId,
-    orElse: () => _skins.first,
-  );
+        (skin) => skin.id == _selectedSkinId,
+        orElse: () => _skins.first,
+      );
 
   Future<void> initialize() async {
     await _loadSkins();
@@ -99,13 +99,13 @@ class SkinManager {
 
   Future<void> _loadSkins() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Load unlocked skins
     final unlockedSkinIds = prefs.getStringList(_skinsKey) ?? ['default'];
-    
+
     // Load selected skin
     _selectedSkinId = prefs.getString(_selectedSkinKey) ?? 'default';
-    
+
     // Create skin list with unlock status
     _skins = _allSkins.map((skin) {
       return skin.copyWith(isUnlocked: unlockedSkinIds.contains(skin.id));
@@ -114,13 +114,11 @@ class SkinManager {
 
   Future<void> _saveSkins() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Save unlocked skin IDs
-    final unlockedSkinIds = _skins
-        .where((skin) => skin.isUnlocked)
-        .map((skin) => skin.id)
-        .toList();
-    
+    final unlockedSkinIds =
+        _skins.where((skin) => skin.isUnlocked).map((skin) => skin.id).toList();
+
     await prefs.setStringList(_skinsKey, unlockedSkinIds);
     await prefs.setString(_selectedSkinKey, _selectedSkinId);
   }
@@ -136,22 +134,22 @@ class SkinManager {
 
   // NEW: Get skins that are available for purchase (unlocked by level but not owned)
   List<Skin> getAvailableForPurchase(int playerLevel) {
-    return _skins.where((skin) => 
-      !skin.isUnlocked && playerLevel >= skin.price
-    ).toList();
+    return _skins
+        .where((skin) => !skin.isUnlocked && playerLevel >= skin.price)
+        .toList();
   }
 
   // NEW: Get skins that are locked (not yet available for purchase)
   List<Skin> getLockedByLevel(int playerLevel) {
-    return _skins.where((skin) => 
-      !skin.isUnlocked && playerLevel < skin.price
-    ).toList();
+    return _skins
+        .where((skin) => !skin.isUnlocked && playerLevel < skin.price)
+        .toList();
   }
 
   Future<bool> unlockSkin(String skinId) async {
     final skinIndex = _skins.indexWhere((skin) => skin.id == skinId);
     if (skinIndex == -1) return false;
-    
+
     _skins[skinIndex] = _skins[skinIndex].copyWith(isUnlocked: true);
     await _saveSkins();
     return true;
@@ -162,9 +160,9 @@ class SkinManager {
       (skin) => skin.id == skinId,
       orElse: () => _skins.first,
     );
-    
+
     if (!skin.isUnlocked) return false;
-    
+
     _selectedSkinId = skinId;
     await _saveSkins();
     return true;
