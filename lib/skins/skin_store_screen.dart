@@ -6,11 +6,13 @@ import '../managers/ad_manager.dart';
 class SkinStoreScreen extends StatefulWidget {
   final SkinManager skinManager;
   final VoidCallback onSkinChanged;
+  final int currentLevel; // NEW: Current player level
 
   const SkinStoreScreen({
     Key? key,
     required this.skinManager,
     required this.onSkinChanged,
+    required this.currentLevel,
   }) : super(key: key);
 
   @override
@@ -26,33 +28,17 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    
-    // Initialize ads properly when store opens
+    _tabController = TabController(length: 3, vsync: this); // NEW: 3 tabs now
     _initializeAds();
   }
 
   Future<void> _initializeAds() async {
-    print('=== Initializing ads in skin store ===');
-    
-    // Ensure AdManager is initialized
     if (!AdManager.isAdsInitialized) {
-      print('AdManager not initialized, initializing now...');
       await AdManager.initialize();
     }
-    
-    // Load rewarded ads
     if (!AdManager.isRewardedAdAvailable()) {
-      print('Loading rewarded ads...');
       await AdManager.loadRewardedAd();
     }
-    
-    // Wait a bit and check status
-    await Future.delayed(const Duration(seconds: 2));
-    print('Ad initialization complete:');
-    print('- Ads initialized: ${AdManager.isAdsInitialized}');
-    print('- Rewarded ad ready: ${AdManager.isRewardedAdReady}');
-    print('- Ad available: ${AdManager.isRewardedAdAvailable()}');
   }
 
   @override
@@ -96,6 +82,8 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
     final rarityEmoji = _getRarityEmoji(skin.rarity);
     final isSelected = widget.skinManager.selectedSkinId == skin.id;
     final isLoadingThisSkin = _isLoading && _loadingSkinId == skin.id;
+    final canPurchase = widget.skinManager
+        .isSkinAvailableForPurchase(skin.id, widget.currentLevel);
 
     return Container(
       margin: const EdgeInsets.all(6.0),
@@ -110,9 +98,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected 
-              ? Colors.cyanAccent 
-              : rarityColor.withOpacity(0.3),
+          color: isSelected ? Colors.cyanAccent : rarityColor.withOpacity(0.3),
           width: isSelected ? 2 : 1,
         ),
         boxShadow: [
@@ -131,7 +117,10 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [rarityColor.withOpacity(0.3), rarityColor.withOpacity(0.1)],
+                colors: [
+                  rarityColor.withOpacity(0.3),
+                  rarityColor.withOpacity(0.1)
+                ],
               ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
@@ -161,7 +150,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
               ],
             ),
           ),
-          
+
           // Skin image
           Expanded(
             flex: 2,
@@ -179,30 +168,45 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                   ],
                 ),
                 child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/${skin.imagePath}',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [rarityColor.withOpacity(0.3), rarityColor.withOpacity(0.1)],
+                  child: ColorFiltered(
+                    // Gray out skins that can't be purchased yet
+                    colorFilter: (!skin.isUnlocked && !canPurchase)
+                        ? const ColorFilter.mode(
+                            Colors.grey,
+                            BlendMode.saturation,
+                          )
+                        : const ColorFilter.mode(
+                            Colors.transparent,
+                            BlendMode.multiply,
                           ),
-                        ),
-                        child: Icon(
-                          Icons.public,
-                          color: rarityColor,
-                          size: 30,
-                        ),
-                      );
-                    },
+                    child: Image.asset(
+                      'assets/images/${skin.imagePath}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                rarityColor.withOpacity(0.3),
+                                rarityColor.withOpacity(0.1)
+                              ],
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.public,
+                            color: rarityColor,
+                            size: 30,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          
+
           // Skin info
           Expanded(
             flex: 2,
@@ -235,12 +239,13 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                     ),
                   ),
                   const SizedBox(height: 4),
-                  
+
                   // Action button
                   SizedBox(
                     width: double.infinity,
                     height: 28,
-                    child: _buildActionButton(skin, isLoadingThisSkin),
+                    child: _buildActionButton(
+                        skin, canPurchase, isLoadingThisSkin),
                   ),
                 ],
               ),
@@ -251,8 +256,10 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
     );
   }
 
-  Widget _buildActionButton(Skin skin, bool isLoadingThisSkin) {
+  Widget _buildActionButton(
+      Skin skin, bool canPurchase, bool isLoadingThisSkin) {
     if (skin.isUnlocked) {
+      // Already owned
       final isSelected = widget.skinManager.selectedSkinId == skin.id;
       return ElevatedButton(
         onPressed: isSelected ? null : () => _selectSkin(skin),
@@ -276,7 +283,8 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
           ),
         ),
       );
-    } else {
+    } else if (canPurchase) {
+      // Available for purchase via ad
       return ElevatedButton(
         onPressed: isLoadingThisSkin ? null : () => _buySkin(skin),
         style: ElevatedButton.styleFrom(
@@ -287,33 +295,64 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4),
         ),
-        child: isLoadingThisSkin 
+        child: isLoadingThisSkin
             ? const SizedBox(
-                width: 12, 
-                height: 12, 
+                width: 12,
+                height: 12,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : FittedBox(
+            : const FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.play_arrow, size: 12),
-                    const SizedBox(width: 2),
+                    Icon(Icons.play_arrow, size: 12),
+                    SizedBox(width: 2),
                     Text(
-                      '${skin.price}',
-                      style: const TextStyle(
+                      'WATCH AD',
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                        fontSize: 9,
                       ),
                     ),
                   ],
                 ),
               ),
+      );
+    } else {
+      // Locked - show required level
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.5),
+          ),
+        ),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock, size: 12, color: Colors.grey),
+                const SizedBox(width: 2),
+                Text(
+                  'LV ${skin.price}',
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
   }
@@ -341,42 +380,31 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
       _loadingSkinId = skin.id;
     });
 
-    print('=== Starting skin purchase for ${skin.name} ===');
-    print('Initial ad availability: ${AdManager.isRewardedAdAvailable()}');
-
-    // Simple approach - just try to show the ad like the game screen does
     AdManager.showRewardedAd(
       onRewarded: () {
-        print('✅ Ad completed successfully for ${skin.name}!');
-        
         if (mounted) {
           setState(() {
             _isLoading = false;
             _loadingSkinId = '';
           });
-          
-          // For now, unlock immediately after one ad (you can modify this for multiple ads later)
           _unlockSkin(skin);
         }
       },
+      onFailed: () {},
     );
 
-    // Reset loading state after timeout in case ad doesn't show
+    // Reset loading state after timeout
     Future.delayed(const Duration(seconds: 10), () {
       if (mounted && _isLoading && _loadingSkinId == skin.id) {
         setState(() {
           _isLoading = false;
           _loadingSkinId = '';
         });
-        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Ad request timed out for ${skin.name}. Please try again.'),
+            content: Text(
+                'Ad request timed out for ${skin.name}. Please try again.'),
             backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'RETRY',
-              onPressed: () => _buySkin(skin),
-            ),
           ),
         );
       }
@@ -389,7 +417,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
       _isLoading = false;
       _loadingSkinId = '';
     });
-    
+
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -407,82 +435,53 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
     }
   }
 
-  // // Debug method - add this temporarily
-  // void _debugAdStatus() {
-  //   print('=== AD DEBUG STATUS ===');
-  //   print('AdManager.isAdsInitialized: ${AdManager.isAdsInitialized}');
-  //   print('AdManager.isRewardedAdReady: ${AdManager.isRewardedAdReady}');
-  //   print('AdManager.isRewardedAdAvailable(): ${AdManager.isRewardedAdAvailable()}');
-  //   print('========================');
-    
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       backgroundColor: const Color(0xFF1a1a2e),
-  //       title: const Text('Ad Debug Info', style: TextStyle(color: Colors.white)),
-  //       content: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text('Ads Initialized: ${AdManager.isAdsInitialized}', style: const TextStyle(color: Colors.white)),
-  //           Text('Rewarded Ad Ready: ${AdManager.isRewardedAdReady}', style: const TextStyle(color: Colors.white)),
-  //           Text('Ad Available: ${AdManager.isRewardedAdAvailable()}', style: const TextStyle(color: Colors.white)),
-  //           const SizedBox(height: 16),
-  //           ElevatedButton(
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //               AdManager.forceLoadRewardedAd();
-  //               ScaffoldMessenger.of(context).showSnackBar(
-  //                 const SnackBar(content: Text('Forced ad reload...')),
-  //               );
-  //             },
-  //             child: const Text('Force Load Ad'),
-  //           ),
-  //         ],
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.of(context).pop(),
-  //           child: const Text('Close', style: TextStyle(color: Colors.cyanAccent)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
     final unlockedSkins = widget.skinManager.getUnlockedSkins();
-    final lockedSkins = widget.skinManager.getLockedSkins();
+    final availableForPurchase =
+        widget.skinManager.getAvailableForPurchase(widget.currentLevel);
+    final lockedByLevel =
+        widget.skinManager.getLockedByLevel(widget.currentLevel);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0a0a1a),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1a1a2e),
-        title: const Text(
-          'Skin Store',
-          style: TextStyle(
-            color: Colors.cyanAccent,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Column(
+          children: [
+            const Text(
+              'Skin Store',
+              style: TextStyle(
+                color: Colors.cyanAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              'Level ${widget.currentLevel}',
+              style: TextStyle(
+                color: Colors.cyanAccent.withOpacity(0.7),
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         iconTheme: const IconThemeData(color: Colors.cyanAccent),
-        // actions: [
-        //   // Debug button - remove this after testing
-        //   IconButton(
-        //     icon: const Icon(Icons.bug_report),
-        //     onPressed: _debugAdStatus,
-        //   ),
-        // ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.cyanAccent),
+          onPressed: () {
+            // Properly handle back navigation
+            Navigator.of(context).pop();
+          },
+        ),
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.cyanAccent,
           unselectedLabelColor: Colors.white.withOpacity(0.6),
           indicatorColor: Colors.cyanAccent,
+          isScrollable: true,
           tabs: [
             Tab(
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.inventory, size: 16),
@@ -493,12 +492,21 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
             ),
             Tab(
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.store, size: 16),
                   const SizedBox(width: 4),
-                  Text('Store (${lockedSkins.length})'),
+                  Text('Available (${availableForPurchase.length})'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock, size: 16),
+                  const SizedBox(width: 4),
+                  Text('Locked (${lockedByLevel.length})'),
                 ],
               ),
             ),
@@ -522,21 +530,95 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
               return _buildSkinCard(unlockedSkins[index]);
             },
           ),
-          
-          // Store tab
-          GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
-            ),
-            itemCount: lockedSkins.length,
-            itemBuilder: (context, index) {
-              return _buildSkinCard(lockedSkins[index]);
-            },
-          ),
+
+          // Available for purchase tab
+          availableForPurchase.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.store,
+                        size: 64,
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No skins available for purchase',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Keep playing to unlock more!',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.4),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 4,
+                    mainAxisSpacing: 4,
+                  ),
+                  itemCount: availableForPurchase.length,
+                  itemBuilder: (context, index) {
+                    return _buildSkinCard(availableForPurchase[index]);
+                  },
+                ),
+
+          // Locked by level tab
+          lockedByLevel.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.emoji_events,
+                        size: 64,
+                        color: Colors.amber.withOpacity(0.6),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'All skins unlocked!',
+                        style: TextStyle(
+                          color: Colors.amber.withOpacity(0.8),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'You\'ve reached the highest levels!',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 4,
+                    mainAxisSpacing: 4,
+                  ),
+                  itemCount: lockedByLevel.length,
+                  itemBuilder: (context, index) {
+                    return _buildSkinCard(lockedByLevel[index]);
+                  },
+                ),
         ],
       ),
     );

@@ -214,11 +214,11 @@ class AdManager {
   // Show Rewarded Ad with improved error handling and preloading
   static Future<void> showRewardedAd({
     required Function onRewarded,
-    Function? onAdFailedToShow,
+    required Function onFailed,
   }) async {
     print('Attempting to show rewarded ad...');
     print('isRewardedAdReady: $isRewardedAdReady');
-    print('rewardedAd != null: ${rewardedAd != null}');
+    print('rewardedAd != null:  [36m${rewardedAd != null} [0m');
     print('isAdsInitialized: $isAdsInitialized');
 
     if (isRewardedAdReady && rewardedAd != null) {
@@ -232,7 +232,7 @@ class AdManager {
         );
       } catch (e) {
         print('Error showing rewarded ad: $e');
-        onAdFailedToShow?.call();
+        onFailed();
         // Try to load a new ad
         loadRewardedAd();
       }
@@ -240,7 +240,7 @@ class AdManager {
       print('Rewarded ad not ready. Loading new ad...');
 
       // Show user feedback immediately
-      onAdFailedToShow?.call();
+      onFailed();
 
       // Try to load and show ad if not already loading
       if (!isLoadingRewardedAd) {
@@ -250,11 +250,10 @@ class AdManager {
         await Future.delayed(const Duration(seconds: 2));
         if (isRewardedAdReady && rewardedAd != null) {
           print('Ad loaded successfully, showing now...');
-          showRewardedAd(
-              onRewarded: onRewarded, onAdFailedToShow: onAdFailedToShow);
+          showRewardedAd(onRewarded: onRewarded, onFailed: onFailed);
         } else {
           print('Failed to load ad after retry');
-          onAdFailedToShow?.call();
+          onFailed();
         }
       }
     }
