@@ -88,30 +88,6 @@ class MagnetWalkerGame extends FlameGame
     onExitToMenu = callback;
   }
 
-  // Method to pause the game (freezes all game logic)
-  void pauseGame() {
-    currentState = GameState.paused;
-    pausePlayTime();
-
-    // Stop all spawning
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-
-    // The game objects will remain in their current positions
-    // because the update loop will be skipped
-  }
-
-  // Method to resume the game
-  void resumeGame() {
-    currentState = GameState.playing;
-    resumePlayTime();
-
-    // Resume spawning only if wave is active
-    if (currentState == GameState.playing) {
-      startSpawning();
-    }
-  }
-
   // Method to exit to menu
   void exitToMainMenu() {
     // Reset game state
@@ -325,44 +301,6 @@ class MagnetWalkerGame extends FlameGame
   void spawnObject() {
     // This method is now handled by the specific spawn managers
     // Keeping it for backward compatibility but it's not used
-  }
-
-  void startWave(int wave) {
-    waveManager.startWave(wave);
-
-    // Show countdown for all waves, including wave 1
-    waveCountdown = 3.0;
-    currentState = GameState.countdown;
-    waveMessage = 'Wave $wave/3 starting in 3';
-
-    // Ensure player is in correct position for current level type
-    if (wave == 1) {
-      _updatePlayerPositionForLevelType();
-    }
-
-    // The actual wave will start after countdown in updateWaveCountdown
-  }
-
-  // Move to the next level
-  void nextLevel() async {
-    waveManager.level++;
-    waveManager.currentWave = 1;
-    wavesCompletedInLevel = 0;
-    waveManager.resetWaveScore();
-
-    // NEW: Check for newly available skins (not auto-unlock, just available for purchase)
-    final newlyAvailableSkins = _checkForNewAvailableSkins(waveManager.level);
-
-    // NEW: Show notification for newly available skins
-    if (newlyAvailableSkins.isNotEmpty) {
-      _showNewSkinsAvailableNotification(newlyAvailableSkins);
-    }
-
-    // Update player position for new level type
-    _updatePlayerPositionForLevelType();
-
-    // Save progress immediately after advancing to a new level
-    saveProgress();
   }
 
   List<Skin> _checkForNewAvailableSkins(int currentLevel) {
@@ -833,143 +771,6 @@ class MagnetWalkerGame extends FlameGame
     FlameAudio.bgm.play('game_music.mp3');
   }
 
-  void endWave({bool failed = false}) {
-    currentState = GameState.countdown;
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-    clearAllObjects(); // Clear all objects immediately
-
-    // Animate player back to initial position depending on level type
-    final gameSize = canvasSize;
-    Vector2 initialPosition;
-    final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
-    if (currentLevelType == LevelType.gravity) {
-      // Gravity mode: bottom center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
-    } else {
-      // Survival mode: center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
-    }
-    player.animateToPosition(initialPosition, 2.7); // 2.7 seconds animation
-
-    if (failed) {
-      wavesCompletedInLevel = 0;
-
-      playSound('lose.mp3');
-      // Stop game music when player loses
-      stopGameMusic();
-      // Show unified failure dialog
-      gameUI.showFailureDialog(
-        score: totalScore,
-        level: waveManager.level,
-        wave: waveManager.currentWave,
-        playTime: playTime,
-        onRestartLevel: () {
-          // Check if we have lives before restarting
-          if (livesManager.lives == 0) {
-            // Show no lives dialog if no lives available
-            gameUI.showNoLivesDialog();
-          } else {
-            // Restart level (wave 1) - this will consume a life
-            waveManager.startWave(1);
-            Future.delayed(const Duration(milliseconds: 300), () {
-              tryConsumeLifeAndStartWave(1);
-            });
-            // Notify main wrapper about game restart
-            onGameRestart?.call();
-          }
-        },
-        onWatchAd: () {
-          AdManager.showRewardedAd(
-            onRewarded: () {
-              // Restart the current wave without consuming a life
-              clearAllObjects();
-              final currentWave = waveManager.currentWave;
-              waveManager.startWave(currentWave);
-              Future.delayed(const Duration(milliseconds: 300), () {
-                startWaveWithoutConsumingLife(currentWave);
-              });
-              // Notify main wrapper about game restart
-              onGameRestart?.call();
-            },
-            onFailed: () {
-              final context = gameUI.game.buildContext;
-              if (context != null) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('No Ad Available'),
-                    content: const Text(
-                        'No ad is available right now. Please try again later.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          // Re-show the failure dialog
-                          gameUI.showFailureDialog(
-                            score: totalScore,
-                            level: waveManager.level,
-                            wave: waveManager.currentWave,
-                            playTime: playTime,
-                            onRestartLevel: () {
-                              if (livesManager.lives == 0) {
-                                gameUI.showNoLivesDialog();
-                              } else {
-                                waveManager.startWave(1);
-                                Future.delayed(
-                                    const Duration(milliseconds: 300), () {
-                                  tryConsumeLifeAndStartWave(1);
-                                });
-                                onGameRestart?.call();
-                              }
-                            },
-                            onWatchAd: () {/* recursion handled */},
-                          );
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
-          );
-        },
-      );
-    } else {
-      // Wave completed successfully
-      wavesCompletedInLevel++;
-
-      if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
-        // Level complete: show dialog immediately
-        currentState = GameState.levelComplete;
-        showLevelCompleteDialog();
-      } else {
-        // More waves to go - start countdown for next wave
-        waveManager.currentWave++;
-        startWave(waveManager.currentWave);
-      }
-    }
-
-    // Save progress after wave ends
-    saveProgress();
-  }
-
-  void updateWaveCountdown(double dt) {
-    if (currentState == GameState.countdown && waveCountdown > 0) {
-      waveCountdown -= dt;
-      if (waveCountdown <= 0) {
-        // Start the actual wave
-        currentState = GameState.playing;
-        waveMessage = null;
-        startSpawning();
-      } else {
-        waveMessage =
-            'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
-      }
-    }
-  }
-
   void showLevelCompleteDialog() {
     playSound('win.wav');
     gameUI.showLevelCompleted(totalScore, waveManager.level, playTime);
@@ -1035,63 +836,6 @@ class MagnetWalkerGame extends FlameGame
       );
       add(particle);
       particles.add(particle);
-    }
-  }
-
-  void restartGame() {
-    // Reset game state but keep the current level
-    waveManager.startWave(1);
-    currentState = GameState.playing;
-    playTime = Duration.zero;
-    gameStartTime = null; // Reset start time for new game
-    pauseStartTime = null; // Reset pause time for new game
-
-    // Clear all objects using the helper method
-    clearAllObjects();
-
-    // Reset player
-    player.reset();
-
-    // Restart timers
-    startPlayTimeTracking();
-
-    // Stop any existing spawning
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-
-    // Hide game over UI
-    gameUI.hideGameOver();
-
-    // Save progress after restart
-    saveProgress();
-
-    // Start the first wave or show no lives dialog
-    startGameOrShowNoLivesDialog();
-
-    // Notify main wrapper about game restart
-    onGameRestart?.call();
-  }
-
-  void startGameOrShowNoLivesDialog() {
-    if (livesManager.lives == 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        gameUI.showNoLivesDialog();
-      });
-      return;
-    }
-    tryConsumeLifeAndStartWave(1);
-  }
-
-  void tryConsumeLifeAndStartWave(int wave) {
-    if (livesManager.lives == 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        gameUI.showNoLivesDialog();
-      });
-      return;
-    }
-    if (livesManager.tryConsumeLife()) {
-      waveManager.startWave(wave);
-      startWave(wave);
     }
   }
 
@@ -1252,19 +996,6 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
-  // Helper to start a wave without consuming a life (for ad rewards)
-  void startWaveWithoutConsumingLife(int wave) {
-    print(
-        'startWaveWithoutConsumingLife called with wave: $wave, lives: \\${livesManager.lives}');
-    // Ensure proper game state
-    currentState = GameState.playing;
-    waveCountdown = 0;
-    waveMessage = null;
-    noLivesDialogVisible = false;
-    waveManager.startWave(wave);
-    startWave(wave);
-  }
-
   // Helper to dismiss any existing dialogs and reset state
   void dismissNoLivesDialog() {
     noLivesDialogVisible = false;
@@ -1280,5 +1011,244 @@ class MagnetWalkerGame extends FlameGame
   // Play button sound on tap
   void playButtonSound() {
     playSound('button.mp3');
+  }
+
+//////////// HEREEEEE ONLY WE HANDLE THE GAME STATE ////////////
+  void tryConsumeLifeAndStartWave(int wave) {
+    if (livesManager.tryConsumeLife()) {
+      startWave(wave);
+    }
+  }
+
+  void startGameOrShowNoLivesDialog() {
+    if (livesManager.lives == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        gameUI.showNoLivesDialog();
+      });
+      return;
+    }
+    tryConsumeLifeAndStartWave(1);
+  }
+
+  // Method to pause the game (freezes all game logic)
+  void pauseGame() {
+    currentState = GameState.paused;
+    pausePlayTime();
+
+    // Stop all spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+
+    // The game objects will remain in their current positions
+    // because the update loop will be skipped
+  }
+
+  // Method to resume the game
+  void resumeGame() {
+    currentState = GameState.playing;
+    resumePlayTime();
+
+    // Resume spawning only if wave is active
+    if (currentState == GameState.playing) {
+      restartWave();
+    }
+  }
+
+  // Call this to start a new level (resets wave to 1)
+  void startLevel(int level) {
+    print('startLevel called - level: $level');
+    waveManager.level = level;
+    waveManager.currentWave = 1;
+    wavesCompletedInLevel = 0;
+    currentState = GameState.countdown;
+    prepareWave();
+    saveProgress();
+  }
+
+// Prepares the current wave (shows countdown, positions player, etc.)
+  void prepareWave() {
+    print(
+        'prepareWave called - level: ${waveManager.level}, wave: ${waveManager.currentWave}');
+
+    // Clear any existing objects
+    clearAllObjects();
+
+    // Position player for current level type
+    _updatePlayerPositionForLevelType();
+
+    // Set up countdown
+    waveCountdown = 3.0;
+    waveMessage =
+        'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in 3';
+
+    // Stop any existing spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+
+    // Reset wave score
+    waveManager.resetWaveScore();
+  }
+
+// Call this when the countdown finishes to start the wave
+  void onCountdownFinished() {
+    print('onCountdownFinished called');
+    currentState = GameState.playing;
+    waveMessage = null;
+    startSpawning();
+  }
+
+// Call this when the player completes a wave
+  void completeWave() {
+    print('completeWave called');
+    wavesCompletedInLevel++;
+
+    if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
+      // Level complete
+      currentState = GameState.levelComplete;
+      //playSound('win.wav');
+      pauseGame();
+      showLevelCompleteDialog();
+    } else {
+      // More waves to complete in this level
+      waveManager.currentWave++;
+      currentState = GameState.countdown;
+      prepareWave();
+    }
+
+    saveProgress();
+  }
+
+// Call this when the player fails a wave
+  void failWave() {
+    print('failWave called');
+    currentState = GameState.gameOver;
+
+    // Stop spawning and clear objects
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    clearAllObjects();
+
+    // Position player back to start
+    _updatePlayerPositionForLevelType();
+
+    playSound('lose.mp3');
+    stopGameMusic();
+
+    // Show failure dialog
+    gameUI.showFailureDialog(
+      score: totalScore,
+      level: waveManager.level,
+      wave: waveManager.currentWave,
+      playTime: playTime,
+      onRestartLevel: () {
+        if (livesManager.lives == 0) {
+          gameUI.showNoLivesDialog();
+        } else {
+          livesManager.tryConsumeLife();
+          startLevel(waveManager.level); // Restart current level
+        }
+      },
+      onWatchAd: () {
+        AdManager.showRewardedAd(
+          onRewarded: () {
+            // Restart current wave after ad
+            restartWave();
+          },
+          onFailed: () {
+            final context = gameUI.game.buildContext;
+            if (context != null) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('No Ad Available'),
+                  content: const Text(
+                      'No ad is available right now. Please try again later.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+
+// Call this to restart the current wave (e.g., after failure)
+  void restartWave() {
+    print('restartWave called');
+    currentState = GameState.countdown;
+    prepareWave();
+  }
+
+// Call this to advance to the next level
+  void nextLevel() {
+    print('nextLevel called');
+
+    waveManager.level++;
+    waveManager.currentWave = 1;
+    wavesCompletedInLevel = 0;
+    waveManager.resetWaveScore();
+
+    // Check for newly available skins
+    final newlyAvailableSkins = _checkForNewAvailableSkins(waveManager.level);
+    if (newlyAvailableSkins.isNotEmpty) {
+      _showNewSkinsAvailableNotification(newlyAvailableSkins);
+    } else {
+      // If no new skins, just prepare the next wave
+      currentState = GameState.countdown;
+      prepareWave();
+    }
+
+    saveProgress();
+  }
+
+  void startWave(int wave) {
+    waveManager.startWave(wave);
+    prepareWave();
+  }
+
+  void endWave({bool failed = false}) {
+    if (failed) {
+      failWave();
+    } else {
+      completeWave();
+    }
+  }
+
+  void restartGame() {
+    // Reset game state but keep the current level
+    waveManager.startWave(1);
+    playTime = Duration.zero;
+    gameStartTime = null;
+    pauseStartTime = null;
+
+    clearAllObjects();
+    player.reset();
+    startPlayTimeTracking();
+
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    gameUI.hideGameOver();
+
+    saveProgress();
+    startGameOrShowNoLivesDialog();
+    onGameRestart?.call();
+  }
+
+  void updateWaveCountdown(double dt) {
+    if (currentState == GameState.countdown && waveCountdown > 0) {
+      waveCountdown -= dt;
+      if (waveCountdown <= 0) {
+        onCountdownFinished();
+      } else {
+        waveMessage =
+            'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+      }
+    }
   }
 }
