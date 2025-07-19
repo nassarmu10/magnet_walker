@@ -68,7 +68,7 @@ class GameObject extends CircleComponent
           game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
       final playerPos = game.player.position;
       final direction = (playerPos - position)..normalize();
-      final speed = 1.0 + (level * 1.0); // Speed increases with level
+      final speed = 1.0 + (level * 5.0); // Speed increases with level
       velocity = direction * speed;
     }
 
@@ -117,20 +117,20 @@ class GameObject extends CircleComponent
     // Check collision with player based on level type
     final player = game.player;
     if (position.distanceTo(player.position) < radius + player.radius) {
-      if (levelType == LevelType.gravity) {
-        // In gravity mode, all objects collide with player
+      if (levelType == LevelType.gravity ||
+          levelType == LevelType.survival ||
+          levelType == LevelType.demon) {
         collected = true;
         game.collectObject(this);
-      } else if (levelType == LevelType.survival) {
-        // In survival mode, coins collide with player, bombs only if they hit player
-        if (type == ObjectType.coin) {
-          // Coins collide with player to give points
-          collected = true;
-          game.collectObject(this);
-        } else if (type == ObjectType.bomb) {
-          // Bombs only collide if they hit the player (game over)
-          collected = true;
-          game.collectObject(this);
+      }
+    }
+
+    final demon = game.demon;
+    if (position.distanceTo(demon.position) < radius + demon.radius) {
+      if (levelType == LevelType.demon && isMagnetized) {
+        if (type == ObjectType.bomb) {
+          print("HIT A DEMON BY BOMB");
+          demon.onHitByBomb();
         }
       }
     }
@@ -143,7 +143,8 @@ class GameObject extends CircleComponent
       if (position.y > gameSize.y + 50) {
         removeFromParent();
       }
-    } else if (levelType == LevelType.survival) {
+    } else if (levelType == LevelType.survival ||
+        levelType == LevelType.demon) {
       // Remove if too far from player or off screen
       final distanceToPlayer = position.distanceTo(player.position);
       if (distanceToPlayer > gameSize.x * 1.5 ||
@@ -151,6 +152,7 @@ class GameObject extends CircleComponent
           position.x > gameSize.x + 50 ||
           position.y < -50 ||
           position.y > gameSize.y + 50) {
+        game.gameObjects.remove(this);
         removeFromParent();
       }
     }

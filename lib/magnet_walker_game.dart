@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:magnet_walker/components/demon.dart';
 import 'package:magnet_walker/skins/skin_model.dart';
 import 'package:magnet_walker/skins/skin_store_screen.dart';
 import 'dart:math' as math;
@@ -35,6 +36,7 @@ enum GameState {
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
   late Player player;
+  late Demon demon;
   late GameUI gameUI;
   late Background background;
 
@@ -161,20 +163,26 @@ class MagnetWalkerGame extends FlameGame
 
     // Add player - position based on current level type
     final gameSize = canvasSize;
-    Vector2 initialPosition;
+    Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
     if (currentLevelType == LevelType.gravity) {
       // Gravity mode: bottom center
       initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
-    } else {
+    } else if (currentLevelType == LevelType.survival) {
       // Survival mode: center
       initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+    } else if (currentLevelType == LevelType.demon) {
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
     }
     player = Player(position: initialPosition);
     add(player);
 
     // Apply current skin to player
     await _updatePlayerSkin();
+    if (currentLevelType == LevelType.demon) {
+      demon = Demon(position: Vector2(gameSize.x / 2, 200));
 
+      add(demon);
+    }
     // Add UI last to ensure game size is available
     gameUI = GameUI();
     add(gameUI);
@@ -250,16 +258,15 @@ class MagnetWalkerGame extends FlameGame
   void _updatePlayerPositionForLevelType() {
     final gameSize = canvasSize;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
-    Vector2 initialPosition;
+    Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
     if (currentLevelType == LevelType.gravity) {
-      // Gravity mode: bottom center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
-    } else {
+    } else if (currentLevelType == LevelType.survival) {
       // Survival mode: center
       initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+    } else if (currentLevelType == LevelType.demon) {
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
     }
-
     // Animate player to new position
     player.animateToPosition(initialPosition, 2.7);
   }
@@ -293,9 +300,9 @@ class MagnetWalkerGame extends FlameGame
 
     if (currentLevelType == LevelType.gravity) {
       gravitySpawnManager.startSpawning();
-    } else {
+    } else if (currentLevelType == LevelType.survival) {
       survivalSpawnManager.startSpawning();
-    }
+    } else if (currentLevelType == LevelType.demon) {}
   }
 
   void spawnObject() {
@@ -780,25 +787,28 @@ class MagnetWalkerGame extends FlameGame
     if (!obj.isMounted) return;
 
     if (obj.type == ObjectType.coin) {
-      totalScore += 1;
-      waveManager.addWaveScore(1);
       createParticles(obj.position, Colors.yellow);
       playSound('coin.wav');
+      if (currentLevelType != LevelType.demon) {
+        totalScore += 1;
+        waveManager.addWaveScore(1);
 
-      if (waveManager.isWaveComplete() && currentState == GameState.playing) {
-        endWave();
-        return;
-      }
+        if (waveManager.isWaveComplete() && currentState == GameState.playing) {
+          endWave();
+          return;
+        }
+      } // handle demon finishes
     } else {
       // Handle bomb collision based on level type
-      if (currentLevelType == LevelType.gravity) {
+      if (currentLevelType == LevelType.gravity ||
+          currentLevelType == LevelType.survival) {
         endWave(failed: true);
         createParticles(obj.position, Colors.red);
         playSound('bomb.wav');
-      } else {
-        endWave(failed: true);
+      } else if (currentLevelType == LevelType.demon) {
         createParticles(obj.position, Colors.red);
         playSound('bomb.wav');
+        failDemonLevel();
       }
     }
 
@@ -1038,6 +1048,7 @@ class MagnetWalkerGame extends FlameGame
     // Stop all spawning
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
+    demon.isAlive = false; // TODO handle pause demon level
 
     // The game objects will remain in their current positions
     // because the update loop will be skipped
@@ -1094,7 +1105,14 @@ class MagnetWalkerGame extends FlameGame
     print('onCountdownFinished called');
     currentState = GameState.playing;
     waveMessage = null;
-    startSpawning();
+
+    if (currentLevelType != LevelType.demon) {
+      startSpawning();
+    } else {
+      currentState = GameState.playing;
+      demon.isAlive =
+          true; // TODO THIS SHOULD BE CHANGED TO HOW TO START DEMON LEVELS
+    }
   }
 
 // Call this when the player completes a wave
@@ -1218,6 +1236,67 @@ class MagnetWalkerGame extends FlameGame
     } else {
       completeWave();
     }
+  }
+
+  void failDemonLevel() {
+    print('failDemonLevel called');
+
+    demon.isAlive = false;
+    currentState = GameState.gameOver;
+    clearAllObjects();
+
+    // Position player back to start
+    _updatePlayerPositionForLevelType();
+    saveProgress();
+
+    playSound('lose.mp3');
+    stopGameMusic();
+
+    // Show failure dialog
+    gameUI.showFailureDialog(
+      score: totalScore,
+      level: waveManager.level,
+      wave: waveManager.currentWave,
+      playTime: playTime,
+      onRestartLevel: () {
+        if (livesManager.lives == 0) {
+          gameUI.showNoLivesDialog();
+        } else {
+          currentState = GameState
+              .playing; //TODO change to function of start/restart demon level
+          demon.isAlive = true;
+          livesManager.tryConsumeLife();
+        }
+      },
+      onWatchAd: () {
+        AdManager.showRewardedAd(
+          onRewarded: () {
+            currentState = GameState
+                .playing; //TODO change to function of start/restart demon level
+            demon.isAlive = true;
+          },
+          onFailed: () {
+            final context = gameUI.game.buildContext;
+            if (context != null) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('No Ad Available'),
+                  content: const Text(
+                      'No ad is available right now. Please try again later.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+        );
+      },
+    );
   }
 
   void restartGame() {

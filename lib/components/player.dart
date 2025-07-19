@@ -95,7 +95,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
-    if (currentLevelType == LevelType.gravity) {
+    if (currentLevelType == LevelType.gravity ||
+        currentLevelType == LevelType.demon) {
       position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
       position.y = (position.y + deltaY).clamp(20.0, gameSize.y - 20);
     } else if (currentLevelType == LevelType.survival) {
@@ -119,15 +120,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   void applyMagneticForce(GameObject obj, double dt) {
     final distance = position.distanceTo(obj.position);
-
     if (distance < magnetRadius && distance > 0) {
       final direction = (position - obj.position)..normalize();
       final force = 1000 * (1 - distance / magnetRadius);
 
       obj.velocity += direction * force * dt;
       obj.isMagnetized = true;
-    } else {
-      obj.isMagnetized = false;
     }
   }
 
