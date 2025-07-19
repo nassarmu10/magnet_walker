@@ -22,6 +22,16 @@ import 'managers/wave_manager.dart';
 import 'managers/ad_manager.dart';
 import 'skins/skin_manager.dart';
 
+enum GameState {
+  menu,
+  countdown,
+  playing,
+  paused,
+  waveComplete,
+  levelComplete,
+  gameOver
+}
+
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
   late Player player;
@@ -34,7 +44,7 @@ class MagnetWalkerGame extends FlameGame
   late LevelType currentLevelType;
 
   // Game state
-  bool gameRunning = true;
+  GameState currentState = GameState.menu;
 
   // Audio settings
   bool sfxEnabled = true;
@@ -43,11 +53,8 @@ class MagnetWalkerGame extends FlameGame
   VoidCallback? onGameRestart;
 
   // Wave system
-  bool isWaveActive = false;
   double waveCountdown = 0.0;
   String? waveMessage;
-  bool isLevelComplete = false;
-  bool isPaused = false;
   VoidCallback? onExitToMenu;
 
   // Score and level progression
@@ -83,7 +90,7 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to pause the game (freezes all game logic)
   void pauseGame() {
-    isPaused = true;
+    currentState = GameState.paused;
     pausePlayTime();
 
     // Stop all spawning
@@ -96,11 +103,11 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to resume the game
   void resumeGame() {
-    isPaused = false;
+    currentState = GameState.playing;
     resumePlayTime();
 
     // Resume spawning only if wave is active
-    if (isWaveActive && gameRunning) {
+    if (currentState == GameState.playing) {
       startSpawning();
     }
   }
@@ -108,9 +115,7 @@ class MagnetWalkerGame extends FlameGame
   // Method to exit to menu
   void exitToMainMenu() {
     // Reset game state
-    isPaused = false;
-    gameRunning = false;
-    isWaveActive = false;
+    currentState = GameState.menu;
 
     // Stop all timers and spawning
     gravitySpawnManager.stop();
@@ -205,8 +210,7 @@ class MagnetWalkerGame extends FlameGame
     startPlayTimeTracking();
 
     // Start spawning objects after everything is loaded
-    isWaveActive = false;
-    isLevelComplete = false;
+    currentState = GameState.countdown;
     waveMessage = null;
     await Future.delayed(const Duration(milliseconds: 100));
     // Only start wave if lives > 0
@@ -294,7 +298,7 @@ class MagnetWalkerGame extends FlameGame
     playTimeTimer?.cancel();
 
     playTimeTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (gameRunning && gameStartTime != null) {
+      if (currentState == GameState.playing && gameStartTime != null) {
         // Calculate total time minus paused time
         final totalTime = DateTime.now().difference(gameStartTime!);
         playTime = totalTime - pausedTime;
@@ -328,8 +332,7 @@ class MagnetWalkerGame extends FlameGame
 
     // Show countdown for all waves, including wave 1
     waveCountdown = 3.0;
-    isWaveActive = false;
-    gameRunning = false;
+    currentState = GameState.countdown;
     waveMessage = 'Wave $wave/3 starting in 3';
 
     // Ensure player is in correct position for current level type
@@ -776,7 +779,7 @@ class MagnetWalkerGame extends FlameGame
         },
       ).then((_) {
         // Ensure game is resumed if dialog is closed unexpectedly
-        if (isPaused) {
+        if (currentState == GameState.paused) {
           resumeGame();
         }
       });
@@ -802,7 +805,7 @@ class MagnetWalkerGame extends FlameGame
     )
         .then((_) {
       // Resume game when returning from skin store
-      if (isPaused) {
+      if (currentState == GameState.paused) {
         resumeGame();
       }
     });
@@ -831,8 +834,7 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void endWave({bool failed = false}) {
-    isWaveActive = false;
-    gameRunning = false;
+    currentState = GameState.countdown;
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     clearAllObjects(); // Clear all objects immediately
@@ -851,6 +853,8 @@ class MagnetWalkerGame extends FlameGame
     player.animateToPosition(initialPosition, 2.7); // 2.7 seconds animation
 
     if (failed) {
+      wavesCompletedInLevel = 0;
+
       playSound('lose.mp3');
       // Stop game music when player loses
       stopGameMusic();
@@ -938,7 +942,7 @@ class MagnetWalkerGame extends FlameGame
 
       if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
         // Level complete: show dialog immediately
-        isLevelComplete = true;
+        currentState = GameState.levelComplete;
         showLevelCompleteDialog();
       } else {
         // More waves to go - start countdown for next wave
@@ -952,12 +956,11 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void updateWaveCountdown(double dt) {
-    if (!isWaveActive && waveCountdown > 0) {
+    if (currentState == GameState.countdown && waveCountdown > 0) {
       waveCountdown -= dt;
       if (waveCountdown <= 0) {
         // Start the actual wave
-        isWaveActive = true;
-        gameRunning = true;
+        currentState = GameState.playing;
         waveMessage = null;
         startSpawning();
       } else {
@@ -981,7 +984,7 @@ class MagnetWalkerGame extends FlameGame
       createParticles(obj.position, Colors.yellow);
       playSound('coin.wav');
 
-      if (waveManager.isWaveComplete() && isWaveActive) {
+      if (waveManager.isWaveComplete() && currentState == GameState.playing) {
         endWave();
         return;
       }
@@ -1035,21 +1038,10 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
-  void gameOver() {
-    // Not used for wave fail anymore
-    gameRunning = false;
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-    playTimeTimer?.cancel();
-    clearAllObjects();
-    pausePlayTime();
-    // Show game over dialog if needed (handled by endWave now)
-  }
-
   void restartGame() {
     // Reset game state but keep the current level
     waveManager.startWave(1);
-    gameRunning = true;
+    currentState = GameState.playing;
     playTime = Duration.zero;
     gameStartTime = null; // Reset start time for new game
     pauseStartTime = null; // Reset pause time for new game
@@ -1147,10 +1139,10 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   bool onDragUpdate(DragUpdateEvent event) {
-    if (isPaused) return false;
+    if (currentState == GameState.paused) return false;
     // Forward drag events to the player for better control
     // Allow movement only when game is running and wave is active
-    if (gameRunning && isWaveActive) {
+    if (currentState == GameState.playing) {
       // Increase movement speed and responsiveness
       player.moveBy(event.localDelta.x * 1, event.localDelta.y * 1);
     }
@@ -1164,9 +1156,10 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void onTapDown(TapDownEvent event) {
-    if (isPaused) return;
+    if (currentState == GameState.paused) return;
     // Existing tap logic here
-    if (gameRunning && isWaveActive && currentLevelType == LevelType.survival) {
+    if (currentState == GameState.playing &&
+        currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted && !obj.collected && obj.type == ObjectType.bomb) {
@@ -1183,7 +1176,7 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void update(double dt) {
-    if (!isPaused) {
+    if (currentState != GameState.paused) {
       super.update(dt);
       updateWaveCountdown(dt);
     }
@@ -1205,7 +1198,7 @@ class MagnetWalkerGame extends FlameGame
     }
 
     // Update game objects only when game is running
-    if (gameRunning) {
+    if (currentState == GameState.playing) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
@@ -1264,8 +1257,7 @@ class MagnetWalkerGame extends FlameGame
     print(
         'startWaveWithoutConsumingLife called with wave: $wave, lives: \\${livesManager.lives}');
     // Ensure proper game state
-    gameRunning = true;
-    isWaveActive = true;
+    currentState = GameState.playing;
     waveCountdown = 0;
     waveMessage = null;
     noLivesDialogVisible = false;
@@ -1278,20 +1270,10 @@ class MagnetWalkerGame extends FlameGame
     noLivesDialogVisible = false;
     // Only set gameRunning to true if we have lives
     if (livesManager.lives > 0) {
-      gameRunning = true;
+      currentState = GameState.playing;
     } else {
       // If no lives, keep game in a paused state
-      gameRunning = false;
-      isWaveActive = false;
-    }
-  }
-
-  // Helper to handle Play Again from Game Over dialog
-  void handlePlayAgain() {
-    if (livesManager.lives > 0) {
-      restartGame();
-    } else {
-      gameUI.showNoLivesDialog();
+      currentState = GameState.countdown;
     }
   }
 

@@ -27,7 +27,7 @@ class GravitySpawnManager {
 
     spawnTimer = async.Timer.periodic(
         Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
-      if (game.gameRunning) {
+      if (game.currentState == GameState.playing) {
         spawnObject();
       }
     });
