@@ -9,7 +9,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   double magnetRadius = 80.0;
   late Paint magnetFieldPaint;
   late Paint playerGlowPaint;
-  SpriteComponent? earthSpriteComponent;
+  SpriteComponent? playerSpriteComponent;
   Vector2? _targetPosition;
   double? _moveDuration;
   double _moveElapsed = 0;
@@ -45,19 +45,19 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Future<void> _loadSkin(String skinPath) async {
     try {
       // Remove existing sprite component
-      if (earthSpriteComponent != null) {
-        remove(earthSpriteComponent!);
+      if (playerSpriteComponent != null) {
+        remove(playerSpriteComponent!);
       }
 
       // Load new skin
       final skinImage = await game.images.load(skinPath);
-      earthSpriteComponent = SpriteComponent(
+      playerSpriteComponent = SpriteComponent(
         sprite: Sprite(skinImage),
         size: Vector2.all(radius * 5),
         anchor: Anchor.center,
         priority: 1,
       );
-      add(earthSpriteComponent!);
+      add(playerSpriteComponent!);
       _currentSkinPath = skinPath;
     } catch (e) {
       print('Failed to load skin $skinPath: $e');
@@ -92,14 +92,10 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   void moveBy(double deltaX, double deltaY) {
     if (isAnimatingToPosition) return;
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
-
     if (currentLevelType == LevelType.gravity) {
-      // In gravity mode, player moves both horizontally and vertically
-      // Allow more movement range for better control
       position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
       position.y = (position.y + deltaY).clamp(20.0, gameSize.y - 20);
     } else if (currentLevelType == LevelType.survival) {
@@ -110,13 +106,10 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   void moveHorizontally(double deltaX) {
     if (isAnimatingToPosition) return;
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
-
     if (currentLevelType == LevelType.gravity) {
-      // In gravity mode, player moves horizontally at bottom
       position.x = (position.x + deltaX).clamp(30.0, gameSize.x - 30);
     } else if (currentLevelType == LevelType.survival) {
       // In survival mode, player stays stationary in center
@@ -144,19 +137,14 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void reset() {
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
-
     if (currentLevelType == LevelType.gravity) {
-      // In gravity mode, player stays at bottom center
       position = Vector2(gameSize.x / 2, gameSize.y - 117);
     } else {
-      // In survival mode, player starts at center
       position = Vector2(gameSize.x / 2, gameSize.y / 2);
     }
-
     magnetRadius = 80.0;
   }
 

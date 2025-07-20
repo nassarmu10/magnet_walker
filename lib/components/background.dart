@@ -20,7 +20,7 @@ class Background extends Component with HasGameReference<MagnetWalkerGame> {
     if (_bgSprite != null) {
       _offsetY += _speed * dt;
       // Loop the background
-      final gameSize = game.size;
+      final gameSize = game.canvasSize;
       final imgWidth = _bgSprite!.image.width.toDouble();
       final imgHeight = _bgSprite!.image.height.toDouble();
       final scale = (gameSize.x / imgWidth > gameSize.y / imgHeight)
@@ -37,7 +37,7 @@ class Background extends Component with HasGameReference<MagnetWalkerGame> {
   @override
   void render(Canvas canvas) {
     if (_bgSprite != null) {
-      final gameSize = game.size;
+      final gameSize = game.canvasSize;
       final imgWidth = _bgSprite!.image.width.toDouble();
       final imgHeight = _bgSprite!.image.height.toDouble();
       final scale = (gameSize.x / imgWidth > gameSize.y / imgHeight)

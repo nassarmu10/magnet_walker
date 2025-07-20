@@ -59,7 +59,7 @@ class GameObject extends CircleComponent
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
       // Base speed increases with level
-      final baseSpeed = 50.0;
+      final baseSpeed = 5.0;
       final levelSpeedMultiplier = 1.0 + (level * 0.3); // 30% faster per level
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
@@ -68,7 +68,7 @@ class GameObject extends CircleComponent
           game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
       final playerPos = game.player.position;
       final direction = (playerPos - position)..normalize();
-      final speed = 80.0 + (level * 10.0); // Speed increases with level
+      final speed = 1.0 + (level * 1.0); // Speed increases with level
       velocity = direction * speed;
     }
 

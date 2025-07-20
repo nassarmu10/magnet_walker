@@ -1,151 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flame/game.dart';
-import 'package:magnet_walker/managers/ad_manager.dart';
-import 'magnet_walker_game.dart';
+import 'package:flame_audio/flame_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'menu_screen.dart';
+import 'settings_screen.dart';
 import 'skins/skin_store_screen.dart';
 import 'skins/skin_manager.dart';
+import 'game_screen.dart';
+import 'managers/ad_manager.dart';
 
 void main() {
   runApp(const MagnetWalkerApp());
 }
 
-class MagnetWalkerApp extends StatelessWidget {
+class MagnetWalkerApp extends StatefulWidget {
   const MagnetWalkerApp({super.key});
+
+  @override
+  State<MagnetWalkerApp> createState() => _MagnetWalkerAppState();
+}
+
+class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
+  late SkinManager skinManager;
+  bool _musicEnabled = true;
+  bool _menuMusicEnabled = true;
+  bool _sfxEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    _loadSettings();
+    skinManager = SkinManager();
+    skinManager.initialize();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _musicEnabled = prefs.getBool('music_enabled') ?? true;
+      _menuMusicEnabled = prefs.getBool('menu_music_enabled') ?? true;
+      _sfxEnabled = prefs.getBool('sfx_enabled') ?? true;
+    });
+
+    if (_menuMusicEnabled) {
+      FlameAudio.bgm.play('menu_music.mp3');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Magnet Walker',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        fontFamily: 'Arial',
-      ),
-      home: const MainMenuWrapper(),
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.blue, fontFamily: 'Arial'),
+      routes: {
+        '/': (context) => MenuScreen(
+              onSettings: () => Navigator.pushNamed(context, '/settings'),
+              onPlay: () => Navigator.pushReplacementNamed(context, '/game'),
+              onSkins: () async {
+                if (!AdManager.isAdsInitialized) {
+                  await AdManager.initialize();
+                  await AdManager.loadRewardedAd();
+                }
+                Navigator.pushNamed(context, '/skins');
+              },
+            ),
+        '/game': (context) => GameScreen(
+              musicEnabled: _musicEnabled,
+              sfxEnabled: _sfxEnabled,
+              menuMusicEnabled: _menuMusicEnabled,
+            ),
+        '/settings': (context) => SettingsScreen(
+              musicEnabled: _musicEnabled,
+              menuMusicEnabled: _menuMusicEnabled,
+              sfxEnabled: _sfxEnabled,
+              onMusicChanged: (val) => setState(() => _musicEnabled = val),
+              onMenuMusicChanged: (val) =>
+                  setState(() => _menuMusicEnabled = val),
+              onSfxChanged: (val) => setState(() => _sfxEnabled = val),
+              onBack: () => Navigator.pop(context),
+            ),
+        '/skins': (context) => SkinStoreScreen(
+              skinManager: skinManager,
+              currentLevel: 1,
+              onSkinChanged: () {}, // You can access Game here if needed
+            ),
+      },
     );
-  }
-}
-
-class MainMenuWrapper extends StatefulWidget {
-  const MainMenuWrapper({super.key});
-
-  @override
-  State<MainMenuWrapper> createState() => _MainMenuWrapperState();
-}
-
-class _MainMenuWrapperState extends State<MainMenuWrapper> {
-  bool _showGame = false;
-  late MagnetWalkerGame game;
-  late SkinManager skinManager;
-
-  @override
-  void initState() {
-    super.initState();
-    game = MagnetWalkerGame();
-    skinManager = SkinManager();
-    _initializeSkinManager();
-    // Lock to portrait mode
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-  }
-
-  Future<void> _initializeSkinManager() async {
-    await skinManager.initialize();
-    setState(() {}); // Refresh UI after skin manager is ready
-  }
-
-  void _startGame() {
-    setState(() {
-      _showGame = true;
-    });
-  }
-
-  void _showSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Settings'),
-        content: const Text('Settings screen coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSkins() async {
-    // Ensure ads are initialized before showing skin store
-    if (!AdManager.isAdsInitialized) {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text('Initializing ads...'),
-            ],
-          ),
-        ),
-      );
-      
-      // Initialize ads
-      await AdManager.initialize();
-      await AdManager.loadRewardedAd();
-      
-      // Close loading dialog
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    }
-    
-    if (mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SkinStoreScreen(
-            skinManager: skinManager,
-            onSkinChanged: () {
-              // Update game skin if game is loaded
-              if (_showGame) {
-                game.onSkinChanged();
-              }
-            },
-          ),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_showGame) {
-      return Scaffold(
-        body: Container(
-          color: Colors.black,
-          child: SafeArea(
-            child: GameWidget(game: game),
-          ),
-        ),
-      );
-    } else {
-      return MenuScreen(
-        onPlay: _startGame,
-        onSettings: _showSettings,
-        onSkins: _showSkins,
-      );
-    }
   }
 
   @override
   void dispose() {
+    FlameAudio.bgm.stop();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,

@@ -2,9 +2,12 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:magnet_walker/skins/skin_model.dart';
+import 'package:magnet_walker/skins/skin_store_screen.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flame_audio/flame_audio.dart';
 
 import 'components/player.dart';
 import 'components/game_object.dart';
@@ -19,6 +22,16 @@ import 'managers/wave_manager.dart';
 import 'managers/ad_manager.dart';
 import 'skins/skin_manager.dart';
 
+enum GameState {
+  menu,
+  countdown,
+  playing,
+  paused,
+  waveComplete,
+  levelComplete,
+  gameOver
+}
+
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
   late Player player;
@@ -31,13 +44,18 @@ class MagnetWalkerGame extends FlameGame
   late LevelType currentLevelType;
 
   // Game state
-  bool gameRunning = true;
+  GameState currentState = GameState.menu;
+
+  // Audio settings
+  bool sfxEnabled = true;
+
+  // Callback for game restart
+  VoidCallback? onGameRestart;
 
   // Wave system
-  bool isWaveActive = false;
   double waveCountdown = 0.0;
   String? waveMessage;
-  bool isLevelComplete = false;
+  VoidCallback? onExitToMenu;
 
   // Score and level progression
   int totalScore =
@@ -64,6 +82,33 @@ class MagnetWalkerGame extends FlameGame
   late SkinManager skinManager;
 
   bool noLivesDialogVisible = false;
+
+  // Method to set the exit callback
+  void setExitCallback(VoidCallback callback) {
+    onExitToMenu = callback;
+  }
+
+  // Method to exit to menu
+  void exitToMainMenu() {
+    // Reset game state
+    currentState = GameState.menu;
+
+    // Stop all timers and spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    playTimeTimer?.cancel();
+
+    // Clear all objects
+    clearAllObjects();
+
+    // Save progress
+    saveProgress();
+    stopGameMusic();
+    // Call the exit callback
+    if (onExitToMenu != null) {
+      onExitToMenu!();
+    }
+  }
 
   @override
   Future<void> onLoad() async {
@@ -92,7 +137,7 @@ class MagnetWalkerGame extends FlameGame
     await _preloadSkinImages();
 
     // Set up camera with proper size
-    camera.viewfinder.visibleGameSize = Vector2(375, 667);
+    // camera.viewfinder.visibleGameSize = Vector2(375, 667);
 
     // Initialize spawn managers
     gravitySpawnManager = GravitySpawnManager(this);
@@ -115,7 +160,7 @@ class MagnetWalkerGame extends FlameGame
     livesManager.regenerateLivesIfNeeded();
 
     // Add player - position based on current level type
-    final gameSize = camera.viewfinder.visibleGameSize!;
+    final gameSize = canvasSize;
     Vector2 initialPosition;
     if (currentLevelType == LevelType.gravity) {
       // Gravity mode: bottom center
@@ -133,13 +178,15 @@ class MagnetWalkerGame extends FlameGame
     // Add UI last to ensure game size is available
     gameUI = GameUI();
     add(gameUI);
+    gameUI.setExitCallback(() {
+      exitToMainMenu();
+    });
 
     // Start play time tracking
     startPlayTimeTracking();
 
     // Start spawning objects after everything is loaded
-    isWaveActive = false;
-    isLevelComplete = false;
+    currentState = GameState.countdown;
     waveMessage = null;
     await Future.delayed(const Duration(milliseconds: 100));
     // Only start wave if lives > 0
@@ -201,7 +248,7 @@ class MagnetWalkerGame extends FlameGame
 
   // Update player position based on current level type
   void _updatePlayerPositionForLevelType() {
-    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = canvasSize;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     Vector2 initialPosition;
 
@@ -227,7 +274,7 @@ class MagnetWalkerGame extends FlameGame
     playTimeTimer?.cancel();
 
     playTimeTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (gameRunning && gameStartTime != null) {
+      if (currentState == GameState.playing && gameStartTime != null) {
         // Calculate total time minus paused time
         final totalTime = DateTime.now().difference(gameStartTime!);
         playTime = totalTime - pausedTime;
@@ -256,128 +303,476 @@ class MagnetWalkerGame extends FlameGame
     // Keeping it for backward compatibility but it's not used
   }
 
-  void startWave(int wave) {
-    waveManager.startWave(wave);
+  List<Skin> _checkForNewAvailableSkins(int currentLevel) {
+    final newlyAvailable = <Skin>[];
 
-    // Show countdown for all waves, including wave 1
-    waveCountdown = 3.0;
-    isWaveActive = false;
-    gameRunning = false;
-    waveMessage = 'Wave $wave/3 starting in 3';
-
-    // Ensure player is in correct position for current level type
-    if (wave == 1) {
-      _updatePlayerPositionForLevelType();
+    for (final skin in skinManager.skins) {
+      // If skin is not unlocked and requires exactly this level, it's newly available
+      if (!skin.isUnlocked && skin.price == currentLevel) {
+        newlyAvailable.add(skin);
+      }
     }
 
-    // The actual wave will start after countdown in updateWaveCountdown
+    return newlyAvailable;
   }
 
-  // Move to the next level
-  void nextLevel() {
-    waveManager.level++;
-    waveManager.currentWave = 1;
-    wavesCompletedInLevel = 0;
-    waveManager.resetWaveScore();
+  void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
+    // IMPORTANT: Pause the game when showing skin notification
+    pauseGame();
 
-    // Update player position for new level type
-    _updatePlayerPositionForLevelType();
+    // Show notification after a short delay to ensure game is properly paused
+    Future.delayed(const Duration(milliseconds: 500), () {
+      final context = buildContext;
+      if (context == null || newSkins.isEmpty) {
+        // Resume game if we can't show dialog
+        resumeGame();
+        return;
+      }
 
-    // Save progress immediately after advancing to a new level
-    saveProgress();
-  }
+      showDialog(
+        context: context,
+        barrierDismissible: false, // Prevent dismissing by tapping outside
+        builder: (context) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final dialogWidth = screenWidth * 0.9; // Made slightly wider
+          final padding = dialogWidth * 0.05;
+          final titleFontSize = dialogWidth * 0.09;
+          final bodyFontSize = dialogWidth * 0.045;
+          final buttonFontSize = dialogWidth * 0.055;
 
-  void endWave({bool failed = false}) {
-    isWaveActive = false;
-    gameRunning = false;
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-    clearAllObjects(); // Clear all objects immediately
+          return WillPopScope(
+            onWillPop: () async => false, // Prevent back button
+            child: AlertDialog(
+              backgroundColor: const Color(0xFF1a1a2e),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(dialogWidth * 0.06),
+                side: BorderSide(
+                  color: Colors.amber.withOpacity(0.8),
+                  width: 3,
+                ),
+              ),
+              title: Column(
+                children: [
+                  // Celebration icon
+                  Container(
+                    padding: EdgeInsets.all(padding),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.amber.withOpacity(0.3),
+                          Colors.amber.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.amber,
+                      size: titleFontSize * 0.8,
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.5),
+                  Text(
+                    'CONGRATULATIONS!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                      letterSpacing: 2.0,
+                      shadows: const [
+                        Shadow(
+                          offset: Offset(0, 0),
+                          blurRadius: 15,
+                          color: Colors.amber,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.3),
+                  Text(
+                    'Level ${waveManager.level} Reached!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: bodyFontSize * 1.2,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+              content: Container(
+                width: dialogWidth,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Unlock message
+                    Container(
+                      padding: EdgeInsets.all(padding * 0.8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.amber.withOpacity(0.2),
+                            Colors.amber.withOpacity(0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(dialogWidth * 0.04),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.4),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            newSkins.length > 1
+                                ? '🎉 ${newSkins.length} NEW SKINS UNLOCKED! 🎉'
+                                : '🎉 NEW SKIN UNLOCKED! 🎉',
+                            style: TextStyle(
+                              fontSize: bodyFontSize * 1.1,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                              letterSpacing: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: padding * 0.5),
+                          Text(
+                            'You can now purchase ${newSkins.length > 1 ? 'these awesome skins' : 'this awesome skin'} with ads!',
+                            style: TextStyle(
+                              fontSize: bodyFontSize,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: padding),
 
-    // Animate player back to initial position depending on level type
-    final gameSize = camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    Vector2 initialPosition;
-    final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
-    if (currentLevelType == LevelType.gravity) {
-      // Gravity mode: bottom center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
-    } else {
-      // Survival mode: center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
-    }
-    player.animateToPosition(initialPosition, 2.7); // 2.7 seconds animation
-
-    if (failed) {
-      // Show unified failure dialog
-      gameUI.showFailureDialog(
-        score: totalScore,
-        level: waveManager.level,
-        wave: waveManager.currentWave,
-        playTime: playTime,
-        onRestartLevel: () {
-          // Check if we have lives before restarting
-          if (livesManager.lives == 0) {
-            // Show no lives dialog if no lives available
-            gameUI.showNoLivesDialog();
-          } else {
-            // Restart level (wave 1) - this will consume a life
-            waveManager.startWave(1);
-            Future.delayed(const Duration(milliseconds: 300), () {
-              tryConsumeLifeAndStartWave(1);
-            });
-          }
-        },
-        onWatchAd: () {
-          // Watch ad to restart wave
-          AdManager.showRewardedAd(
-            onRewarded: () {
-              // Restart the current wave without consuming a life
-              clearAllObjects();
-              final currentWave = waveManager.currentWave;
-              waveManager.startWave(currentWave);
-              Future.delayed(const Duration(milliseconds: 300), () {
-                startWaveWithoutConsumingLife(currentWave);
-              });
-            },
+                    // Show newly available skins in a scrollable container
+                    if (newSkins.isNotEmpty)
+                      Container(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.15,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: newSkins
+                                .map((skin) => Container(
+                                      margin: EdgeInsets.symmetric(
+                                          vertical: padding * 0.2),
+                                      padding: EdgeInsets.all(padding * 0.6),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Colors.deepPurple.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(
+                                            dialogWidth * 0.03),
+                                        border: Border.all(
+                                          color: Colors.deepPurple
+                                              .withOpacity(0.3),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Skin image
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.deepPurple
+                                                      .withOpacity(0.4),
+                                                  blurRadius: 8,
+                                                  spreadRadius: 1,
+                                                ),
+                                              ],
+                                            ),
+                                            child: ClipOval(
+                                              child: Image.asset(
+                                                'assets/images/${skin.imagePath}',
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      gradient: RadialGradient(
+                                                        colors: [
+                                                          Colors.deepPurple
+                                                              .withOpacity(0.3),
+                                                          Colors.deepPurple
+                                                              .withOpacity(0.1)
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.public,
+                                                      color: Colors.deepPurple,
+                                                      size: 20,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: padding * 0.8),
+                                          // Skin info
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  skin.name,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: bodyFontSize,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  skin.description,
+                                                  style: TextStyle(
+                                                    color: Colors.white
+                                                        .withOpacity(0.7),
+                                                    fontSize:
+                                                        bodyFontSize * 0.8,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Watch ad icon
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: padding * 0.4,
+                                              vertical: padding * 0.2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.pinkAccent,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.play_arrow,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'AD',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize:
+                                                        bodyFontSize * 0.7,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                Column(
+                  children: [
+                    // Go to store button
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius:
+                              BorderRadius.circular(buttonFontSize * 1.2),
+                          gradient: const LinearGradient(
+                            colors: [Colors.pinkAccent, Colors.deepPurple],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.pinkAccent.withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _openSkinStore();
+                            // Don't resume game yet - let skin store handle it
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: padding,
+                              vertical: padding * 0.8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(buttonFontSize * 1.2),
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.store,
+                            color: Colors.white,
+                            size: buttonFontSize,
+                          ),
+                          label: Text(
+                            'OPEN SKIN STORE',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: padding * 0.6),
+                    // Close button
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius:
+                              BorderRadius.circular(buttonFontSize * 1.2),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            // Resume the game
+                            resumeGame();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: padding,
+                              vertical: padding * 0.8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(buttonFontSize * 1.2),
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.close,
+                            color: Colors.white.withOpacity(0.8),
+                            size: buttonFontSize,
+                          ),
+                          label: Text(
+                            'CONTINUE PLAYING',
+                            style: TextStyle(
+                              fontSize: buttonFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white.withOpacity(0.8),
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: padding * 0.4),
+                    // Small hint text
+                    Text(
+                      '💡 You can always access skins from the main menu',
+                      style: TextStyle(
+                        fontSize: bodyFontSize * 0.8,
+                        color: Colors.white.withOpacity(0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           );
         },
-      );
-    } else {
-      // Wave completed successfully
-      wavesCompletedInLevel++;
-
-      if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
-        // Level complete: show dialog immediately
-        isLevelComplete = true;
-        showLevelCompleteDialog();
-      } else {
-        // More waves to go - start countdown for next wave
-        waveManager.currentWave++;
-        startWave(waveManager.currentWave);
-      }
-    }
-
-    // Save progress after wave ends
-    saveProgress();
+      ).then((_) {
+        // Ensure game is resumed if dialog is closed unexpectedly
+        if (currentState == GameState.paused) {
+          resumeGame();
+        }
+      });
+    });
   }
 
-  void updateWaveCountdown(double dt) {
-    if (!isWaveActive && waveCountdown > 0) {
-      waveCountdown -= dt;
-      if (waveCountdown <= 0) {
-        // Start the actual wave
-        isWaveActive = true;
-        gameRunning = true;
-        waveMessage = null;
-        startSpawning();
-      } else {
-        waveMessage =
-            'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+  void _openSkinStore() {
+    final context = buildContext;
+    if (context == null) return;
+
+    // Navigate to skin store screen
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => SkinStoreScreen(
+          skinManager: skinManager,
+          currentLevel: waveManager.level,
+          onSkinChanged: () {
+            onSkinChanged();
+          },
+        ),
+      ),
+    )
+        .then((_) {
+      // Resume game when returning from skin store
+      if (currentState == GameState.paused) {
+        resumeGame();
       }
+    });
+  }
+
+  // Helper to play audio
+  void playSound(String fileName) {
+    if (sfxEnabled) {
+      FlameAudio.play(fileName);
     }
+  }
+
+  // Method to update SFX setting
+  void setSfxEnabled(bool enabled) {
+    sfxEnabled = enabled;
+  }
+
+  // Method to stop game music
+  void stopGameMusic() {
+    FlameAudio.bgm.stop();
+  }
+
+  // Method to restart game music
+  void restartGameMusic() {
+    FlameAudio.bgm.play('game_music.mp3');
   }
 
   void showLevelCompleteDialog() {
+    playSound('win.wav');
     gameUI.showLevelCompleted(totalScore, waveManager.level, playTime);
   }
 
@@ -388,8 +783,9 @@ class MagnetWalkerGame extends FlameGame
       totalScore += 1;
       waveManager.addWaveScore(1);
       createParticles(obj.position, Colors.yellow);
+      playSound('coin.wav');
 
-      if (waveManager.isWaveComplete() && isWaveActive) {
+      if (waveManager.isWaveComplete() && currentState == GameState.playing) {
         endWave();
         return;
       }
@@ -398,9 +794,11 @@ class MagnetWalkerGame extends FlameGame
       if (currentLevelType == LevelType.gravity) {
         endWave(failed: true);
         createParticles(obj.position, Colors.red);
+        playSound('bomb.wav');
       } else {
         endWave(failed: true);
         createParticles(obj.position, Colors.red);
+        playSound('bomb.wav');
       }
     }
 
@@ -414,6 +812,7 @@ class MagnetWalkerGame extends FlameGame
       createParticles(bomb.position, Colors.red);
       bomb.removeFromParent();
       gameObjects.remove(bomb);
+      playSound('bomb.wav');
     }
   }
 
@@ -437,71 +836,6 @@ class MagnetWalkerGame extends FlameGame
       );
       add(particle);
       particles.add(particle);
-    }
-  }
-
-  void gameOver() {
-    // Not used for wave fail anymore
-    gameRunning = false;
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-    playTimeTimer?.cancel();
-    clearAllObjects();
-    pausePlayTime();
-    // Show game over dialog if needed (handled by endWave now)
-  }
-
-  void restartGame() {
-    // Reset game state but keep the current level
-    waveManager.startWave(1);
-    gameRunning = true;
-    playTime = Duration.zero;
-    gameStartTime = null; // Reset start time for new game
-    pauseStartTime = null; // Reset pause time for new game
-
-    // Clear all objects using the helper method
-    clearAllObjects();
-
-    // Reset player
-    player.reset();
-
-    // Restart timers
-    startPlayTimeTracking();
-
-    // Stop any existing spawning
-    gravitySpawnManager.stop();
-    survivalSpawnManager.stop();
-
-    // Hide game over UI
-    gameUI.hideGameOver();
-
-    // Save progress after restart
-    saveProgress();
-
-    // Start the first wave or show no lives dialog
-    startGameOrShowNoLivesDialog();
-  }
-
-  void startGameOrShowNoLivesDialog() {
-    if (livesManager.lives == 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        gameUI.showNoLivesDialog();
-      });
-      return;
-    }
-    tryConsumeLifeAndStartWave(1);
-  }
-
-  void tryConsumeLifeAndStartWave(int wave) {
-    if (livesManager.lives == 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        gameUI.showNoLivesDialog();
-      });
-      return;
-    }
-    if (livesManager.tryConsumeLife()) {
-      waveManager.startWave(wave);
-      startWave(wave);
     }
   }
 
@@ -549,9 +883,10 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   bool onDragUpdate(DragUpdateEvent event) {
+    if (currentState == GameState.paused) return false;
     // Forward drag events to the player for better control
     // Allow movement only when game is running and wave is active
-    if (gameRunning && isWaveActive) {
+    if (currentState == GameState.playing) {
       // Increase movement speed and responsiveness
       player.moveBy(event.localDelta.x * 1, event.localDelta.y * 1);
     }
@@ -565,8 +900,10 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void onTapDown(TapDownEvent event) {
+    if (currentState == GameState.paused) return;
     // Existing tap logic here
-    if (gameRunning && isWaveActive && currentLevelType == LevelType.survival) {
+    if (currentState == GameState.playing &&
+        currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted && !obj.collected && obj.type == ObjectType.bomb) {
@@ -583,8 +920,10 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void update(double dt) {
-    super.update(dt);
-    updateWaveCountdown(dt);
+    if (currentState != GameState.paused) {
+      super.update(dt);
+      updateWaveCountdown(dt);
+    }
     // Regenerate lives periodically while running
     livesManager.regenerateLivesIfNeeded();
 
@@ -603,7 +942,7 @@ class MagnetWalkerGame extends FlameGame
     }
 
     // Update game objects only when game is running
-    if (gameRunning) {
+    if (currentState == GameState.playing) {
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
@@ -657,39 +996,259 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
-  // Helper to start a wave without consuming a life (for ad rewards)
-  void startWaveWithoutConsumingLife(int wave) {
-    print(
-        'startWaveWithoutConsumingLife called with wave: $wave, lives: \\${livesManager.lives}');
-    // Ensure proper game state
-    gameRunning = true;
-    isWaveActive = true;
-    waveCountdown = 0;
-    waveMessage = null;
-    noLivesDialogVisible = false;
-    waveManager.startWave(wave);
-    startWave(wave);
-  }
-
   // Helper to dismiss any existing dialogs and reset state
   void dismissNoLivesDialog() {
     noLivesDialogVisible = false;
     // Only set gameRunning to true if we have lives
     if (livesManager.lives > 0) {
-      gameRunning = true;
+      currentState = GameState.playing;
     } else {
       // If no lives, keep game in a paused state
-      gameRunning = false;
-      isWaveActive = false;
+      currentState = GameState.countdown;
     }
   }
 
-  // Helper to handle Play Again from Game Over dialog
-  void handlePlayAgain() {
-    if (livesManager.lives > 0) {
-      restartGame();
+  // Play button sound on tap
+  void playButtonSound() {
+    playSound('button.mp3');
+  }
+
+//////////// HEREEEEE ONLY WE HANDLE THE GAME STATE ////////////
+  void tryConsumeLifeAndStartWave(int wave) {
+    if (livesManager.tryConsumeLife()) {
+      startWave(wave);
+    }
+  }
+
+  void startGameOrShowNoLivesDialog() {
+    if (livesManager.lives == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        gameUI.showNoLivesDialog();
+      });
+      return;
+    }
+    tryConsumeLifeAndStartWave(1);
+  }
+
+  // Method to pause the game (freezes all game logic)
+  void pauseGame() {
+    currentState = GameState.paused;
+    pausePlayTime();
+
+    // Stop all spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+
+    // The game objects will remain in their current positions
+    // because the update loop will be skipped
+  }
+
+  // Method to resume the game
+  void resumeGame() {
+    currentState = GameState.playing;
+    resumePlayTime();
+
+    // Resume spawning only if wave is active
+    if (currentState == GameState.playing) {
+      restartWave();
+    }
+  }
+
+  // Call this to start a new level (resets wave to 1)
+  void startLevel(int level) {
+    print('startLevel called - level: $level');
+    waveManager.level = level;
+    waveManager.currentWave = 1;
+    wavesCompletedInLevel = 0;
+    currentState = GameState.countdown;
+    prepareWave();
+    saveProgress();
+  }
+
+// Prepares the current wave (shows countdown, positions player, etc.)
+  void prepareWave() {
+    print(
+        'prepareWave called - level: ${waveManager.level}, wave: ${waveManager.currentWave}');
+
+    // Clear any existing objects
+    clearAllObjects();
+
+    // Position player for current level type
+    _updatePlayerPositionForLevelType();
+
+    // Set up countdown
+    waveCountdown = 3.0;
+    waveMessage =
+        'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in 3';
+
+    // Stop any existing spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+
+    // Reset wave score
+    waveManager.resetWaveScore();
+  }
+
+// Call this when the countdown finishes to start the wave
+  void onCountdownFinished() {
+    print('onCountdownFinished called');
+    currentState = GameState.playing;
+    waveMessage = null;
+    startSpawning();
+  }
+
+// Call this when the player completes a wave
+  void completeWave() {
+    print('completeWave called');
+    wavesCompletedInLevel++;
+
+    if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
+      // Level complete
+      currentState = GameState.levelComplete;
+      //playSound('win.wav');
+      pauseGame();
+      showLevelCompleteDialog();
     } else {
-      gameUI.showNoLivesDialog();
+      // More waves to complete in this level
+      waveManager.currentWave++;
+      currentState = GameState.countdown;
+      prepareWave();
+    }
+
+    saveProgress();
+  }
+
+// Call this when the player fails a wave
+  void failWave() {
+    print('failWave called');
+    currentState = GameState.gameOver;
+
+    // Stop spawning and clear objects
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    clearAllObjects();
+
+    // Position player back to start
+    _updatePlayerPositionForLevelType();
+
+    playSound('lose.mp3');
+    stopGameMusic();
+
+    // Show failure dialog
+    gameUI.showFailureDialog(
+      score: totalScore,
+      level: waveManager.level,
+      wave: waveManager.currentWave,
+      playTime: playTime,
+      onRestartLevel: () {
+        if (livesManager.lives == 0) {
+          gameUI.showNoLivesDialog();
+        } else {
+          livesManager.tryConsumeLife();
+          startLevel(waveManager.level); // Restart current level
+        }
+      },
+      onWatchAd: () {
+        AdManager.showRewardedAd(
+          onRewarded: () {
+            // Restart current wave after ad
+            restartWave();
+          },
+          onFailed: () {
+            final context = gameUI.game.buildContext;
+            if (context != null) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('No Ad Available'),
+                  content: const Text(
+                      'No ad is available right now. Please try again later.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+
+// Call this to restart the current wave (e.g., after failure)
+  void restartWave() {
+    print('restartWave called');
+    currentState = GameState.countdown;
+    prepareWave();
+  }
+
+// Call this to advance to the next level
+  void nextLevel() {
+    print('nextLevel called');
+
+    waveManager.level++;
+    waveManager.currentWave = 1;
+    wavesCompletedInLevel = 0;
+    waveManager.resetWaveScore();
+
+    // Check for newly available skins
+    final newlyAvailableSkins = _checkForNewAvailableSkins(waveManager.level);
+    if (newlyAvailableSkins.isNotEmpty) {
+      _showNewSkinsAvailableNotification(newlyAvailableSkins);
+    } else {
+      // If no new skins, just prepare the next wave
+      currentState = GameState.countdown;
+      prepareWave();
+    }
+
+    saveProgress();
+  }
+
+  void startWave(int wave) {
+    waveManager.startWave(wave);
+    prepareWave();
+  }
+
+  void endWave({bool failed = false}) {
+    if (failed) {
+      failWave();
+    } else {
+      completeWave();
+    }
+  }
+
+  void restartGame() {
+    // Reset game state but keep the current level
+    waveManager.startWave(1);
+    playTime = Duration.zero;
+    gameStartTime = null;
+    pauseStartTime = null;
+
+    clearAllObjects();
+    player.reset();
+    startPlayTimeTracking();
+
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    gameUI.hideGameOver();
+
+    saveProgress();
+    startGameOrShowNoLivesDialog();
+    onGameRestart?.call();
+  }
+
+  void updateWaveCountdown(double dt) {
+    if (currentState == GameState.countdown && waveCountdown > 0) {
+      waveCountdown -= dt;
+      if (waveCountdown <= 0) {
+        onCountdownFinished();
+      } else {
+        waveMessage =
+            'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+      }
     }
   }
 }
