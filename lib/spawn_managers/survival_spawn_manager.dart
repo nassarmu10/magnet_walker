@@ -38,7 +38,7 @@ class SurvivalSpawnManager {
     print(game.waveManager.currentWave.toString());
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final playerPos = game.player.position;
+    final playerPos = game.player?.position;
 
     // Choose spawn edge (0: top, 1: right, 2: bottom, 3: left)
     final edge = math.Random().nextInt(4);
@@ -92,7 +92,6 @@ class SurvivalSpawnManager {
     }
 
     game.add(obj);
-    game.gameObjects.add(obj);
   }
 
   void stop() {

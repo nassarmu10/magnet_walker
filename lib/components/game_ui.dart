@@ -1526,8 +1526,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: () {
-                      Navigator.of(context, rootNavigator: true)
-                          .popUntil((route) => route.isFirst);
+                      // Navigator.of(context, rootNavigator: true)
+                      //     .popUntil((route) => route.isFirst);
                       // Reset dialog flag and start the game
                       game.noLivesDialogVisible = false;
                       if (game.livesManager.lives > 0) {

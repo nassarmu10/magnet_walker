@@ -56,9 +56,7 @@ class GravitySpawnManager {
     if (type == ObjectType.bomb || type == ObjectType.coin) {
       obj.velocity.y *= (1.0 + 0.2 * (game.waveManager.currentWave - 1));
     }
-
     game.add(obj);
-    game.gameObjects.add(obj);
   }
 
   void stop() {

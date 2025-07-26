@@ -35,9 +35,9 @@ enum GameState {
 
 class MagnetWalkerGame extends FlameGame
     with HasCollisionDetection, DragCallbacks, TapCallbacks {
-  late Player player;
-  late Demon demon;
-  late GameUI gameUI;
+  Player? player;
+  Demon? demon;
+  GameUI? gameUI;
   late Background background;
 
   // Level type management
@@ -114,9 +114,135 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
+    print("OnLoad called ..............0000000000........");
     // Wait for the game to be fully initialized
     await Future.delayed(const Duration(milliseconds: 50));
 
+    // One-time initialization that should only happen once
+    await _initializeOneTimeComponents();
+
+    // Level-specific initialization that can be reused
+    await _initializeLevel();
+
+    //Start level
+    await _startLevel();
+  }
+
+  /// Initialize or restart a level - can be called multiple times
+  Future<void> _initializeLevel() async {
+    // Clear any existing level-specific components
+    _clearLevelComponents();
+
+    // Set current level type
+    currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
+
+    // Regenerate lives if needed
+    livesManager.regenerateLivesIfNeeded();
+
+    // Add player - position based on current level type
+    final gameSize = canvasSize;
+    Vector2 initialPosition = _getPlayerInitialPosition(gameSize);
+
+    player = Player(position: initialPosition);
+    add(player as Component);
+
+    // Apply current skin to player
+    await _updatePlayerSkin();
+
+    // Demon will be added after countdown
+
+    // Add UI if not already added (only on first load)
+    if (gameUI == null) {
+      gameUI = GameUI();
+      add(gameUI as Component);
+      gameUI?.setExitCallback(() {
+        exitToMainMenu();
+      });
+    }
+
+    // Start play time tracking
+    startPlayTimeTracking();
+  }
+
+  Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
+    switch (currentLevelType) {
+      case LevelType.gravity:
+        return Vector2(gameSize.x / 2, gameSize.y - 117);
+      case LevelType.demon:
+        return Vector2(gameSize.x / 2, gameSize.y - 117);
+      case LevelType.survival:
+        return Vector2(gameSize.x / 2, gameSize.y / 2);
+      default:
+        return Vector2(gameSize.x / 2, gameSize.y / 2);
+    }
+  }
+
+  /// Start the current level/wave
+  Future<void> _startLevel() async {
+    currentState = GameState.countdown;
+    waveMessage = null;
+    await Future.delayed(const Duration(milliseconds: 100));
+    waveCountdown = 3.0;
+    if (currentLevelType != LevelType.demon) {
+      waveMessage =
+          'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in 3';
+    } else {
+      waveMessage = 'Kill the demon';
+    }
+  }
+
+  /// Clear level-specific components before restarting
+  void _clearLevelComponents() {
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    // Remove player if exists
+    if (player != null) {
+      player!.removeFromParent();
+      player = null;
+    }
+
+    // Remove demon if exists
+    if (demon != null) {
+      demon!.removeFromParent();
+      demon = null;
+    }
+    clearAllObjects();
+    // Clear any spawned objects, projectiles, etc.
+    // Add other cleanup as needed for your specific game objects
+  }
+
+  /// Show no lives dialog
+  void _showNoLivesDialog() {
+    noLivesDialogVisible = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (gameUI!.isMounted && gameUI?.game.buildContext != null) {
+        gameUI?.showNoLivesDialog(onDialogClosed: () {
+          noLivesDialogVisible = false;
+        });
+      } else {
+        // If still not ready, try again after a short delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (gameUI!.isMounted) {
+            gameUI?.showNoLivesDialog(onDialogClosed: () {
+              noLivesDialogVisible = false;
+            });
+          }
+        });
+      }
+    });
+  }
+
+  /// Call this method when the player loses and wants to restart
+  Future<void> restartLevel() async {
+    // Reset any game state
+    currentState = GameState.menu; // or whatever initial state you want
+
+    // Reinitialize the level
+    await _initializeLevel();
+  }
+
+  /// One-time initialization that should only happen when the game first loads
+  Future<void> _initializeOneTimeComponents() async {
     // Initialize AdManager
     await AdManager.initialize();
     await AdManager.loadRewardedAd();
@@ -138,9 +264,6 @@ class MagnetWalkerGame extends FlameGame
     // Preload all skin images
     await _preloadSkinImages();
 
-    // Set up camera with proper size
-    // camera.viewfinder.visibleGameSize = Vector2(375, 667);
-
     // Initialize spawn managers
     gravitySpawnManager = GravitySpawnManager(this);
     survivalSpawnManager = SurvivalSpawnManager(this);
@@ -151,75 +274,13 @@ class MagnetWalkerGame extends FlameGame
 
     // Initialize wave manager first
     waveManager = WaveManager();
+
     // Load saved progress (level and wave)
     await loadProgress();
 
-    // Set initial level type
-    currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     // Initialize lives manager
     livesManager = LivesManager();
     await livesManager.load();
-    livesManager.regenerateLivesIfNeeded();
-
-    // Add player - position based on current level type
-    final gameSize = canvasSize;
-    Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
-    if (currentLevelType == LevelType.gravity) {
-      // Gravity mode: bottom center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
-    } else if (currentLevelType == LevelType.survival) {
-      // Survival mode: center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
-    } else if (currentLevelType == LevelType.demon) {
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
-    }
-    player = Player(position: initialPosition);
-    add(player);
-
-    // Apply current skin to player
-    await _updatePlayerSkin();
-    if (currentLevelType == LevelType.demon) {
-      demon = Demon(position: Vector2(gameSize.x / 2, 200));
-
-      add(demon);
-    }
-    // Add UI last to ensure game size is available
-    gameUI = GameUI();
-    add(gameUI);
-    gameUI.setExitCallback(() {
-      exitToMainMenu();
-    });
-
-    // Start play time tracking
-    startPlayTimeTracking();
-
-    // Start spawning objects after everything is loaded
-    currentState = GameState.countdown;
-    waveMessage = null;
-    await Future.delayed(const Duration(milliseconds: 100));
-    // Only start wave if lives > 0
-    if (livesManager.lives > 0) {
-      tryConsumeLifeAndStartWave(waveManager.currentWave);
-    } else {
-      // Show no lives dialog after UI is ready
-      noLivesDialogVisible = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (gameUI.isMounted && gameUI.game.buildContext != null) {
-          gameUI.showNoLivesDialog(onDialogClosed: () {
-            noLivesDialogVisible = false;
-          });
-        } else {
-          // If still not ready, try again after a short delay
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (gameUI.isMounted) {
-              gameUI.showNoLivesDialog(onDialogClosed: () {
-                noLivesDialogVisible = false;
-              });
-            }
-          });
-        }
-      });
-    }
   }
 
   Future<void> _preloadSkinImages() async {
@@ -246,7 +307,7 @@ class MagnetWalkerGame extends FlameGame
 
   Future<void> _updatePlayerSkin() async {
     final selectedSkin = skinManager.selectedSkin;
-    await player.updateSkin(selectedSkin.imagePath);
+    await player?.updateSkin(selectedSkin.imagePath);
   }
 
   // Method to be called when skin changes
@@ -268,7 +329,7 @@ class MagnetWalkerGame extends FlameGame
       initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
     }
     // Animate player to new position
-    player.animateToPosition(initialPosition, 2.7);
+    player?.animateToPosition(initialPosition, 2.7);
   }
 
   void startPlayTimeTracking() {
@@ -294,7 +355,7 @@ class MagnetWalkerGame extends FlameGame
     // Stop any existing spawn managers
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-
+    print(currentLevelType);
     // Use the current level for level type
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
 
@@ -780,7 +841,7 @@ class MagnetWalkerGame extends FlameGame
 
   void showLevelCompleteDialog() {
     playSound('win.wav');
-    gameUI.showLevelCompleted(totalScore, waveManager.level, playTime);
+    gameUI?.showLevelCompleted(totalScore, waveManager.level, playTime);
   }
 
   void collectObject(GameObject obj) {
@@ -797,7 +858,7 @@ class MagnetWalkerGame extends FlameGame
           endWave();
           return;
         }
-      } // handle demon finishes
+      } // handle demon collecting coins
     } else {
       // Handle bomb collision based on level type
       if (currentLevelType == LevelType.gravity ||
@@ -898,7 +959,7 @@ class MagnetWalkerGame extends FlameGame
     // Allow movement only when game is running and wave is active
     if (currentState == GameState.playing) {
       // Increase movement speed and responsiveness
-      player.moveBy(event.localDelta.x * 1, event.localDelta.y * 1);
+      player?.moveBy(event.localDelta.x * 1, event.localDelta.y * 1);
     }
     return true;
   }
@@ -940,11 +1001,11 @@ class MagnetWalkerGame extends FlameGame
     // Check if we need to show no lives dialog
     if (livesManager.lives == 0 &&
         !noLivesDialogVisible &&
-        !gameUI.gameOverVisible) {
+        !gameUI!.gameOverVisible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (gameUI.isMounted && this.buildContext != null) {
+        if (gameUI!.isMounted && this.buildContext != null) {
           noLivesDialogVisible = true;
-          gameUI.showNoLivesDialog(onDialogClosed: () {
+          gameUI?.showNoLivesDialog(onDialogClosed: () {
             noLivesDialogVisible = false;
           });
         }
@@ -956,7 +1017,7 @@ class MagnetWalkerGame extends FlameGame
       // Update magnetic effects
       for (final obj in List.from(gameObjects)) {
         if (obj.isMounted) {
-          player.applyMagneticForce(obj, dt);
+          player?.applyMagneticForce(obj, dt);
         }
       }
 
@@ -1031,12 +1092,12 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startGameOrShowNoLivesDialog() {
-    if (livesManager.lives == 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        gameUI.showNoLivesDialog();
-      });
-      return;
-    }
+    // if (livesManager.lives == 0) {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     gameUI.showNoLivesDialog();
+    //   });
+    //   return;
+    // }
     tryConsumeLifeAndStartWave(1);
   }
 
@@ -1048,7 +1109,8 @@ class MagnetWalkerGame extends FlameGame
     // Stop all spawning
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    demon.isAlive = false; // TODO handle pause demon level
+    if (currentLevelType == LevelType.demon)
+      demon?.isAlive = false; // TODO handle pause demon level
 
     // The game objects will remain in their current positions
     // because the update loop will be skipped
@@ -1063,17 +1125,6 @@ class MagnetWalkerGame extends FlameGame
     if (currentState == GameState.playing) {
       restartWave();
     }
-  }
-
-  // Call this to start a new level (resets wave to 1)
-  void startLevel(int level) {
-    print('startLevel called - level: $level');
-    waveManager.level = level;
-    waveManager.currentWave = 1;
-    wavesCompletedInLevel = 0;
-    currentState = GameState.countdown;
-    prepareWave();
-    saveProgress();
   }
 
 // Prepares the current wave (shows countdown, positions player, etc.)
@@ -1109,9 +1160,7 @@ class MagnetWalkerGame extends FlameGame
     if (currentLevelType != LevelType.demon) {
       startSpawning();
     } else {
-      currentState = GameState.playing;
-      demon.isAlive =
-          true; // TODO THIS SHOULD BE CHANGED TO HOW TO START DEMON LEVELS
+      startDemonLeve();
     }
   }
 
@@ -1123,8 +1172,7 @@ class MagnetWalkerGame extends FlameGame
     if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
       // Level complete
       currentState = GameState.levelComplete;
-      //playSound('win.wav');
-      pauseGame();
+      _initializeLevel();
       showLevelCompleteDialog();
     } else {
       // More waves to complete in this level
@@ -1153,17 +1201,21 @@ class MagnetWalkerGame extends FlameGame
     stopGameMusic();
 
     // Show failure dialog
-    gameUI.showFailureDialog(
+    gameUI?.showFailureDialog(
       score: totalScore,
       level: waveManager.level,
       wave: waveManager.currentWave,
       playTime: playTime,
       onRestartLevel: () {
         if (livesManager.lives == 0) {
-          gameUI.showNoLivesDialog();
+          gameUI?.showNoLivesDialog();
         } else {
           livesManager.tryConsumeLife();
-          startLevel(waveManager.level); // Restart current level
+          waveManager.currentWave = 1;
+          wavesCompletedInLevel = 0;
+          waveManager.resetWaveScore();
+          _initializeLevel();
+          _startLevel();
         }
       },
       onWatchAd: () {
@@ -1173,7 +1225,7 @@ class MagnetWalkerGame extends FlameGame
             restartWave();
           },
           onFailed: () {
-            final context = gameUI.game.buildContext;
+            final context = gameUI?.game.buildContext;
             if (context != null) {
               showDialog(
                 context: context,
@@ -1204,22 +1256,28 @@ class MagnetWalkerGame extends FlameGame
   }
 
 // Call this to advance to the next level
-  void nextLevel() {
+  async.Future<void> nextLevel() async {
     print('nextLevel called');
-
+    print(waveManager.level);
     waveManager.level++;
-    waveManager.currentWave = 1;
-    wavesCompletedInLevel = 0;
-    waveManager.resetWaveScore();
-
-    // Check for newly available skins
-    final newlyAvailableSkins = _checkForNewAvailableSkins(waveManager.level);
-    if (newlyAvailableSkins.isNotEmpty) {
-      _showNewSkinsAvailableNotification(newlyAvailableSkins);
+    currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
+    if (currentLevelType == LevelType.demon) {
+      await _initializeLevel();
+      await _startLevel();
     } else {
-      // If no new skins, just prepare the next wave
-      currentState = GameState.countdown;
-      prepareWave();
+      waveManager.currentWave = 1;
+      wavesCompletedInLevel = 0;
+      waveManager.resetWaveScore();
+
+      // Check for newly available skins
+      final newlyAvailableSkins = _checkForNewAvailableSkins(waveManager.level);
+      if (newlyAvailableSkins.isNotEmpty) {
+        _showNewSkinsAvailableNotification(newlyAvailableSkins);
+      } else {
+        // If no new skins, just prepare the next wave
+        currentState = GameState.countdown;
+        prepareWave();
+      }
     }
 
     saveProgress();
@@ -1238,10 +1296,34 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
+  void SuccessDemonLevel() {
+    clearAllObjects();
+    currentState = GameState.levelComplete;
+    //playSound('win.wav');
+    //pauseGame();
+    endDemonLevel();
+    showLevelCompleteDialog();
+  }
+
+  void startDemonLeve() {
+    if (demon == null) {
+      demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+      add(demon as Component);
+    }
+    currentState = GameState.playing;
+    //currentState = GameState.playing;
+    demon?.isAlive = true;
+  }
+
+  void endDemonLevel() {
+    demon?.isAlive = true;
+    demon?.deleteDemon();
+  }
+
   void failDemonLevel() {
+    endDemonLevel();
     print('failDemonLevel called');
 
-    demon.isAlive = false;
     currentState = GameState.gameOver;
     clearAllObjects();
 
@@ -1253,30 +1335,28 @@ class MagnetWalkerGame extends FlameGame
     stopGameMusic();
 
     // Show failure dialog
-    gameUI.showFailureDialog(
+    gameUI?.showFailureDialog(
       score: totalScore,
       level: waveManager.level,
       wave: waveManager.currentWave,
       playTime: playTime,
       onRestartLevel: () {
         if (livesManager.lives == 0) {
-          gameUI.showNoLivesDialog();
+          gameUI?.showNoLivesDialog();
         } else {
-          currentState = GameState
-              .playing; //TODO change to function of start/restart demon level
-          demon.isAlive = true;
-          livesManager.tryConsumeLife();
+          livesManager.lives--;
+          _initializeLevel();
+          _startLevel();
         }
       },
       onWatchAd: () {
         AdManager.showRewardedAd(
           onRewarded: () {
-            currentState = GameState
-                .playing; //TODO change to function of start/restart demon level
-            demon.isAlive = true;
+            _initializeLevel();
+            _startLevel();
           },
           onFailed: () {
-            final context = gameUI.game.buildContext;
+            final context = gameUI?.game.buildContext;
             if (context != null) {
               showDialog(
                 context: context,
@@ -1300,6 +1380,7 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void restartGame() {
+    //TODO THIS IS NOT RIGHT
     // Reset game state but keep the current level
     waveManager.startWave(1);
     playTime = Duration.zero;
@@ -1307,12 +1388,12 @@ class MagnetWalkerGame extends FlameGame
     pauseStartTime = null;
 
     clearAllObjects();
-    player.reset();
+    player?.reset();
     startPlayTimeTracking();
 
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    gameUI.hideGameOver();
+    gameUI?.hideGameOver();
 
     saveProgress();
     startGameOrShowNoLivesDialog();

@@ -122,7 +122,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final distance = position.distanceTo(obj.position);
     if (distance < magnetRadius && distance > 0) {
       final direction = (position - obj.position)..normalize();
-      final force = 1000 * (1 - distance / magnetRadius);
+      final force = 600 * (1 - distance / magnetRadius);
 
       obj.velocity += direction * force * dt;
       obj.isMagnetized = true;

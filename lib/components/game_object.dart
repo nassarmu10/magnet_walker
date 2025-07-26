@@ -66,8 +66,8 @@ class GameObject extends CircleComponent
       // Objects move toward player
       final gameSize =
           game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-      final playerPos = game.player.position;
-      final direction = (playerPos - position)..normalize();
+      final playerPos = game.player?.position;
+      final direction = (playerPos! - position)..normalize();
       final speed = 1.0 + (level * 5.0); // Speed increases with level
       velocity = direction * speed;
     }
@@ -105,7 +105,7 @@ class GameObject extends CircleComponent
 
       // Calculate angle to point toward player
       final player = game.player;
-      final direction = (player.position - position);
+      final direction = (player!.position - position);
       final angle = math.atan2(direction.y, direction.x);
 
       // Rotate the sprite component to point toward player
@@ -116,7 +116,8 @@ class GameObject extends CircleComponent
 
     // Check collision with player based on level type
     final player = game.player;
-    if (position.distanceTo(player.position) < radius + player.radius) {
+    if (position.distanceTo(player?.position as Vector2) <
+        radius + player!.radius) {
       if (levelType == LevelType.gravity ||
           levelType == LevelType.survival ||
           levelType == LevelType.demon) {
@@ -125,12 +126,15 @@ class GameObject extends CircleComponent
       }
     }
 
-    final demon = game.demon;
-    if (position.distanceTo(demon.position) < radius + demon.radius) {
-      if (levelType == LevelType.demon && isMagnetized) {
-        if (type == ObjectType.bomb) {
-          print("HIT A DEMON BY BOMB");
-          demon.onHitByBomb();
+    if (levelType == LevelType.demon) {
+      final demon = game.demon;
+      if (position.distanceTo(demon?.position as Vector2) <
+          radius + demon!.radius) {
+        if (levelType == LevelType.demon && isMagnetized) {
+          if (type == ObjectType.bomb) {
+            print("HIT A DEMON BY BOMB");
+            demon.onHitByBomb();
+          }
         }
       }
     }
@@ -223,5 +227,12 @@ class GameObject extends CircleComponent
             canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
       }
     }
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    // Add to gameObjects here instead
+    (game).gameObjects.add(this);
   }
 }

@@ -14,7 +14,7 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   // Health
   int maxHealth = 3;
-  int health = 3;
+  int health = 3; //TODO FIND BETTER VALUESß
   double hitEffectTimer = 0.0;
   static const double hitEffectDuration = 0.2;
 
@@ -98,8 +98,9 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void shootBombAtPlayer() {
-    final playerPos = game.player.position;
-    final direction = (playerPos - position).normalized();
+    print("shooting bomb");
+    final playerPos = game.player?.position;
+    final direction = (playerPos! - position).normalized();
     final bomb = GameObject(
       position: position.clone(),
       type: ObjectType.bomb,
@@ -108,7 +109,6 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     );
     bomb.velocity = direction * 200; // Adjust speed as needed
     game.add(bomb);
-    game.gameObjects.add(bomb);
   }
 
   // Call this when a bomb is returned and hits the demon
@@ -119,7 +119,12 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     if (health <= 0) {
       isAlive = false;
       // Play animation, sound, etc.
-      removeFromParent();
+      game.SuccessDemonLevel();
     }
+  }
+
+  void deleteDemon() {
+    isAlive = false;
+    removeFromParent();
   }
 }
