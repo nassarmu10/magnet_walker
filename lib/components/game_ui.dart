@@ -1542,6 +1542,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 ],
               ),
               actions: [
+                // Start Playing button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -1562,6 +1563,33 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                     },
                     child: Text(
                       'Start Playing!',
+                      style: TextStyle(
+                        fontSize: dialogWidth * 0.06,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12), // Space between buttons
+                // Return to Main Menu button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[700],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close the dialog first
+                      // Call the exit to menu callback
+                      onExitToMenu?.call();
+                    },
+                    child: Text(
+                      'Return to Main Menu',
                       style: TextStyle(
                         fontSize: dialogWidth * 0.06,
                         fontWeight: FontWeight.bold,
