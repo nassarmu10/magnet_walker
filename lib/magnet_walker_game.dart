@@ -165,6 +165,8 @@ class MagnetWalkerGame extends FlameGame
   }
 
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
+    final actualSize = camera.viewfinder.visibleGameSize ?? gameSize;
+    gameSize = actualSize;
     switch (currentLevelType) {
       case LevelType.gravity:
         return Vector2(gameSize.x / 2, gameSize.y - 117);
@@ -1207,13 +1209,14 @@ class MagnetWalkerGame extends FlameGame
       wave: waveManager.currentWave,
       playTime: playTime,
       onRestartLevel: () {
-        if (livesManager.lives == 0) {
+        if (livesManager.lives <= 0) {
           gameUI?.showNoLivesDialog();
         } else {
           livesManager.tryConsumeLife();
           waveManager.currentWave = 1;
           wavesCompletedInLevel = 0;
           waveManager.resetWaveScore();
+          restartGameMusic();
           _initializeLevel();
           _startLevel();
         }
@@ -1223,6 +1226,7 @@ class MagnetWalkerGame extends FlameGame
           onRewarded: () {
             // Restart current wave after ad
             restartWave();
+            restartGameMusic();
           },
           onFailed: () {
             final context = gameUI?.game.buildContext;
@@ -1341,7 +1345,7 @@ class MagnetWalkerGame extends FlameGame
       wave: waveManager.currentWave,
       playTime: playTime,
       onRestartLevel: () {
-        if (livesManager.lives == 0) {
+        if (livesManager.lives <= 0) {
           gameUI?.showNoLivesDialog();
         } else {
           livesManager.lives--;

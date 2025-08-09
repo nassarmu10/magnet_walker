@@ -20,15 +20,17 @@ class MagnetWalkerApp extends StatefulWidget {
   State<MagnetWalkerApp> createState() => _MagnetWalkerAppState();
 }
 
-class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
+class _MagnetWalkerAppState extends State<MagnetWalkerApp> with WidgetsBindingObserver {
   late SkinManager skinManager;
   bool _musicEnabled = true;
   bool _menuMusicEnabled = true;
   bool _sfxEnabled = true;
+  int _currentLevel = 1;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _loadSettings();
     skinManager = SkinManager();
@@ -41,6 +43,7 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
       _musicEnabled = prefs.getBool('music_enabled') ?? true;
       _menuMusicEnabled = prefs.getBool('menu_music_enabled') ?? true;
       _sfxEnabled = prefs.getBool('sfx_enabled') ?? true;
+      _currentLevel = prefs.getInt('saved_level') ?? 1;
     });
 
     if (_menuMusicEnabled) {
@@ -83,7 +86,7 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
             ),
         '/skins': (context) => SkinStoreScreen(
               skinManager: skinManager,
-              currentLevel: 1,
+              currentLevel: _currentLevel,
               onSkinChanged: () {}, // You can access Game here if needed
             ),
       },
@@ -92,6 +95,7 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     FlameAudio.bgm.stop();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -100,5 +104,16 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp> {
       DeviceOrientation.landscapeRight,
     ]);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      FlameAudio.bgm.pause();
+    } else if (state == AppLifecycleState.resumed) {
+      if (_menuMusicEnabled) {
+        FlameAudio.bgm.resume();
+      }
+    }
   }
 }
