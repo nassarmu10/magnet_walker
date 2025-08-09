@@ -1416,7 +1416,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                     value: percent,
                     minHeight: 12,
                     backgroundColor: Colors.red[200]!.withOpacity(0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
+                    valueColor: AlwaysStoppedAnimation(Colors.redAccent),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -1448,6 +1448,33 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   },
                   child: Text(
                     'Watch Ad for 1 Life',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12), // Space between buttons
+              // Return to Main Menu button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[700],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the dialog first
+                    // Call the game's exit callback to return to main menu
+                    exitToMenu();
+                  },
+                  child: Text(
+                    'Return to Main Menu',
                     style: TextStyle(
                       fontSize: dialogWidth * 0.06,
                       fontWeight: FontWeight.bold,
