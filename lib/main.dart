@@ -108,11 +108,11 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp> with WidgetsBindingOb
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      FlameAudio.bgm.pause();
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      FlameAudio.bgm.stop(); // Use stop() instead of pause()
     } else if (state == AppLifecycleState.resumed) {
       if (_menuMusicEnabled) {
-        FlameAudio.bgm.resume();
+        FlameAudio.bgm.play('menu_music.mp3'); // Restart from beginning
       }
     }
   }

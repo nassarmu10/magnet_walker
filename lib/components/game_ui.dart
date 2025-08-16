@@ -1347,36 +1347,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
   void showNoLivesDialog({VoidCallback? onDialogClosed}) {
     final context = game.buildContext;
-    if (context == null) {
-      // If context is not available yet, schedule to show later
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (game.buildContext != null) {
-          showNoLivesDialog(onDialogClosed: onDialogClosed);
-        }
-      });
-      return;
-    }
-
-    // Calculate progress for next life
-    final lives = game.livesManager.lives;
-    final maxLives = game.livesManager.maxLives;
-    final regenMinutes = game.livesManager.lifeRegenMinutes;
-    final lastLifeTimestamp = game.livesManager.lastLifeTimestamp;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final regenMillis = regenMinutes * 60 * 1000;
-    int millisLeft = 0;
-    double percent = 1.0;
-    String timeLeftStr = '';
-
-    if (lives < maxLives && lastLifeTimestamp != null) {
-      millisLeft = (lastLifeTimestamp + regenMillis) - now;
-      if (millisLeft < 0) millisLeft = 0;
-      percent = 1.0 - (millisLeft / regenMillis).clamp(0.0, 1.0);
-      final secondsLeft = (millisLeft / 1000).ceil();
-      final minutes = (secondsLeft ~/ 60).toString().padLeft(2, '0');
-      final seconds = (secondsLeft % 60).toString().padLeft(2, '0');
-      timeLeftStr = '$minutes:$seconds';
-    }
+    if (context == null) return;
 
     showDialog(
       context: context,
@@ -1384,8 +1355,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       builder: (context) {
         final dialogWidth = MediaQuery.of(context).size.width * 0.85;
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           backgroundColor: const Color(0xFF1a1a2e),
           contentPadding: EdgeInsets.all(dialogWidth * 0.06),
           content: Column(
@@ -1401,53 +1371,31 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
               ),
               const SizedBox(height: 18),
               Text(
-                'You have no lives left. Please wait for a new life or watch an ad to get one instantly.',
+                'Return to main menu to get more lives or wait for them to regenerate.',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: dialogWidth * 0.055,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 18),
-              // Progress bar for next life
-              Column(
-                children: [
-                  LinearProgressIndicator(
-                    value: percent,
-                    minHeight: 12,
-                    backgroundColor: Colors.red[200]!.withOpacity(0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Next life in $timeLeftStr',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: dialogWidth * 0.05,
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 24),
-              // Watch Ad button
+              // Return to Menu button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.pinkAccent,
+                    backgroundColor: Colors.cyanAccent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
-                    // Simulate watching an ad and gaining a life
                     Navigator.of(context).pop();
-                    _simulateWatchAdAndGainLife();
-                    if (onDialogClosed != null) onDialogClosed();
+                    game.exitToMainMenu();
                   },
                   child: Text(
-                    'Watch Ad for 1 Life',
+                    'Return to Main Menu',
                     style: TextStyle(
                       fontSize: dialogWidth * 0.06,
                       fontWeight: FontWeight.bold,
@@ -1460,10 +1408,128 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
           ),
         );
       },
-    ).then((_) {
-      if (onDialogClosed != null) onDialogClosed();
-    });
+    );
   }
+
+  // void showNoLivesDialog({VoidCallback? onDialogClosed}) {
+  //   final context = game.buildContext;
+  //   if (context == null) {
+  //     // If context is not available yet, schedule to show later
+  //     Future.delayed(const Duration(milliseconds: 500), () {
+  //       if (game.buildContext != null) {
+  //         showNoLivesDialog(onDialogClosed: onDialogClosed);
+  //       }
+  //     });
+  //     return;
+  //   }
+
+  //   // Calculate progress for next life
+  //   final lives = game.livesManager.lives;
+  //   final maxLives = game.livesManager.maxLives;
+  //   final regenMinutes = game.livesManager.lifeRegenMinutes;
+  //   final lastLifeTimestamp = game.livesManager.lastLifeTimestamp;
+  //   final now = DateTime.now().millisecondsSinceEpoch;
+  //   final regenMillis = regenMinutes * 60 * 1000;
+  //   int millisLeft = 0;
+  //   double percent = 1.0;
+  //   String timeLeftStr = '';
+
+  //   if (lives < maxLives && lastLifeTimestamp != null) {
+  //     millisLeft = (lastLifeTimestamp + regenMillis) - now;
+  //     if (millisLeft < 0) millisLeft = 0;
+  //     percent = 1.0 - (millisLeft / regenMillis).clamp(0.0, 1.0);
+  //     final secondsLeft = (millisLeft / 1000).ceil();
+  //     final minutes = (secondsLeft ~/ 60).toString().padLeft(2, '0');
+  //     final seconds = (secondsLeft % 60).toString().padLeft(2, '0');
+  //     timeLeftStr = '$minutes:$seconds';
+  //   }
+
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (context) {
+  //       final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+  //       return AlertDialog(
+  //         shape:
+  //             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+  //         backgroundColor: const Color(0xFF1a1a2e),
+  //         contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Text(
+  //               'No Lives Left!',
+  //               style: TextStyle(
+  //                 fontSize: dialogWidth * 0.09,
+  //                 fontWeight: FontWeight.bold,
+  //                 color: Colors.redAccent,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 18),
+  //             Text(
+  //               'You have no lives left. Please wait for a new life or watch an ad to get one instantly.',
+  //               style: TextStyle(
+  //                 color: Colors.white70,
+  //                 fontSize: dialogWidth * 0.055,
+  //               ),
+  //               textAlign: TextAlign.center,
+  //             ),
+  //             const SizedBox(height: 18),
+  //             // Progress bar for next life
+  //             Column(
+  //               children: [
+  //                 LinearProgressIndicator(
+  //                   value: percent,
+  //                   minHeight: 12,
+  //                   backgroundColor: Colors.red[200]!.withOpacity(0.2),
+  //                   valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
+  //                 ),
+  //                 const SizedBox(height: 8),
+  //                 Text(
+  //                   'Next life in $timeLeftStr',
+  //                   style: TextStyle(
+  //                     color: Colors.white70,
+  //                     fontSize: dialogWidth * 0.05,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //             const SizedBox(height: 24),
+  //             // Watch Ad button
+  //             SizedBox(
+  //               width: double.infinity,
+  //               child: ElevatedButton(
+  //                 style: ElevatedButton.styleFrom(
+  //                   backgroundColor: Colors.pinkAccent,
+  //                   shape: RoundedRectangleBorder(
+  //                     borderRadius: BorderRadius.circular(12),
+  //                   ),
+  //                   padding: const EdgeInsets.symmetric(vertical: 14),
+  //                 ),
+  //                 onPressed: () {
+  //                   // Simulate watching an ad and gaining a life
+  //                   Navigator.of(context).pop();
+  //                   _simulateWatchAdAndGainLife();
+  //                   if (onDialogClosed != null) onDialogClosed();
+  //                 },
+  //                 child: Text(
+  //                   'Watch Ad for 1 Life',
+  //                   style: TextStyle(
+  //                     fontSize: dialogWidth * 0.06,
+  //                     fontWeight: FontWeight.bold,
+  //                     color: Colors.white,
+  //                   ),
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   ).then((_) {
+  //     if (onDialogClosed != null) onDialogClosed();
+  //   });
+  // }
 
   void _simulateWatchAdAndGainLife() {
     // Show real rewarded ad
