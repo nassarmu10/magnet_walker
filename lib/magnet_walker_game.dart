@@ -295,6 +295,10 @@ class MagnetWalkerGame extends FlameGame
       'player_neptune.png',
       'player_sun.png',
       'player_blackhole.png',
+      'spaceship1.png',
+      'spaceship2.png',
+      'spaceship3.png',
+      'spaceship4.png',
     ];
 
     for (final imageName in skinImages) {

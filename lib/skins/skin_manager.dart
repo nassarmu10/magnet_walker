@@ -21,7 +21,7 @@ class SkinManager {
       id: 'mars',
       name: 'Mars',
       description: 'The red planet of war',
-      imagePath: 'player_mars.png',
+      imagePath: 'spaceship1.png',
       price: 3, // Available for purchase from level 3
       isUnlocked: false,
       rarity: 'common',
@@ -30,7 +30,7 @@ class SkinManager {
       id: 'venus',
       name: 'Venus',
       description: 'The beautiful morning star',
-      imagePath: 'player_venus.png',
+      imagePath: 'spaceship2.png',
       price: 5, // Available for purchase from level 5
       isUnlocked: false,
       rarity: 'common',
@@ -39,7 +39,7 @@ class SkinManager {
       id: 'jupiter',
       name: 'Jupiter',
       description: 'The gas giant with storms',
-      imagePath: 'player_jupiter.png',
+      imagePath: 'spaceship3.png',
       price: 8, // Available for purchase from level 8
       isUnlocked: false,
       rarity: 'rare',
@@ -48,7 +48,7 @@ class SkinManager {
       id: 'saturn',
       name: 'Saturn',
       description: 'The ringed beauty',
-      imagePath: 'player_saturn.png',
+      imagePath: 'spaceship4.png',
       price: 12, // Available for purchase from level 12
       isUnlocked: false,
       rarity: 'rare',
@@ -57,7 +57,7 @@ class SkinManager {
       id: 'neptune',
       name: 'Neptune',
       description: 'The mysterious ice giant',
-      imagePath: 'player_neptune.png',
+      imagePath: 'spaceship2.png',
       price: 18, // Available for purchase from level 18
       isUnlocked: false,
       rarity: 'epic',

@@ -158,7 +158,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
               padding: const EdgeInsets.all(8),
               child: Container(
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: rarityColor.withOpacity(0.4),
@@ -167,40 +167,51 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                     ),
                   ],
                 ),
-                child: ClipOval(
-                  child: ColorFiltered(
-                    // Gray out skins that can't be purchased yet
-                    colorFilter: (!skin.isUnlocked && !canPurchase)
-                        ? const ColorFilter.mode(
-                            Colors.grey,
-                            BlendMode.saturation,
-                          )
-                        : const ColorFilter.mode(
-                            Colors.transparent,
-                            BlendMode.multiply,
-                          ),
-                    child: Image.asset(
-                      'assets/images/${skin.imagePath}',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      // The actual image
+                      Image.asset(
+                        'assets/images/${skin.imagePath}',
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: RadialGradient(
+                                colors: [
+                                  rarityColor.withOpacity(0.3),
+                                  rarityColor.withOpacity(0.1)
+                                ],
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.public,
+                              color: rarityColor,
+                              size: 30,
+                            ),
+                          );
+                        },
+                      ),
+                      // Overlay for locked items (instead of ColorFiltered)
+                      if (!skin.isUnlocked && !canPurchase)
+                        Container(
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                rarityColor.withOpacity(0.3),
-                                rarityColor.withOpacity(0.1)
-                              ],
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.black.withOpacity(0.6), // Semi-transparent overlay
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.lock,
+                              color: Colors.white70,
+                              size: 24,
                             ),
                           ),
-                          child: Icon(
-                            Icons.public,
-                            color: rarityColor,
-                            size: 30,
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ),
