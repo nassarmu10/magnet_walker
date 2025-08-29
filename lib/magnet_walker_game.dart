@@ -1414,8 +1414,10 @@ class MagnetWalkerGame extends FlameGame
       if (waveCountdown <= 0) {
         onCountdownFinished();
       } else {
-        waveMessage =
-            'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+        if (currentLevelType != LevelType.demon) {
+          waveMessage =
+              'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+        }
       }
     }
   }
