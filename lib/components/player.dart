@@ -102,7 +102,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
 
       // For demon levels, restrict upward movement to avoid collision area
-      if (currentLevelType == LevelType.demon) {
+      if (currentLevelType == LevelType.demon &&
+          game.currentState == GameState.playing) {
         // Set minimum Y to keep player away from demon patrol area
         // Adjust this value based on your demon's patrol area and desired safe zone
         final demon = game.demon!;

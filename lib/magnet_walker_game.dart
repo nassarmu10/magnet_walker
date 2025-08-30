@@ -1157,9 +1157,12 @@ class MagnetWalkerGame extends FlameGame
 
     // Set up countdown
     waveCountdown = 3.0;
-    waveMessage =
-        'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in 3';
-
+    if (currentLevelType == LevelType.demon) {
+      waveMessage = 'Demon Attacks in 3';
+    } else {
+      waveMessage =
+          'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in 3';
+    }
     // Stop any existing spawning
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
@@ -1435,6 +1438,8 @@ class MagnetWalkerGame extends FlameGame
         if (currentLevelType != LevelType.demon) {
           waveMessage =
               'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+        } else {
+          waveMessage = 'Demon Attacks in ${waveCountdown.ceil()}';
         }
       }
     }

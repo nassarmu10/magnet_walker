@@ -1093,19 +1093,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      'RESTART',
-                      const Color(0xFF666666),
-                      () {
-                        Navigator.of(context).pop();
-                        game.restartGame();
-                      },
-                      buttonFontSize,
-                      buttonPaddingH,
-                      buttonPaddingV,
-                    ),
-                  ),
                   SizedBox(width: dialogWidth * 0.04),
                   Expanded(
                     child: _buildActionButton(
