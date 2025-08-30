@@ -92,13 +92,30 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   void moveBy(double deltaX, double deltaY) {
     if (isAnimatingToPosition) return;
+
     final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
+
     if (currentLevelType == LevelType.gravity ||
         currentLevelType == LevelType.demon) {
       position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
-      position.y = (position.y + deltaY).clamp(20.0, gameSize.y - 20);
+
+      // For demon levels, restrict upward movement to avoid collision area
+      if (currentLevelType == LevelType.demon) {
+        // Set minimum Y to keep player away from demon patrol area
+        // Adjust this value based on your demon's patrol area and desired safe zone
+        final demon = game.demon!;
+        final minY = demon.patrolOrigin.y * 2 + demon.patrolRadius + 50.0;
+
+        position.y = (position.y + deltaY).clamp(minY, gameSize.y - 20);
+      } else {
+        // Normal gravity level movement
+        final minY = gameSize.y / 4;
+
+        position.y = (position.y + deltaY).clamp(minY, gameSize.y - 20);
+        //position.y = (position.y + deltaY).clamp(20.0, gameSize.y - 20);
+      }
     } else if (currentLevelType == LevelType.survival) {
       // In survival mode, player stays stationary in center
       // No movement allowed
@@ -121,10 +138,30 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void applyMagneticForce(GameObject obj, double dt) {
     final distance = position.distanceTo(obj.position);
     if (distance < magnetRadius && distance > 0) {
-      final direction = (position - obj.position)..normalize();
-      final force = 600 * (1 - distance / magnetRadius);
+      var force = 600 * (1 - distance / magnetRadius);
 
-      obj.velocity += direction * force * dt;
+      // Default: pull toward player
+      Vector2 targetDirection = (position - obj.position)..normalize();
+
+      final currentLevelType =
+          LevelTypeConfig.getLevelType(game.waveManager.level);
+      // Boost force for demon bombs
+      if (currentLevelType == LevelType.demon && obj.type == ObjectType.bomb) {
+        final closeDistanceThreshold = radius + obj.radius + 10; // Small buffer
+        //this has to be done because high force will make it never collide with player
+        force = distance > closeDistanceThreshold
+            ? 1200 * (1 - distance / magnetRadius)
+            : 100 * (1 - distance / magnetRadius);
+      }
+      if (currentLevelType == LevelType.demon) {
+        // In demon mode, redirect force toward demon instead of player
+        final demon = game.demon;
+        if (demon != null) {
+          targetDirection = (demon.position - obj.position)..normalize();
+        }
+      }
+
+      obj.velocity += targetDirection * force * dt;
       obj.isMagnetized = true;
     }
   }

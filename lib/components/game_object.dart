@@ -103,12 +103,26 @@ class GameObject extends CircleComponent
       bombSpriteComponent!.size =
           Vector2.all(radius * 4 * pulseScale); // Use 4x scaling
 
-      // Calculate angle to point toward player
-      final player = game.player;
-      final direction = (player!.position - position);
-      final angle = math.atan2(direction.y, direction.x);
+      Vector2 direction;
 
-      // Rotate the sprite component to point toward player
+      if (levelType == LevelType.demon && isMagnetized) {
+        // Point toward demon when magnetized in demon level
+        final demon = game.demon;
+        if (demon != null) {
+          direction = (demon.position - position);
+        } else {
+          // Fallback to player if demon is null
+          final player = game.player;
+          direction = (player!.position - position);
+        }
+      } else {
+        // Default: point toward player
+        final player = game.player;
+        direction = (player!.position - position);
+      }
+
+      final angle = math.atan2(direction.y, direction.x);
+      // Rotate the sprite component to point toward target
       bombSpriteComponent!.angle = angle;
     }
 
@@ -128,12 +142,20 @@ class GameObject extends CircleComponent
 
     if (levelType == LevelType.demon) {
       final demon = game.demon;
-      if (position.distanceTo(demon?.position as Vector2) <
-          radius + demon!.radius) {
-        if (levelType == LevelType.demon && isMagnetized) {
+      if (demon != null) {
+        final distanceToDemon = position.distanceTo(demon.position);
+
+        if (distanceToDemon < (radius * 1.2 + demon.radius) && isMagnetized) {
+          // 1.2 to give a little leeway
+
           if (type == ObjectType.bomb) {
-            print("HIT A DEMON BY BOMB");
+            print("💥 HIT A DEMON BY BOMB");
             demon.onHitByBomb();
+
+            // Mark bomb as destroyed
+            collected = true;
+            game.gameObjects.remove(this);
+            removeFromParent();
           }
         }
       }
