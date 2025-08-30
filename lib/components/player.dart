@@ -39,15 +39,23 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
 
     // Load initial skin (will be updated by game)
-    await _loadSkin(_currentSkinPath);
+    // await _loadSkin(_currentSkinPath);
   }
 
   Future<void> _loadSkin(String skinPath) async {
     try {
-      // Remove existing sprite component
-      if (playerSpriteComponent != null) {
-        remove(playerSpriteComponent!);
+      print('Loading skin: $skinPath');
+      // Remove ALL children components (not just sprite components)
+      final allChildren = children.toList();
+      for (final child in allChildren) {
+        child.removeFromParent();
       }
+
+      // Force clear the sprite reference
+      playerSpriteComponent = null;
+
+      // Wait longer for cleanup
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Load new skin
       final skinImage = await game.images.load(skinPath);
@@ -57,8 +65,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
         anchor: Anchor.center,
         priority: 1,
       );
+
+      // Add the new sprite
       add(playerSpriteComponent!);
       _currentSkinPath = skinPath;
+
+      print('Successfully loaded skin: $skinPath, children count: ${children.length}');
     } catch (e) {
       print('Failed to load skin $skinPath: $e');
       // Fallback to default skin if loading fails
@@ -70,9 +82,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   // Method to update the player's skin
   Future<void> updateSkin(String skinPath) async {
-    if (_currentSkinPath != skinPath) {
-      await _loadSkin(skinPath);
-    }
+    await _loadSkin(skinPath);
   }
 
   @override

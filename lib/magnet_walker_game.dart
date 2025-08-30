@@ -315,8 +315,11 @@ class MagnetWalkerGame extends FlameGame
   }
 
   Future<void> _updatePlayerSkin() async {
-    final selectedSkin = skinManager.selectedSkin;
-    await player?.updateSkin(selectedSkin.imagePath);
+    if (player != null) {
+      final selectedSkin = skinManager.selectedSkin;
+      print('Applying skin: ${selectedSkin.imagePath}');
+      await player?.updateSkin(selectedSkin.imagePath);
+    }
   }
 
   // Method to be called when skin changes
