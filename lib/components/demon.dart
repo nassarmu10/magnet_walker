@@ -44,6 +44,8 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       anchor: Anchor.center,
       priority: 1,
     );
+    shootInterval = math.max(0.9, 2.0 - (game.waveManager.level * 0.1));
+
     add(demonSprite!);
   }
 

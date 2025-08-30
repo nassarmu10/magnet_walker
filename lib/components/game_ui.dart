@@ -868,10 +868,18 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   _buildStatRow('🚀 LEVEL', '$level', const Color(0xFF8844ff),
                       statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
-                  _buildStatRow('🌊 WAVE', '$wave/3', const Color(0xFFff8844),
-                      statFontSize),
+
+                  // Show wave row only for non-demon levels
+                  if (LevelTypeConfig.getLevelType(game.waveManager.level) !=
+                      LevelType.demon) ...[
+                    _buildStatRow('🌊 WAVE', '$wave/3', const Color(0xFFff8844),
+                        statFontSize),
+                    SizedBox(height: dialogWidth * 0.04),
+                  ],
+
                   SizedBox(height: dialogWidth * 0.05),
-                  // Explanation section
+
+                  // Explanation section with different text based on level type
                   Container(
                     padding: EdgeInsets.all(dialogWidth * 0.045),
                     decoration: BoxDecoration(
@@ -882,7 +890,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       ),
                     ),
                     child: Text(
-                      'You failed wave $wave of level $level. Choose your next action:',
+                      _getFailureMessage(level, wave),
                       style: TextStyle(
                         fontSize: bodyFontSize,
                         color: const Color(0xFF44aaff),
@@ -1593,5 +1601,16 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       },
       onFailed: () {},
     );
+  }
+
+  String _getFailureMessage(int level, int wave) {
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
+
+    if (currentLevelType == LevelType.demon) {
+      return 'The demon defeated you at level $level. Choose your next action:';
+    } else {
+      return 'You failed wave $wave of level $level. Choose your next action:';
+    }
   }
 }
