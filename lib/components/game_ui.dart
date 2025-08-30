@@ -41,7 +41,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent playTimeText;
   late TextComponent targetScoreText;
   late TextComponent instructionsText;
-  late TextComponent livesText;
   bool gameOverVisible = false;
   bool isInitialized = false;
 
@@ -49,7 +48,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late RoundedRectComponent headerBg;
   late RoundedRectComponent topRowBg;
   late RoundedRectComponent bottomRowBg;
-  late ButtonComponent livesButton;
   late ButtonComponent pauseButton;
   bool isPaused = false;
   VoidCallback? onExitToMenu;
@@ -209,7 +207,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // Level (center)
     levelText = TextComponent(
       text: 'Level 1 (Wave 1/3)',
-      position: Vector2(topRowCenterX, topRowCenterY),
+      position: Vector2(topRowRightX, topRowCenterY),
       textRenderer: TextPaint(
         style: const TextStyle(
           fontFamily: 'Roboto',
@@ -230,67 +228,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
           ],
         ),
       ),
-      anchor: Anchor.center,
+      anchor: Anchor.centerRight,
     );
     add(levelText);
-
-    // Lives (right)
-    livesText = TextComponent(
-      text: '❤️ ${game.livesManager.lives}',
-      position: Vector2(topRowRightX, topRowCenterY),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Colors.redAccent,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 6,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-      anchor: Anchor.centerRight,
-      priority: 10,
-    );
-
-    livesButton = ButtonComponent(
-      position: Vector2(topRowRightX - 20, topRowCenterY),
-      size: Vector2(60, topRowHeight),
-      anchor: Anchor.center,
-      button: RectangleComponent(
-        size: Vector2(60, topRowHeight),
-        paint: Paint()..color = const Color(0x00000000), // transparent
-      ),
-      children: [
-        TextComponent(
-          text: '❤️ ${game.livesManager.lives}',
-          anchor: Anchor.center,
-          textRenderer: TextPaint(
-            style: const TextStyle(
-              fontFamily: 'Roboto',
-              color: Colors.redAccent,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  offset: Offset(0, 0),
-                  blurRadius: 6,
-                  color: Colors.black54,
-                ),
-              ],
-            ),
-          ),
-          position: Vector2(30, topRowHeight / 2),
-        ),
-      ],
-      onPressed: showLivesDialog,
-      priority: 10,
-    );
-    add(livesButton);
 
     // REDESIGNED: Bottom row elements (perfectly aligned)
     final bottomRowCenterY = bottomRowY + bottomRowHeight / 2;
@@ -697,12 +637,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       final glowOpacity = (glowIntensity * 0.15).clamp(0.05, 0.15);
       topRowBg.paint.color = Color(0xFF000000).withOpacity(glowOpacity);
       bottomRowBg.paint.color = Color(0xFF000000).withOpacity(glowOpacity);
-    }
-
-    // Update lives counter in button
-    if (livesButton.children.isNotEmpty) {
-      (livesButton.children.first as TextComponent).text =
-          '❤️ ${game.livesManager.lives}';
     }
 
     super.update(dt);
