@@ -20,7 +20,8 @@ class MagnetWalkerApp extends StatefulWidget {
   State<MagnetWalkerApp> createState() => _MagnetWalkerAppState();
 }
 
-class _MagnetWalkerAppState extends State<MagnetWalkerApp> with WidgetsBindingObserver {
+class _MagnetWalkerAppState extends State<MagnetWalkerApp>
+    with WidgetsBindingObserver {
   late SkinManager skinManager;
   bool _musicEnabled = true;
   bool _menuMusicEnabled = true;
@@ -104,16 +105,5 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp> with WidgetsBindingOb
       DeviceOrientation.landscapeRight,
     ]);
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      FlameAudio.bgm.stop(); // Use stop() instead of pause()
-    } else if (state == AppLifecycleState.resumed) {
-      if (_menuMusicEnabled) {
-        FlameAudio.bgm.play('menu_music.mp3'); // Restart from beginning
-      }
-    }
   }
 }

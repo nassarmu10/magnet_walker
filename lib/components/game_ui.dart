@@ -1355,7 +1355,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       builder: (context) {
         final dialogWidth = MediaQuery.of(context).size.width * 0.85;
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           backgroundColor: const Color(0xFF1a1a2e),
           contentPadding: EdgeInsets.all(dialogWidth * 0.06),
           content: Column(

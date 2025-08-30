@@ -35,9 +35,8 @@ class _GameScreenState extends State<GameScreen> {
       Navigator.pushReplacementNamed(context, '/');
     });
 
-    game.setSfxEnabled(widget.sfxEnabled);
-
     if (widget.musicEnabled) {
+      FlameAudio.bgm.stop();
       FlameAudio.bgm.play('game_music.mp3');
     }
   }
@@ -51,7 +50,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    //FlameAudio.bgm.stop();
+    FlameAudio.bgm.stop();
     super.dispose();
   }
 }

@@ -215,15 +215,41 @@ class AdManager {
   static Future<void> showRewardedAd({
     required Function onRewarded,
     required Function onFailed,
+    Function? onAdDismissed, // Add this parameter
   }) async {
     print('Attempting to show rewarded ad...');
     print('isRewardedAdReady: $isRewardedAdReady');
-    print('rewardedAd != null:  [36m${rewardedAd != null} [0m');
+    print('rewardedAd != null: ${rewardedAd != null}');
     print('isAdsInitialized: $isAdsInitialized');
 
     if (isRewardedAdReady && rewardedAd != null) {
       try {
         print('Showing rewarded ad...');
+        // Set up the full screen content callback BEFORE showing the ad
+        rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (RewardedAd ad) {
+            print('Rewarded ad dismissed');
+            onAdDismissed?.call(); // Call when ad is dismissed
+            ad.dispose();
+            rewardedAd = null;
+            isRewardedAdReady = false;
+            // Preload next ad
+            loadRewardedAd();
+          },
+          onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) {
+            print('Rewarded ad failed to show: $error');
+            ad.dispose();
+            rewardedAd = null;
+            isRewardedAdReady = false;
+            onFailed();
+            // Try to load a new ad
+            loadRewardedAd();
+          },
+          onAdShowedFullScreenContent: (RewardedAd ad) {
+            print('Rewarded ad showed full screen content');
+          },
+        );
+
         rewardedAd!.show(
           onUserEarnedReward: (ad, reward) {
             print('User earned reward: ${reward.amount} ${reward.type}');
@@ -238,19 +264,20 @@ class AdManager {
       }
     } else {
       print('Rewarded ad not ready. Loading new ad...');
-
       // Show user feedback immediately
       onFailed();
-
       // Try to load and show ad if not already loading
       if (!isLoadingRewardedAd) {
         await loadRewardedAd();
-
         // Wait a bit and try again if ad is now ready
         await Future.delayed(const Duration(seconds: 2));
         if (isRewardedAdReady && rewardedAd != null) {
           print('Ad loaded successfully, showing now...');
-          showRewardedAd(onRewarded: onRewarded, onFailed: onFailed);
+          showRewardedAd(
+            onRewarded: onRewarded,
+            onFailed: onFailed,
+            onAdDismissed: onAdDismissed, // Pass it through
+          );
         } else {
           print('Failed to load ad after retry');
           onFailed();

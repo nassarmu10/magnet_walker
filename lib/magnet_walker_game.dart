@@ -50,6 +50,7 @@ class MagnetWalkerGame extends FlameGame
 
   // Audio settings
   bool sfxEnabled = true;
+  bool musicEnabled = true;
 
   // Callback for game restart
   VoidCallback? onGameRestart;
@@ -279,6 +280,8 @@ class MagnetWalkerGame extends FlameGame
 
     // Load saved progress (level and wave)
     await loadProgress();
+
+    await loadSoundSettings();
 
     // Initialize lives manager
     livesManager = LivesManager();
@@ -830,9 +833,12 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
-  // Method to update SFX setting
-  void setSfxEnabled(bool enabled) {
-    sfxEnabled = enabled;
+  // Helper to play music
+  void playMusic(String fileName) {
+    if (musicEnabled) {
+      stopGameMusic();
+      FlameAudio.bgm.play(fileName);
+    }
   }
 
   // Method to stop game music
@@ -842,7 +848,10 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to restart game music
   void restartGameMusic() {
-    FlameAudio.bgm.play('game_music.mp3');
+    if (musicEnabled) {
+      stopGameMusic();
+      FlameAudio.bgm.play('game_music.mp3');
+    }
   }
 
   void showLevelCompleteDialog() {
@@ -1111,6 +1120,7 @@ class MagnetWalkerGame extends FlameGame
   void pauseGame() {
     currentState = GameState.paused;
     pausePlayTime();
+    stopGameMusic();
 
     // Stop all spawning
     gravitySpawnManager.stop();
@@ -1131,6 +1141,7 @@ class MagnetWalkerGame extends FlameGame
     if (currentState == GameState.playing) {
       restartWave();
     }
+    restartGameMusic();
   }
 
 // Prepares the current wave (shows countdown, positions player, etc.)
@@ -1228,8 +1239,10 @@ class MagnetWalkerGame extends FlameGame
       onWatchAd: () {
         AdManager.showRewardedAd(
           onRewarded: () {
-            // Restart current wave after ad
             restartWave();
+          },
+          onAdDismissed: () {
+            // Start music only after ad is dismissed
             restartGameMusic();
           },
           onFailed: () {
@@ -1353,6 +1366,7 @@ class MagnetWalkerGame extends FlameGame
           gameUI?.showNoLivesDialog();
         } else {
           livesManager.lives--;
+          restartGameMusic();
           _initializeLevel();
           _startLevel();
         }
@@ -1362,6 +1376,10 @@ class MagnetWalkerGame extends FlameGame
           onRewarded: () {
             _initializeLevel();
             _startLevel();
+          },
+          onAdDismissed: () {
+            // Start music only after ad is dismissed
+            restartGameMusic();
           },
           onFailed: () {
             final context = gameUI?.game.buildContext;
@@ -1419,6 +1437,15 @@ class MagnetWalkerGame extends FlameGame
               'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
         }
       }
+    }
+  }
+
+  loadSoundSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    musicEnabled = prefs.getBool('music_enabled') ?? true;
+    sfxEnabled = prefs.getBool('sfx_enabled') ?? true;
+    if (musicEnabled) {
+      playMusic('game_music.mp3');
     }
   }
 }
