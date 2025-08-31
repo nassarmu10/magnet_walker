@@ -100,9 +100,16 @@ class MagnetWalkerGame extends FlameGame
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     playTimeTimer?.cancel();
+    playTimeTimer = null; // Set to null after cancelling
 
     // Clear all objects
     clearAllObjects();
+
+    // Dispose of demon if exists
+    if (demon != null) {
+      demon!.removeFromParent();
+      demon = null;
+    }
 
     // Save progress
     saveProgress();
@@ -956,21 +963,29 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void clearAllObjects() {
-    // Clear all game objects
-    for (final obj in gameObjects) {
+      // Clear and dispose all game objects
+    for (final obj in gameObjects.toList()) {
       obj.removeFromParent();
     }
     gameObjects.clear();
 
-    // Clear all particles
-    for (final particle in particles) {
+    // Clear and dispose all particles
+    for (final particle in particles.toList()) {
       particle.removeFromParent();
     }
     particles.clear();
+
+    // Clear any remaining components that might be game objects
+    final componentsToRemove = children.where((component) => 
+      component is GameObject || component is GameParticle).toList();
+    for (final component in componentsToRemove) {
+      component.removeFromParent();
+    }
   }
 
   @override
   bool onDragStart(DragStartEvent event) {
+    super.onDragStart(event);
     return true; // Accept all drag events
   }
 
@@ -1062,10 +1077,24 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   void onRemove() {
+    // Stop all timers
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
     playTimeTimer?.cancel();
+    playTimeTimer = null;
+
+    // Clear all objects
+    clearAllObjects();
+
+    // Remove player and demon
+    player?.removeFromParent();
+    player = null;
+    demon?.removeFromParent();
+    demon = null;
+
+    // Dispose ads
     AdManager.disposeAds();
+    
     super.onRemove();
   }
 

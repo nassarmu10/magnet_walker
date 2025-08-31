@@ -45,6 +45,13 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Future<void> _loadSkin(String skinPath) async {
     try {
       print('Loading skin: $skinPath');
+
+      // Dispose of the old sprite component properly
+      if (playerSpriteComponent != null) {
+        playerSpriteComponent!.removeFromParent();
+        // Don't dispose the image here as it's cached by the game
+        playerSpriteComponent = null;
+      }
       // Remove ALL children components (not just sprite components)
       final allChildren = children.toList();
       for (final child in allChildren) {

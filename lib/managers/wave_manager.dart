@@ -8,6 +8,10 @@ class WaveManager {
   int waveScore; // Score for current wave only (resets each wave)
   int waveTarget; // Coins needed to complete current wave
 
+  // Demon level persistence
+  int? savedDemonHealth; // Store demon's health when player fails
+  int? savedDemonMaxHealth; // Store demon's max health
+
   WaveManager({
     this.level = 1,
     this.currentWave = 1,
@@ -39,5 +43,22 @@ class WaveManager {
   // Reset wave score
   void resetWaveScore() {
     waveScore = 0;
+  }
+
+  // Save demon health for continue after ad
+  void saveDemonHealth(int health, int maxHealth) {
+    savedDemonHealth = health;
+    savedDemonMaxHealth = maxHealth;
+  }
+
+  // Clear saved demon health (when level is completed or restarted)
+  void clearDemonHealth() {
+    savedDemonHealth = null;
+    savedDemonMaxHealth = null;
+  }
+
+  // Check if we have saved demon health
+  bool hasSavedDemonHealth() {
+    return savedDemonHealth != null && savedDemonMaxHealth != null;
   }
 }

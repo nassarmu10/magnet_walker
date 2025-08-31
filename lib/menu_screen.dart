@@ -37,7 +37,14 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   void dispose() {
     _regenTimer?.cancel();
+    _regenTimer = null;
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    _regenTimer?.cancel();
+    super.deactivate();
   }
 
   Future<void> _loadLives() async {

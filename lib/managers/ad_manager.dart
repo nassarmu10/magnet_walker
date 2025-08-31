@@ -397,7 +397,7 @@ class AdManager {
   // Dispose Ads
   static void disposeAds() {
     try {
-      bannerAd.dispose();
+      bannerAd?.dispose();
     } catch (e) {
       print('Error disposing banner ad: $e');
     }

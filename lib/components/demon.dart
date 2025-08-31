@@ -14,7 +14,7 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   // Health
   int maxHealth = 3;
-  int health = 3; //TODO FIND BETTER VALUESß
+  int health = 3; //TODO FIND BETTER VALUES
   double hitEffectTimer = 0.0;
   static const double hitEffectDuration = 0.2;
 
@@ -107,7 +107,7 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       position: position.clone(),
       type: ObjectType.bomb,
       level: game.waveManager.level,
-      levelType: LevelType.demon, // Add this to your LevelType enum
+      levelType: LevelType.demon,
     );
     bomb.velocity = direction * 200; // Adjust speed as needed
     game.add(bomb);
@@ -129,5 +129,19 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void deleteDemon() {
     isAlive = false;
     removeFromParent();
+  }
+
+  // NEW: Method to restore demon's health
+  void restoreHealth(int restoredHealth, int restoredMaxHealth) {
+    health = restoredHealth;
+    maxHealth = restoredMaxHealth;
+    isAlive = true;
+    hitEffectTimer = 0.0;
+    shootTimer = 0.0; // Reset shoot timer
+  }
+
+  // NEW: Method to get current health percentage
+  double getHealthPercentage() {
+    return health / maxHealth;
   }
 }
