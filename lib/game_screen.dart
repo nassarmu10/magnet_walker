@@ -102,7 +102,7 @@ class _GameScreenState extends State<GameScreen> {
           // Banner ad area
           if (_isBannerAdLoaded && _bannerAd != null)
             Container(
-              width: double.infinity,
+              width: _bannerAd!.size.width.toDouble(),
               height: _bannerAd!.size.height.toDouble(),
               padding: const EdgeInsets.only(
                   bottom: 4.0), // Optional: add some padding

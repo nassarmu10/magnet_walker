@@ -257,8 +257,14 @@ class MagnetWalkerGame extends FlameGame
 
     // Preload images
     try {
-      await images.load('rocket.png');
-      await images.load('rocket-2.png');
+      await images.loadAll([
+        'rocket.png',
+        'rocket-2.png',
+        'rocket-3.png',
+        'rocket-4.png',
+        'rocket-5.png',
+        'rocket-6.png',
+      ]);
       print('Rocket images preloaded successfully');
     } catch (e) {
       print('Failed to preload rocket images: $e');
@@ -304,13 +310,11 @@ class MagnetWalkerGame extends FlameGame
       'spaceship4.png',
     ];
 
-    for (final imageName in skinImages) {
-      try {
-        await images.load(imageName);
-        print('Preloaded skin image: $imageName');
-      } catch (e) {
-        print('Failed to preload skin image $imageName: $e');
-      }
+    try {
+      await images.loadAll(skinImages);
+      print('skin images preloaded successfully');
+    } catch (e) {
+      print('Failed to preload skin images: $e');
     }
   }
 

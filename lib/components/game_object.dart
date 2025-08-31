@@ -36,9 +36,16 @@ class GameObject extends CircleComponent
       try {
         print('Loading rocket image for bomb...');
         // Randomly choose between rocket.png and rocket-2.png
-        final rocketImages = ['rocket.png', 'rocket-2.png'];
-        final chosen =
-            (math.Random().nextBool()) ? rocketImages[0] : rocketImages[1];
+        final rocketImages = [
+          'rocket.png',
+          'rocket-2.png',
+          'rocket-3.png',
+          'rocket-4.png',
+          'rocket-5.png',
+          'rocket-6.png'
+        ];
+        final random = math.Random();
+        final chosen = rocketImages[random.nextInt(rocketImages.length)];
         final bombSprite = Sprite(game.images.fromCache(chosen));
         print('Rocket sprite loaded successfully: $chosen');
         bombSpriteComponent = SpriteComponent(
@@ -63,8 +70,6 @@ class GameObject extends CircleComponent
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
       // Objects move toward player
-      final gameSize =
-          game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
       final speed = 1.0 + (level * 5.0); // Speed increases with level
