@@ -10,11 +10,16 @@ import '../../level_types.dart';
 class GravitySpawnManager {
   final MagnetWalkerGame game;
   async.Timer? spawnTimer;
+  final double _minDistanceBetweenObjects =
+      60.0; // Minimum distance between objects
+  final List<Vector2> _recentSpawnPositions = [];
+  static const int _maxRecentPositions = 5;
 
   GravitySpawnManager(this.game);
 
   void startSpawning() {
     spawnTimer?.cancel();
+    _recentSpawnPositions.clear();
 
     // Make spawn rate depend on wave
     final baseSpawnRate = 2.0;
@@ -34,11 +39,29 @@ class GravitySpawnManager {
   }
 
   void spawnObject() {
-    print('Spawning object called');
-    print(game.waveManager.currentWave);
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-    final x = math.Random().nextDouble() * (gameSize.x - 60) + 30;
+
+    // Find a valid spawn position that's not too close to recent objects
+    Vector2 spawnPosition;
+    int attempts = 0;
+    final maxAttempts = 10;
+
+    do {
+      final x = math.Random().nextDouble() * (gameSize.x - 80) + 40;
+      spawnPosition = Vector2(x, -30);
+      attempts++;
+
+      // If we've tried too many times, just use this position
+      if (attempts >= maxAttempts) break;
+    } while (_isTooCloseToRecentSpawns(spawnPosition));
+
+    // Add to recent positions and maintain list size
+    _recentSpawnPositions.add(spawnPosition);
+    if (_recentSpawnPositions.length > _maxRecentPositions) {
+      _recentSpawnPositions.removeAt(0);
+    }
+
     // Bomb/coin ratio increases with wave
     final bombChance =
         0.3 + 0.2 * (game.waveManager.currentWave - 1); // 0.3, 0.5, 0.7
@@ -47,19 +70,32 @@ class GravitySpawnManager {
         : ObjectType.bomb;
 
     final obj = GameObject(
-      position: Vector2(x, -20),
+      position: spawnPosition,
       type: type,
       level: game.waveManager.level,
       levelType: LevelType.gravity,
     );
-    // Increase speed per wave
+
+    // Increase speed per wave - make it significantly faster
+    final baseSpeedMultiplier = 1.0 + 0.4 * (game.waveManager.currentWave - 1);
     if (type == ObjectType.bomb || type == ObjectType.coin) {
-      obj.velocity.y *= (1.0 + 0.2 * (game.waveManager.currentWave - 1));
+      obj.velocity.y *= baseSpeedMultiplier;
     }
+
     game.add(obj);
+  }
+
+  bool _isTooCloseToRecentSpawns(Vector2 position) {
+    for (final recentPos in _recentSpawnPositions) {
+      if (position.distanceTo(recentPos) < _minDistanceBetweenObjects) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void stop() {
     spawnTimer?.cancel();
+    _recentSpawnPositions.clear();
   }
 }

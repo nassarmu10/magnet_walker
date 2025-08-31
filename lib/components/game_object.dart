@@ -58,8 +58,7 @@ class GameObject extends CircleComponent
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
-      // Base speed increases with level
-      final baseSpeed = 5.0;
+      const baseSpeed = 15.0; // Increased from 5.0
       final levelSpeedMultiplier = 1.0 + (level * 0.3); // 30% faster per level
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
