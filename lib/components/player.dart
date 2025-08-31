@@ -70,7 +70,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       add(playerSpriteComponent!);
       _currentSkinPath = skinPath;
 
-      print('Successfully loaded skin: $skinPath, children count: ${children.length}');
+      print(
+          'Successfully loaded skin: $skinPath, children count: ${children.length}');
     } catch (e) {
       print('Failed to load skin $skinPath: $e');
       // Fallback to default skin if loading fails
@@ -149,26 +150,35 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void applyMagneticForce(GameObject obj, double dt) {
     final distance = position.distanceTo(obj.position);
     if (distance < magnetRadius && distance > 0) {
-      var force = 600 * (1 - distance / magnetRadius);
-
-      // Default: pull toward player
-      Vector2 targetDirection = (position - obj.position)..normalize();
-
       final currentLevelType =
           LevelTypeConfig.getLevelType(game.waveManager.level);
-      // Boost force for demon bombs
-      if (currentLevelType == LevelType.demon && obj.type == ObjectType.bomb) {
-        final closeDistanceThreshold = radius + obj.radius + 10; // Small buffer
-        //this has to be done because high force will make it never collide with player
-        force = distance > closeDistanceThreshold
-            ? 1200 * (1 - distance / magnetRadius)
-            : 100 * (1 - distance / magnetRadius);
-      }
-      if (currentLevelType == LevelType.demon) {
-        // In demon mode, redirect force toward demon instead of player
+      final isBomb = obj.type == ObjectType.bomb;
+
+      Vector2 targetDirection;
+      double force;
+
+      // Default behavior: pull toward player (for non-demon levels or non-bombs)
+      targetDirection = (position - obj.position)..normalize();
+      force = 600 * (1 - distance / magnetRadius);
+
+      // Special handling for demon level bombs
+      if (currentLevelType == LevelType.demon && isBomb) {
         final demon = game.demon;
         if (demon != null) {
-          targetDirection = (demon.position - obj.position)..normalize();
+          final closeDistanceThreshold =
+              radius + obj.radius + 5; // Very close to player
+
+          if (distance > closeDistanceThreshold) {
+            // Repulsive force: push bomb back toward demon
+            targetDirection = (demon.position - obj.position)..normalize();
+            force =
+                1500 * (1 - distance / magnetRadius); // Strong repulsive force
+          } else {
+            // Bomb is very close to player - reduce force to allow collision
+            // Still push toward demon but with much weaker force
+            targetDirection = (demon.position - obj.position)..normalize();
+            force = 50 * (1 - distance / magnetRadius); // Very weak force
+          }
         }
       }
 
