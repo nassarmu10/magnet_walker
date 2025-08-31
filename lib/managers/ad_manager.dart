@@ -10,7 +10,7 @@ class AdManager {
     // Replace with your banner ad unit ID
     return Platform.isAndroid
         ? 'ca-app-pub-3940256099942544/9214589741' // test 'ca-app-pub-3940256099942544/9214589741'
-        : 'ca-app-pub-4497634353967283/6255642575'; // test ca-app-pub-3940256099942544/6300978111
+        : 'ca-app-pub-3940256099942544/6300978111'; // prod ca-app-pub-4497634353967283/6092306954
   }
 
   static String get interstitialAdUnitId {
