@@ -117,6 +117,7 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void onHitByBomb() {
     if (!isAlive) return;
     health--;
+    game.playSound('bomb.wav');
     hitEffectTimer = hitEffectDuration;
     if (health <= 0) {
       isAlive = false;
