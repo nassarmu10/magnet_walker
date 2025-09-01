@@ -234,71 +234,43 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // REDESIGNED: Bottom row elements (perfectly aligned)
     final bottomRowCenterY = bottomRowY + bottomRowHeight / 2;
-  final bottomRowCenterX = headerMarginX + headerWidth / 2;
+    final bottomRowCenterX = headerMarginX + headerWidth / 2;
 
-  // Target score (centered in bottom row)
-  targetScoreText = TextComponent(
-    text: 'Target: 13',
-    position: Vector2(bottomRowCenterX, bottomRowCenterY),
-    textRenderer: TextPaint(
-      style: const TextStyle(
-        fontFamily: 'Roboto',
-        color: Color(0xFFff8844),
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.2,
-        shadows: [
-          Shadow(
-            offset: Offset(0, 0),
-            blurRadius: 6,
-            color: Color(0xFFff8844),
-          ),
-          Shadow(
-            offset: Offset(1, 1),
-            blurRadius: 3,
-            color: Colors.black87,
-          ),
-        ],
+    // Target score (centered in bottom row)
+    targetScoreText = TextComponent(
+      text: 'Target: 13',
+      position: Vector2(bottomRowCenterX, bottomRowCenterY),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontFamily: 'Roboto',
+          color: Color(0xFFff8844),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1.2,
+          shadows: [
+            Shadow(
+              offset: Offset(0, 0),
+              blurRadius: 6,
+              color: Color(0xFFff8844),
+            ),
+            Shadow(
+              offset: Offset(1, 1),
+              blurRadius: 3,
+              color: Colors.black87,
+            ),
+          ],
+        ),
       ),
-    ),
-    anchor: Anchor.center, // Changed to center since it's now alone
-  );
-  add(targetScoreText);
-
-    // Play time (right)
-    // playTimeText = TextComponent(
-    //   text: 'Time: 00:00',
-    //   position: Vector2(bottomRowRightX, bottomRowCenterY),
-    //   textRenderer: TextPaint(
-    //     style: const TextStyle(
-    //       fontFamily: 'Roboto',
-    //       color: Color(0xFF44aaff),
-    //       fontSize: 14,
-    //       fontWeight: FontWeight.w600,
-    //       letterSpacing: 1.2,
-    //       shadows: [
-    //         Shadow(
-    //           offset: Offset(0, 0),
-    //           blurRadius: 6,
-    //           color: Color(0xFF44aaff),
-    //         ),
-    //         Shadow(
-    //           offset: Offset(1, 1),
-    //           blurRadius: 3,
-    //           color: Colors.black87,
-    //         ),
-    //       ],
-    //     ),
-    //   ),
-    //   anchor: Anchor.centerRight,
-    // );
-    // add(playTimeText);
+      anchor: Anchor.center, // Changed to center since it's now alone
+    );
+    add(targetScoreText);
 
     // REDESIGNED: Instructions at the bottom with better spacing
     final adHeight = 50.0; // Approximate banner ad height
     instructionsText = TextComponent(
       text: 'Swipe left/right to move • Collect coins • Avoid bombs',
-      position: Vector2(gameSize.x / 2, gameSize.y - 30 - adHeight), // ✅ Moved up by ad height
+      position: Vector2(gameSize.x / 2,
+          gameSize.y - 30 - adHeight), // ✅ Moved up by ad height
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -797,17 +769,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     required int score,
     required int level,
     required int wave,
-    required Duration playTime,
     required VoidCallback onRestartLevel,
     required VoidCallback onWatchAd,
   }) {
     gameOverVisible = true;
-
-    // Format play time
-    final minutes = playTime.inMinutes;
-    final seconds = playTime.inSeconds % 60;
-    final timeString =
-        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
     // Show unified failure dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -859,8 +824,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Stats section
-                  _buildStatRow('⏱️ TIME', timeString, const Color(0xFF44aaff),
-                      statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
                   _buildStatRow('⭐ SCORE', '$score', const Color(0xFF00ff88),
                       statFontSize),
@@ -942,14 +905,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     });
   }
 
-  void showLevelCompleted(int finalScore, int finalLevel, Duration playTime) {
+  void showLevelCompleted(int finalScore, int finalLevel) {
     gameOverVisible = true;
-
-    // Format play time
-    final minutes = playTime.inMinutes;
-    final seconds = playTime.inSeconds % 60;
-    final timeString =
-        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
     // Show level completion dialog using Flutter's overlay
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -999,8 +956,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildStatRow('⏱️ TIME', timeString, const Color(0xFF44aaff),
-                      statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
                   _buildStatRow('⭐ SCORE', '$finalScore',
                       const Color(0xFF00ff88), statFontSize),
@@ -1334,159 +1289,12 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   ),
                 ),
               ),
-              // const SizedBox(height: 12), // Space between buttons
-              // // Return to Main Menu button
-              // SizedBox(
-              //   width: double.infinity,
-              //   child: ElevatedButton(
-              //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: Colors.grey[700],
-              //       shape: RoundedRectangleBorder(
-              //         borderRadius: BorderRadius.circular(12),
-              //       ),
-              //       padding: const EdgeInsets.symmetric(vertical: 14),
-              //     ),
-              //     onPressed: () {
-              //       Navigator.of(context).pop(); // Close the dialog first
-              //       // Call the game's exit callback to return to main menu
-              //       exitToMenu();
-              //     },
-              //     child: Text(
-              //       'Return to Main Menu',
-              //       style: TextStyle(
-              //         fontSize: dialogWidth * 0.06,
-              //         fontWeight: FontWeight.bold,
-              //         color: Colors.white,
-              //       ),
-              //     ),
-              //   ),
-              // ),
             ],
           ),
         );
       },
     );
   }
-
-  // void showNoLivesDialog({VoidCallback? onDialogClosed}) {
-  //   final context = game.buildContext;
-  //   if (context == null) {
-  //     // If context is not available yet, schedule to show later
-  //     Future.delayed(const Duration(milliseconds: 500), () {
-  //       if (game.buildContext != null) {
-  //         showNoLivesDialog(onDialogClosed: onDialogClosed);
-  //       }
-  //     });
-  //     return;
-  //   }
-
-  //   // Calculate progress for next life
-  //   final lives = game.livesManager.lives;
-  //   final maxLives = game.livesManager.maxLives;
-  //   final regenMinutes = game.livesManager.lifeRegenMinutes;
-  //   final lastLifeTimestamp = game.livesManager.lastLifeTimestamp;
-  //   final now = DateTime.now().millisecondsSinceEpoch;
-  //   final regenMillis = regenMinutes * 60 * 1000;
-  //   int millisLeft = 0;
-  //   double percent = 1.0;
-  //   String timeLeftStr = '';
-
-  //   if (lives < maxLives && lastLifeTimestamp != null) {
-  //     millisLeft = (lastLifeTimestamp + regenMillis) - now;
-  //     if (millisLeft < 0) millisLeft = 0;
-  //     percent = 1.0 - (millisLeft / regenMillis).clamp(0.0, 1.0);
-  //     final secondsLeft = (millisLeft / 1000).ceil();
-  //     final minutes = (secondsLeft ~/ 60).toString().padLeft(2, '0');
-  //     final seconds = (secondsLeft % 60).toString().padLeft(2, '0');
-  //     timeLeftStr = '$minutes:$seconds';
-  //   }
-
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (context) {
-  //       final dialogWidth = MediaQuery.of(context).size.width * 0.85;
-  //       return AlertDialog(
-  //         shape:
-  //             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-  //         backgroundColor: const Color(0xFF1a1a2e),
-  //         contentPadding: EdgeInsets.all(dialogWidth * 0.06),
-  //         content: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           children: [
-  //             Text(
-  //               'No Lives Left!',
-  //               style: TextStyle(
-  //                 fontSize: dialogWidth * 0.09,
-  //                 fontWeight: FontWeight.bold,
-  //                 color: Colors.redAccent,
-  //               ),
-  //             ),
-  //             const SizedBox(height: 18),
-  //             Text(
-  //               'You have no lives left. Please wait for a new life or watch an ad to get one instantly.',
-  //               style: TextStyle(
-  //                 color: Colors.white70,
-  //                 fontSize: dialogWidth * 0.055,
-  //               ),
-  //               textAlign: TextAlign.center,
-  //             ),
-  //             const SizedBox(height: 18),
-  //             // Progress bar for next life
-  //             Column(
-  //               children: [
-  //                 LinearProgressIndicator(
-  //                   value: percent,
-  //                   minHeight: 12,
-  //                   backgroundColor: Colors.red[200]!.withOpacity(0.2),
-  //                   valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
-  //                 ),
-  //                 const SizedBox(height: 8),
-  //                 Text(
-  //                   'Next life in $timeLeftStr',
-  //                   style: TextStyle(
-  //                     color: Colors.white70,
-  //                     fontSize: dialogWidth * 0.05,
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //             const SizedBox(height: 24),
-  //             // Watch Ad button
-  //             SizedBox(
-  //               width: double.infinity,
-  //               child: ElevatedButton(
-  //                 style: ElevatedButton.styleFrom(
-  //                   backgroundColor: Colors.pinkAccent,
-  //                   shape: RoundedRectangleBorder(
-  //                     borderRadius: BorderRadius.circular(12),
-  //                   ),
-  //                   padding: const EdgeInsets.symmetric(vertical: 14),
-  //                 ),
-  //                 onPressed: () {
-  //                   // Simulate watching an ad and gaining a life
-  //                   Navigator.of(context).pop();
-  //                   _simulateWatchAdAndGainLife();
-  //                   if (onDialogClosed != null) onDialogClosed();
-  //                 },
-  //                 child: Text(
-  //                   'Watch Ad for 1 Life',
-  //                   style: TextStyle(
-  //                     fontSize: dialogWidth * 0.06,
-  //                     fontWeight: FontWeight.bold,
-  //                     color: Colors.white,
-  //                   ),
-  //                 ),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   ).then((_) {
-  //     if (onDialogClosed != null) onDialogClosed();
-  //   });
-  // }
 
   void _simulateWatchAdAndGainLife() {
     // Show real rewarded ad

@@ -66,13 +66,6 @@ class MagnetWalkerGame extends FlameGame
   int wavesNeededToNextLevel = 3; // Waves needed to complete current level
   int wavesCompletedInLevel = 0; // Waves completed in current level
 
-  // Play time tracking
-  DateTime? gameStartTime;
-  DateTime? pauseStartTime;
-  Duration playTime = Duration.zero;
-  Duration pausedTime = Duration.zero;
-  async.Timer? playTimeTimer;
-
   // Spawning
   final List<GameObject> gameObjects = [];
   final List<GameParticle> particles = [];
@@ -99,8 +92,6 @@ class MagnetWalkerGame extends FlameGame
     // Stop all timers and spawning
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    playTimeTimer?.cancel();
-    playTimeTimer = null; // Set to null after cancelling
 
     // Clear all objects
     clearAllObjects();
@@ -167,9 +158,6 @@ class MagnetWalkerGame extends FlameGame
         exitToMainMenu();
       });
     }
-
-    // Start play time tracking
-    startPlayTimeTracking();
   }
 
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
@@ -361,25 +349,6 @@ class MagnetWalkerGame extends FlameGame
     player?.animateToPosition(initialPosition, 2.7);
   }
 
-  void startPlayTimeTracking() {
-    // If this is the first time starting, set the start time
-    if (gameStartTime == null) {
-      gameStartTime = DateTime.now();
-    }
-
-    // Cancel existing timer if any
-    playTimeTimer?.cancel();
-
-    playTimeTimer = async.Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (currentState == GameState.playing && gameStartTime != null) {
-        // Calculate total time minus paused time
-        final totalTime = DateTime.now().difference(gameStartTime!);
-        playTime = totalTime - pausedTime;
-        if (playTime.isNegative) playTime = Duration.zero;
-      }
-    });
-  }
-
   void startSpawning() {
     // Stop any existing spawn managers
     gravitySpawnManager.stop();
@@ -434,10 +403,10 @@ class MagnetWalkerGame extends FlameGame
           final screenHeight = MediaQuery.of(context).size.height;
           final dialogWidth = screenWidth * 0.9; // Made slightly wider
           final padding = dialogWidth * 0.05;
-          
+
           // ✅ Fixed font sizes - use smaller, more appropriate values
           final titleFontSize = screenWidth * 0.045; // ~18px on most phones
-          final bodyFontSize = screenWidth * 0.035;  // ~14px on most phones  
+          final bodyFontSize = screenWidth * 0.035; // ~14px on most phones
           final buttonFontSize = screenWidth * 0.04; // ~16px on most phones
 
           return WillPopScope(
@@ -615,7 +584,8 @@ class MagnetWalkerGame extends FlameGame
                                                     child: const Icon(
                                                       Icons.public,
                                                       color: Colors.deepPurple,
-                                                      size: 16, // Reduced icon size
+                                                      size:
+                                                          16, // Reduced icon size
                                                     ),
                                                   );
                                                 },
@@ -642,7 +612,8 @@ class MagnetWalkerGame extends FlameGame
                                                   style: TextStyle(
                                                     color: Colors.white
                                                         .withOpacity(0.7),
-                                                    fontSize: bodyFontSize * 0.85, // Smaller description
+                                                    fontSize: bodyFontSize *
+                                                        0.85, // Smaller description
                                                   ),
                                                   maxLines: 2,
                                                   overflow:
@@ -676,7 +647,8 @@ class MagnetWalkerGame extends FlameGame
                                                   style: TextStyle(
                                                     color: Colors.white,
                                                     fontWeight: FontWeight.bold,
-                                                    fontSize: bodyFontSize * 0.75, // Smaller text
+                                                    fontSize: bodyFontSize *
+                                                        0.75, // Smaller text
                                                   ),
                                                 ),
                                               ],
@@ -700,8 +672,8 @@ class MagnetWalkerGame extends FlameGame
                       width: double.infinity,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(buttonFontSize * 0.8), // Smaller radius
+                          borderRadius: BorderRadius.circular(
+                              buttonFontSize * 0.8), // Smaller radius
                           gradient: const LinearGradient(
                             colors: [Colors.pinkAccent, Colors.deepPurple],
                           ),
@@ -877,7 +849,7 @@ class MagnetWalkerGame extends FlameGame
 
   void showLevelCompleteDialog() {
     playSound('win.wav');
-    gameUI?.showLevelCompleted(totalScore, waveManager.level, playTime);
+    gameUI?.showLevelCompleted(totalScore, waveManager.level);
   }
 
   void collectObject(GameObject obj) {
@@ -943,29 +915,6 @@ class MagnetWalkerGame extends FlameGame
       );
       add(particle);
       particles.add(particle);
-    }
-  }
-
-  void pausePlayTime() {
-    if (pauseStartTime == null) {
-      pauseStartTime = DateTime.now();
-      // Stop the timer immediately
-      playTimeTimer?.cancel();
-    }
-  }
-
-  void resumePlayTime() {
-    if (pauseStartTime != null) {
-      final pauseDuration = DateTime.now().difference(pauseStartTime!);
-      pausedTime += pauseDuration;
-      pauseStartTime = null;
-      // Clamp pausedTime to not exceed totalTime
-      final totalTime = DateTime.now().difference(gameStartTime!);
-      if (pausedTime > totalTime) {
-        pausedTime = totalTime;
-      }
-      // Restart the timer
-      startPlayTimeTracking();
     }
   }
 
@@ -1089,8 +1038,6 @@ class MagnetWalkerGame extends FlameGame
     // Stop all timers
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    playTimeTimer?.cancel();
-    playTimeTimer = null;
 
     // Clear all objects
     clearAllObjects();
@@ -1164,7 +1111,6 @@ class MagnetWalkerGame extends FlameGame
   // Method to pause the game (freezes all game logic)
   void pauseGame() {
     currentState = GameState.paused;
-    pausePlayTime();
     stopGameMusic();
 
     // Stop all spawning
@@ -1180,7 +1126,6 @@ class MagnetWalkerGame extends FlameGame
   // Method to resume the game
   void resumeGame() {
     currentState = GameState.playing;
-    resumePlayTime();
 
     // Resume spawning only if wave is active
     if (currentState == GameState.playing) {
@@ -1278,7 +1223,6 @@ class MagnetWalkerGame extends FlameGame
       score: totalScore,
       level: waveManager.level,
       wave: waveManager.currentWave,
-      playTime: playTime,
       onRestartLevel: () {
         // if (livesManager.lives <= 0) {
         //   gameUI?.showNoLivesDialog();
@@ -1421,70 +1365,6 @@ class MagnetWalkerGame extends FlameGame
     demon?.deleteDemon();
   }
 
-  // void failDemonLevel() {
-  //   endDemonLevel();
-  //   print('failDemonLevel called');
-
-  //   currentState = GameState.gameOver;
-  //   clearAllObjects();
-
-  //   // Position player back to start
-  //   _updatePlayerPositionForLevelType();
-  //   saveProgress();
-
-  //   playSound('lose.mp3');
-  //   stopGameMusic();
-
-  //   // Show failure dialog
-  //   gameUI?.showFailureDialog(
-  //     score: totalScore,
-  //     level: waveManager.level,
-  //     wave: waveManager.currentWave,
-  //     playTime: playTime,
-  //     onRestartLevel: () {
-  //       if (livesManager.lives <= 0) {
-  //         gameUI?.showNoLivesDialog();
-  //       } else {
-  //         livesManager.lives--;
-  //         restartGameMusic();
-  //         _initializeLevel();
-  //         _startLevel();
-  //       }
-  //     },
-  //     onWatchAd: () {
-  //       AdManager.showRewardedAd(
-  //         onRewarded: () {
-  //           _initializeLevel();
-  //           _startLevel();
-  //         },
-  //         onAdDismissed: () {
-  //           // Start music only after ad is dismissed
-  //           restartGameMusic();
-  //         },
-  //         onFailed: () {
-  //           final context = gameUI?.game.buildContext;
-  //           if (context != null) {
-  //             showDialog(
-  //               context: context,
-  //               builder: (context) => AlertDialog(
-  //                 title: const Text('No Ad Available'),
-  //                 content: const Text(
-  //                     'No ad is available right now. Please try again later.'),
-  //                 actions: [
-  //                   TextButton(
-  //                     onPressed: () => Navigator.of(context).pop(),
-  //                     child: const Text('OK'),
-  //                   ),
-  //                 ],
-  //               ),
-  //             );
-  //           }
-  //         },
-  //       );
-  //     },
-  //   );
-  // }
-
   void failDemonLevel() {
     // Save demon's current health before ending the level
     if (demon != null && demon!.isAlive) {
@@ -1519,7 +1399,6 @@ class MagnetWalkerGame extends FlameGame
       score: totalScore,
       level: waveManager.level,
       wave: waveManager.currentWave,
-      playTime: playTime,
       onRestartLevel: () {
         // Clear saved demon health when restarting
         waveManager.clearDemonHealth();
@@ -1581,13 +1460,9 @@ class MagnetWalkerGame extends FlameGame
     //TODO THIS IS NOT RIGHT
     // Reset game state but keep the current level
     waveManager.startWave(1);
-    playTime = Duration.zero;
-    gameStartTime = null;
-    pauseStartTime = null;
 
     clearAllObjects();
     player?.reset();
-    startPlayTimeTracking();
 
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
