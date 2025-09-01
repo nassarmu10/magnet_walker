@@ -71,7 +71,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: widget.onBack,
                 ),
                 title: const Text('Settings',
-                    style: TextStyle(color: Colors.white)),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600)),
                 centerTitle: true,
               ),
               Expanded(
@@ -93,133 +96,148 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Game Music
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.music_note,
-                                    color: Colors.lightBlueAccent),
-                                SizedBox(width: 12),
-                                Text('Game Music',
-                                    style: TextStyle(
-                                        fontSize: 18, color: Colors.white)),
-                              ],
-                            ),
-                            Switch(
-                              value: _musicEnabled,
-                              activeColor: Colors.lightBlueAccent,
-                              onChanged: (value) async {
-                                setState(() => _musicEnabled = value);
-                                widget.onMusicChanged(value);
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                prefs.setBool('music_enabled', value);
-                              },
-                            ),
-                          ],
+                        // Audio Settings Section
+                        Container(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.settings_outlined,
+                                  color: Colors.white.withOpacity(0.8),
+                                  size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Audio Settings',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const Divider(color: Colors.white24, height: 32),
+
+                        // Game Music
+                        _buildSettingRow(
+                          icon: Icons.music_note,
+                          iconColor: Colors.lightBlueAccent,
+                          title: 'Game Music',
+                          value: _musicEnabled,
+                          onChanged: (value) async {
+                            setState(() => _musicEnabled = value);
+                            widget.onMusicChanged(value);
+                            final prefs = await SharedPreferences.getInstance();
+                            prefs.setBool('music_enabled', value);
+                          },
+                        ),
 
                         // Menu Music
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.library_music,
-                                    color: Colors.purpleAccent),
-                                SizedBox(width: 12),
-                                Text('Menu Music',
-                                    style: TextStyle(
-                                        fontSize: 18, color: Colors.white)),
-                              ],
-                            ),
-                            Switch(
-                              value: _menuMusicEnabled,
-                              activeColor: Colors.purpleAccent,
-                              onChanged: (value) async {
-                                setState(() => _menuMusicEnabled = value);
-                                widget.onMenuMusicChanged(value);
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                prefs.setBool('menu_music_enabled', value);
-                                if (value) {
-                                  FlameAudio.bgm.play('menu_music.mp3');
-                                } else {
-                                  FlameAudio.bgm.stop();
-                                }
-                              },
-                            ),
-                          ],
+                        _buildSettingRow(
+                          icon: Icons.library_music,
+                          iconColor: Colors.purpleAccent,
+                          title: 'Menu Music',
+                          value: _menuMusicEnabled,
+                          onChanged: (value) async {
+                            setState(() => _menuMusicEnabled = value);
+                            widget.onMenuMusicChanged(value);
+                            final prefs = await SharedPreferences.getInstance();
+                            prefs.setBool('menu_music_enabled', value);
+                            if (value) {
+                              FlameAudio.bgm.play('menu_music.mp3');
+                            } else {
+                              FlameAudio.bgm.stop();
+                            }
+                          },
                         ),
-                        const Divider(color: Colors.white24, height: 32),
 
                         // SFX
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.volume_up,
-                                    color: Colors.orangeAccent),
-                                SizedBox(width: 12),
-                                Text('Sound Effects',
-                                    style: TextStyle(
-                                        fontSize: 18, color: Colors.white)),
-                              ],
-                            ),
-                            Switch(
-                              value: _sfxEnabled,
-                              activeColor: Colors.orangeAccent,
-                              onChanged: (value) async {
-                                setState(() => _sfxEnabled = value);
-                                widget.onSfxChanged(value);
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                prefs.setBool('sfx_enabled', value);
-                              },
-                            ),
-                          ],
+                        _buildSettingRow(
+                          icon: Icons.volume_up,
+                          iconColor: Colors.orangeAccent,
+                          title: 'Sound Effects',
+                          value: _sfxEnabled,
+                          onChanged: (value) async {
+                            setState(() => _sfxEnabled = value);
+                            widget.onSfxChanged(value);
+                            final prefs = await SharedPreferences.getInstance();
+                            prefs.setBool('sfx_enabled', value);
+                          },
                         ),
-                        const SizedBox(height: 40),
 
-                        // Social / Contact buttons
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.pinkAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 32),
+
+                        // About Section
+                        Container(
+                          padding: const EdgeInsets.only(top: 16),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: Colors.white.withOpacity(0.1),
+                                width: 1,
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 14),
                           ),
-                          icon:
-                              const Icon(Icons.camera_alt, color: Colors.white),
-                          label: const Text("Follow us on Instagram",
-                              style: TextStyle(color: Colors.white)),
-                          onPressed: () {
-                            _launchUrl(
-                                "https://www.instagram.com/mtsquared.techs/?igsh=MWJhNzVnM2FhM243cQ%3D%3D");
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline,
+                                      color: Colors.white.withOpacity(0.8),
+                                      size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'About',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white.withOpacity(0.7),
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Professional contact links
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildContactButton(
+                                      icon: Icons.language,
+                                      label: 'Website',
+                                      onPressed: () =>
+                                          _launchUrl("https://mtsqtechs.com"),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildContactButton(
+                                      icon: Icons.camera_alt_outlined,
+                                      label: 'Instagram',
+                                      onPressed: () => _launchUrl(
+                                          "https://www.instagram.com/mtsquared.techs/?igsh=MWJhNzVnM2FhM243cQ%3D%3D"),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Version/Company info
+                              Center(
+                                child: Text(
+                                  'Made by MT² Technologies',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white.withOpacity(0.5),
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          icon: const Icon(Icons.public, color: Colors.white),
-                          label: const Text("Visit our Website",
-                              style: TextStyle(color: Colors.white)),
-                          onPressed: () {
-                            _launchUrl("https://mtsqtechs.com");
-                          },
                         ),
                       ],
                     ),
@@ -229,6 +247,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSettingRow({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeColor: iconColor,
+            inactiveThumbColor: Colors.grey,
+            inactiveTrackColor: Colors.grey.withOpacity(0.3),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: Colors.white.withOpacity(0.8),
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
