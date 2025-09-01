@@ -41,8 +41,6 @@ class GameObject extends CircleComponent
           'rocket-2.png',
           'rocket-3.png',
           'rocket-4.png',
-          'rocket-5.png',
-          'rocket-6.png'
         ];
         final random = math.Random();
         final chosen = rocketImages[random.nextInt(rocketImages.length)];

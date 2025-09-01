@@ -205,12 +205,12 @@ class MagnetWalkerGame extends FlameGame
   void _clearLevelComponents() {
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    
+
     // Clear saved demon health when clearing level components (unless it's for ad continue)
     if (currentState != GameState.gameOver) {
       waveManager.clearDemonHealth();
     }
-    
+
     // Remove player if exists
     if (player != null) {
       player!.removeFromParent();
@@ -275,8 +275,6 @@ class MagnetWalkerGame extends FlameGame
         'rocket-2.png',
         'rocket-3.png',
         'rocket-4.png',
-        'rocket-5.png',
-        'rocket-6.png',
       ]);
       print('Rocket images preloaded successfully');
     } catch (e) {
@@ -351,7 +349,8 @@ class MagnetWalkerGame extends FlameGame
     Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
     if (currentLevelType == LevelType.gravity) {
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);  // Add this line
+      initialPosition =
+          Vector2(gameSize.x / 2, gameSize.y - 117); // Add this line
     } else if (currentLevelType == LevelType.survival) {
       // Survival mode: center
       initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
@@ -970,7 +969,7 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void clearAllObjects() {
-      // Clear and dispose all game objects
+    // Clear and dispose all game objects
     for (final obj in gameObjects.toList()) {
       obj.removeFromParent();
     }
@@ -983,8 +982,10 @@ class MagnetWalkerGame extends FlameGame
     particles.clear();
 
     // Clear any remaining components that might be game objects
-    final componentsToRemove = children.where((component) => 
-      component is GameObject || component is GameParticle).toList();
+    final componentsToRemove = children
+        .where(
+            (component) => component is GameObject || component is GameParticle)
+        .toList();
     for (final component in componentsToRemove) {
       component.removeFromParent();
     }
@@ -1101,7 +1102,7 @@ class MagnetWalkerGame extends FlameGame
 
     // Dispose ads
     AdManager.disposeAds();
-    
+
     super.onRemove();
   }
 
@@ -1366,7 +1367,7 @@ class MagnetWalkerGame extends FlameGame
   void SuccessDemonLevel() {
     // Clear any saved demon health when successfully completing the level
     waveManager.clearDemonHealth();
-    
+
     clearAllObjects();
     currentState = GameState.levelComplete;
     //playSound('win.wav');
@@ -1469,13 +1470,12 @@ class MagnetWalkerGame extends FlameGame
   //   );
   // }
 
-
   void failDemonLevel() {
     // Save demon's current health before ending the level
     if (demon != null && demon!.isAlive) {
       waveManager.saveDemonHealth(demon!.health, demon!.maxHealth);
     }
-    
+
     endDemonLevel();
     print('failDemonLevel called');
 
@@ -1490,8 +1490,9 @@ class MagnetWalkerGame extends FlameGame
     stopGameMusic();
 
     // Show failure dialog with demon health percentage
-    final demonHealthPercent = demon != null ? demon!.getHealthPercentage() : 0.0;
-    
+    final demonHealthPercent =
+        demon != null ? demon!.getHealthPercentage() : 0.0;
+
     gameUI?.showFailureDialog(
       score: totalScore,
       level: waveManager.level,
@@ -1500,7 +1501,7 @@ class MagnetWalkerGame extends FlameGame
       onRestartLevel: () {
         // Clear saved demon health when restarting
         waveManager.clearDemonHealth();
-        
+
         if (livesManager.lives <= 0) {
           gameUI?.showNoLivesDialog();
         } else {
@@ -1525,7 +1526,7 @@ class MagnetWalkerGame extends FlameGame
           onFailed: () {
             // If ad fails, clear saved demon health
             waveManager.clearDemonHealth();
-            
+
             final context = gameUI?.game.buildContext;
             if (context != null) {
               showDialog(
