@@ -431,11 +431,14 @@ class MagnetWalkerGame extends FlameGame
         barrierDismissible: false, // Prevent dismissing by tapping outside
         builder: (context) {
           final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
           final dialogWidth = screenWidth * 0.9; // Made slightly wider
           final padding = dialogWidth * 0.05;
-          final titleFontSize = dialogWidth * 0.09;
-          final bodyFontSize = dialogWidth * 0.045;
-          final buttonFontSize = dialogWidth * 0.055;
+          
+          // ✅ Fixed font sizes - use smaller, more appropriate values
+          final titleFontSize = screenWidth * 0.045; // ~18px on most phones
+          final bodyFontSize = screenWidth * 0.035;  // ~14px on most phones  
+          final buttonFontSize = screenWidth * 0.04; // ~16px on most phones
 
           return WillPopScope(
             onWillPop: () async => false, // Prevent back button
@@ -452,7 +455,7 @@ class MagnetWalkerGame extends FlameGame
                 children: [
                   // Celebration icon
                   Container(
-                    padding: EdgeInsets.all(padding),
+                    padding: EdgeInsets.all(padding * 0.8), // Smaller padding
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
@@ -465,7 +468,7 @@ class MagnetWalkerGame extends FlameGame
                     child: Icon(
                       Icons.auto_awesome,
                       color: Colors.amber,
-                      size: titleFontSize * 0.8,
+                      size: titleFontSize * 1.2, // Scale icon with title font
                     ),
                   ),
                   SizedBox(height: padding * 0.5),
@@ -476,11 +479,11 @@ class MagnetWalkerGame extends FlameGame
                       fontSize: titleFontSize,
                       fontWeight: FontWeight.bold,
                       color: Colors.amber,
-                      letterSpacing: 2.0,
+                      letterSpacing: 1.5, // Reduced letter spacing
                       shadows: const [
                         Shadow(
                           offset: Offset(0, 0),
-                          blurRadius: 15,
+                          blurRadius: 10, // Reduced blur
                           color: Colors.amber,
                         ),
                       ],
@@ -491,10 +494,10 @@ class MagnetWalkerGame extends FlameGame
                     'Level ${waveManager.level} Reached!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: bodyFontSize * 1.2,
+                      fontSize: bodyFontSize * 1.1, // Slightly larger than body
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
-                      letterSpacing: 1.0,
+                      letterSpacing: 0.5, // Reduced letter spacing
                     ),
                   ),
                 ],
@@ -502,7 +505,7 @@ class MagnetWalkerGame extends FlameGame
               content: Container(
                 width: dialogWidth,
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  maxHeight: screenHeight * 0.4, // Use screen height instead
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -529,10 +532,10 @@ class MagnetWalkerGame extends FlameGame
                                 ? '🎉 ${newSkins.length} NEW SKINS UNLOCKED! 🎉'
                                 : '🎉 NEW SKIN UNLOCKED! 🎉',
                             style: TextStyle(
-                              fontSize: bodyFontSize * 1.1,
+                              fontSize: bodyFontSize * 1.15, // Slightly larger
                               fontWeight: FontWeight.bold,
                               color: Colors.amber,
-                              letterSpacing: 1.2,
+                              letterSpacing: 0.8, // Reduced letter spacing
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -555,7 +558,7 @@ class MagnetWalkerGame extends FlameGame
                     if (newSkins.isNotEmpty)
                       Container(
                         constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height * 0.15,
+                          maxHeight: screenHeight * 0.15, // Use screen height
                         ),
                         child: SingleChildScrollView(
                           child: Column(
@@ -576,17 +579,17 @@ class MagnetWalkerGame extends FlameGame
                                       ),
                                       child: Row(
                                         children: [
-                                          // Skin image
+                                          // Skin image - smaller size
                                           Container(
-                                            width: 40,
-                                            height: 40,
+                                            width: 32, // Reduced from 40
+                                            height: 32, // Reduced from 40
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               boxShadow: [
                                                 BoxShadow(
                                                   color: Colors.deepPurple
                                                       .withOpacity(0.4),
-                                                  blurRadius: 8,
+                                                  blurRadius: 6, // Reduced blur
                                                   spreadRadius: 1,
                                                 ),
                                               ],
@@ -612,7 +615,7 @@ class MagnetWalkerGame extends FlameGame
                                                     child: const Icon(
                                                       Icons.public,
                                                       color: Colors.deepPurple,
-                                                      size: 20,
+                                                      size: 16, // Reduced icon size
                                                     ),
                                                   );
                                                 },
@@ -639,8 +642,7 @@ class MagnetWalkerGame extends FlameGame
                                                   style: TextStyle(
                                                     color: Colors.white
                                                         .withOpacity(0.7),
-                                                    fontSize:
-                                                        bodyFontSize * 0.8,
+                                                    fontSize: bodyFontSize * 0.85, // Smaller description
                                                   ),
                                                   maxLines: 2,
                                                   overflow:
@@ -666,7 +668,7 @@ class MagnetWalkerGame extends FlameGame
                                                 const Icon(
                                                   Icons.play_arrow,
                                                   color: Colors.white,
-                                                  size: 16,
+                                                  size: 12, // Smaller icon
                                                 ),
                                                 const SizedBox(width: 4),
                                                 Text(
@@ -674,8 +676,7 @@ class MagnetWalkerGame extends FlameGame
                                                   style: TextStyle(
                                                     color: Colors.white,
                                                     fontWeight: FontWeight.bold,
-                                                    fontSize:
-                                                        bodyFontSize * 0.7,
+                                                    fontSize: bodyFontSize * 0.75, // Smaller text
                                                   ),
                                                 ),
                                               ],
@@ -700,15 +701,15 @@ class MagnetWalkerGame extends FlameGame
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius:
-                              BorderRadius.circular(buttonFontSize * 1.2),
+                              BorderRadius.circular(buttonFontSize * 0.8), // Smaller radius
                           gradient: const LinearGradient(
                             colors: [Colors.pinkAccent, Colors.deepPurple],
                           ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.pinkAccent.withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                              blurRadius: 8, // Reduced blur
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
@@ -722,18 +723,18 @@ class MagnetWalkerGame extends FlameGame
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             padding: EdgeInsets.symmetric(
-                              horizontal: padding,
-                              vertical: padding * 0.8,
+                              horizontal: padding * 0.8,
+                              vertical: padding * 0.6, // Reduced padding
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius:
-                                  BorderRadius.circular(buttonFontSize * 1.2),
+                                  BorderRadius.circular(buttonFontSize * 0.8),
                             ),
                           ),
                           icon: Icon(
                             Icons.store,
                             color: Colors.white,
-                            size: buttonFontSize,
+                            size: buttonFontSize * 0.9, // Smaller icon
                           ),
                           label: Text(
                             'OPEN SKIN STORE',
@@ -741,7 +742,7 @@ class MagnetWalkerGame extends FlameGame
                               fontSize: buttonFontSize,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                              letterSpacing: 1.2,
+                              letterSpacing: 0.8, // Reduced letter spacing
                             ),
                           ),
                         ),
@@ -754,7 +755,7 @@ class MagnetWalkerGame extends FlameGame
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius:
-                              BorderRadius.circular(buttonFontSize * 1.2),
+                              BorderRadius.circular(buttonFontSize * 0.8),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.3),
                             width: 2,
@@ -770,18 +771,18 @@ class MagnetWalkerGame extends FlameGame
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             padding: EdgeInsets.symmetric(
-                              horizontal: padding,
-                              vertical: padding * 0.8,
+                              horizontal: padding * 0.8,
+                              vertical: padding * 0.6,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius:
-                                  BorderRadius.circular(buttonFontSize * 1.2),
+                                  BorderRadius.circular(buttonFontSize * 0.8),
                             ),
                           ),
                           icon: Icon(
                             Icons.close,
                             color: Colors.white.withOpacity(0.8),
-                            size: buttonFontSize,
+                            size: buttonFontSize * 0.9,
                           ),
                           label: Text(
                             'CONTINUE PLAYING',
@@ -789,7 +790,7 @@ class MagnetWalkerGame extends FlameGame
                               fontSize: buttonFontSize,
                               fontWeight: FontWeight.bold,
                               color: Colors.white.withOpacity(0.8),
-                              letterSpacing: 1.2,
+                              letterSpacing: 0.8,
                             ),
                           ),
                         ),
@@ -800,7 +801,7 @@ class MagnetWalkerGame extends FlameGame
                     Text(
                       '💡 You can always access skins from the main menu',
                       style: TextStyle(
-                        fontSize: bodyFontSize * 0.8,
+                        fontSize: bodyFontSize * 0.8, // Smaller hint text
                         color: Colors.white.withOpacity(0.6),
                         fontStyle: FontStyle.italic,
                       ),
