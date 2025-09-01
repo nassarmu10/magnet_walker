@@ -38,7 +38,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent scoreText;
   late TextComponent levelText;
   late TextComponent levelTypeText;
-  late TextComponent playTimeText;
+  // late TextComponent playTimeText;
   late TextComponent targetScoreText;
   late TextComponent instructionsText;
   bool gameOverVisible = false;
@@ -234,66 +234,65 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // REDESIGNED: Bottom row elements (perfectly aligned)
     final bottomRowCenterY = bottomRowY + bottomRowHeight / 2;
-    final bottomRowLeftX = headerMarginX + 24;
-    final bottomRowRightX = headerMarginX + headerWidth - 24;
+  final bottomRowCenterX = headerMarginX + headerWidth / 2;
 
-    // Target score (left)
-    targetScoreText = TextComponent(
-      text: 'Target: 13',
-      position: Vector2(bottomRowLeftX, bottomRowCenterY),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFFff8844),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 1.2,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 6,
-              color: Color(0xFFff8844),
-            ),
-            Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 3,
-              color: Colors.black87,
-            ),
-          ],
-        ),
+  // Target score (centered in bottom row)
+  targetScoreText = TextComponent(
+    text: 'Target: 13',
+    position: Vector2(bottomRowCenterX, bottomRowCenterY),
+    textRenderer: TextPaint(
+      style: const TextStyle(
+        fontFamily: 'Roboto',
+        color: Color(0xFFff8844),
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.2,
+        shadows: [
+          Shadow(
+            offset: Offset(0, 0),
+            blurRadius: 6,
+            color: Color(0xFFff8844),
+          ),
+          Shadow(
+            offset: Offset(1, 1),
+            blurRadius: 3,
+            color: Colors.black87,
+          ),
+        ],
       ),
-      anchor: Anchor.centerLeft,
-    );
-    add(targetScoreText);
+    ),
+    anchor: Anchor.center, // Changed to center since it's now alone
+  );
+  add(targetScoreText);
 
     // Play time (right)
-    playTimeText = TextComponent(
-      text: 'Time: 00:00',
-      position: Vector2(bottomRowRightX, bottomRowCenterY),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFF44aaff),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 1.2,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 6,
-              color: Color(0xFF44aaff),
-            ),
-            Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 3,
-              color: Colors.black87,
-            ),
-          ],
-        ),
-      ),
-      anchor: Anchor.centerRight,
-    );
-    add(playTimeText);
+    // playTimeText = TextComponent(
+    //   text: 'Time: 00:00',
+    //   position: Vector2(bottomRowRightX, bottomRowCenterY),
+    //   textRenderer: TextPaint(
+    //     style: const TextStyle(
+    //       fontFamily: 'Roboto',
+    //       color: Color(0xFF44aaff),
+    //       fontSize: 14,
+    //       fontWeight: FontWeight.w600,
+    //       letterSpacing: 1.2,
+    //       shadows: [
+    //         Shadow(
+    //           offset: Offset(0, 0),
+    //           blurRadius: 6,
+    //           color: Color(0xFF44aaff),
+    //         ),
+    //         Shadow(
+    //           offset: Offset(1, 1),
+    //           blurRadius: 3,
+    //           color: Colors.black87,
+    //         ),
+    //       ],
+    //     ),
+    //   ),
+    //   anchor: Anchor.centerRight,
+    // );
+    // add(playTimeText);
 
     // REDESIGNED: Instructions at the bottom with better spacing
     instructionsText = TextComponent(
@@ -620,11 +619,11 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         'Target: ${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
 
     // Update play time display
-    final minutes = game.playTime.inMinutes;
-    final seconds = game.playTime.inSeconds % 60;
-    final timeString =
-        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    playTimeText.text = 'Time: $timeString';
+    // final minutes = game.playTime.inMinutes;
+    // final seconds = game.playTime.inSeconds % 60;
+    // final timeString =
+    //     '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    // playTimeText.text = 'Time: $timeString';
 
     // Update instructions based on level type
     final currentLevelType =
@@ -1334,33 +1333,33 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12), // Space between buttons
-              // Return to Main Menu button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[700],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close the dialog first
-                    // Call the game's exit callback to return to main menu
-                    exitToMenu();
-                  },
-                  child: Text(
-                    'Return to Main Menu',
-                    style: TextStyle(
-                      fontSize: dialogWidth * 0.06,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+              // const SizedBox(height: 12), // Space between buttons
+              // // Return to Main Menu button
+              // SizedBox(
+              //   width: double.infinity,
+              //   child: ElevatedButton(
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: Colors.grey[700],
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(12),
+              //       ),
+              //       padding: const EdgeInsets.symmetric(vertical: 14),
+              //     ),
+              //     onPressed: () {
+              //       Navigator.of(context).pop(); // Close the dialog first
+              //       // Call the game's exit callback to return to main menu
+              //       exitToMenu();
+              //     },
+              //     child: Text(
+              //       'Return to Main Menu',
+              //       style: TextStyle(
+              //         fontSize: dialogWidth * 0.06,
+              //         fontWeight: FontWeight.bold,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         );

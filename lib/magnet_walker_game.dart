@@ -1253,6 +1253,8 @@ class MagnetWalkerGame extends FlameGame
     print('failWave called');
     currentState = GameState.gameOver;
 
+    bool hasLivesLeft = livesManager.tryConsumeLife();
+
     // Stop spawning and clear objects
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
@@ -1264,6 +1266,12 @@ class MagnetWalkerGame extends FlameGame
     playSound('lose.mp3');
     stopGameMusic();
 
+    if (!hasLivesLeft) {
+      // No lives left - show no lives dialog
+      gameUI?.showNoLivesDialog();
+      return;
+    }
+
     // Show failure dialog
     gameUI?.showFailureDialog(
       score: totalScore,
@@ -1271,17 +1279,23 @@ class MagnetWalkerGame extends FlameGame
       wave: waveManager.currentWave,
       playTime: playTime,
       onRestartLevel: () {
-        if (livesManager.lives <= 0) {
-          gameUI?.showNoLivesDialog();
-        } else {
-          livesManager.tryConsumeLife();
-          waveManager.currentWave = 1;
-          wavesCompletedInLevel = 0;
-          waveManager.resetWaveScore();
-          restartGameMusic();
-          _initializeLevel();
-          _startLevel();
-        }
+        // if (livesManager.lives <= 0) {
+        //   gameUI?.showNoLivesDialog();
+        // } else {
+        //   livesManager.tryConsumeLife();
+        //   waveManager.currentWave = 1;
+        //   wavesCompletedInLevel = 0;
+        //   waveManager.resetWaveScore();
+        //   restartGameMusic();
+        //   _initializeLevel();
+        //   _startLevel();
+        // }
+        waveManager.currentWave = 1;
+        wavesCompletedInLevel = 0;
+        waveManager.resetWaveScore();
+        restartGameMusic();
+        _initializeLevel();
+        _startLevel();
       },
       onWatchAd: () {
         AdManager.showRewardedAd(
@@ -1480,6 +1494,8 @@ class MagnetWalkerGame extends FlameGame
     print('failDemonLevel called');
 
     currentState = GameState.gameOver;
+    bool hasLivesLeft = livesManager.tryConsumeLife();
+
     clearAllObjects();
 
     // Position player back to start
@@ -1488,6 +1504,11 @@ class MagnetWalkerGame extends FlameGame
 
     playSound('lose.mp3');
     stopGameMusic();
+
+    if (!hasLivesLeft) {
+      gameUI?.showNoLivesDialog();
+      return;
+    }
 
     // Show failure dialog with demon health percentage
     final demonHealthPercent =
@@ -1502,14 +1523,19 @@ class MagnetWalkerGame extends FlameGame
         // Clear saved demon health when restarting
         waveManager.clearDemonHealth();
 
-        if (livesManager.lives <= 0) {
-          gameUI?.showNoLivesDialog();
-        } else {
-          livesManager.lives--;
-          restartGameMusic();
-          _initializeLevel();
-          _startLevel();
-        }
+        // if (livesManager.lives <= 0) {
+        //   gameUI?.showNoLivesDialog();
+        // } else {
+        //   livesManager.lives--;
+        //   restartGameMusic();
+        //   _initializeLevel();
+        //   _startLevel();
+        // }
+
+        // No need to consume life here - already consumed above
+        restartGameMusic();
+        _initializeLevel();
+        _startLevel();
       },
       onWatchAd: () {
         AdManager.showRewardedAd(
