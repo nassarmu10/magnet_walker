@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame_audio/flame_audio.dart';
@@ -8,6 +10,7 @@ import 'skins/skin_store_screen.dart';
 import 'skins/skin_manager.dart';
 import 'game_screen.dart';
 import 'managers/ad_manager.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 void main() {
   runApp(const MagnetWalkerApp());
@@ -36,6 +39,9 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp>
     _loadSettings();
     skinManager = SkinManager();
     skinManager.initialize();
+    if (Platform.isIOS) {
+      _requestTracking();
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -105,5 +111,14 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp>
       DeviceOrientation.landscapeRight,
     ]);
     super.dispose();
+  }
+
+  Future<void> _requestTracking() async {
+    final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+    if (status == TrackingStatus.notDetermined) {
+      // Optionally show a pre-permission screen explaining why you need this
+      await Future.delayed(const Duration(milliseconds: 200));
+      await AppTrackingTransparency.requestTrackingAuthorization();
+    }
   }
 }

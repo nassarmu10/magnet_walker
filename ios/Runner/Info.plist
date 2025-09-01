@@ -53,6 +53,9 @@
 	<string>http</string>
 	<string>instagram</string>
 	</array>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This identifier will be used to deliver personalized ads and improve your experience.</string>
+
 
 </dict>
 </plist>
