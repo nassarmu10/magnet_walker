@@ -1,6 +1,7 @@
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool musicEnabled;
@@ -39,133 +40,193 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _sfxEnabled = widget.sfxEnabled;
   }
 
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D1A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: widget.onBack,
-        ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSettingTile(
-                icon: Icons.music_note,
-                title: 'Game Music',
-                subtitle: 'Background music during gameplay',
-                color: Colors.lightBlueAccent,
-                value: _musicEnabled,
-                onChanged: (value) async {
-                  setState(() => _musicEnabled = value);
-                  widget.onMusicChanged(value);
-                  final prefs = await SharedPreferences.getInstance();
-                  prefs.setBool('music_enabled', value);
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildSettingTile(
-                icon: Icons.queue_music,
-                title: 'Menu Music',
-                subtitle: 'Theme music in the main menu',
-                color: Colors.purpleAccent,
-                value: _menuMusicEnabled,
-                onChanged: (value) async {
-                  setState(() => _menuMusicEnabled = value);
-                  widget.onMenuMusicChanged(value);
-                  final prefs = await SharedPreferences.getInstance();
-                  prefs.setBool('menu_music_enabled', value);
-                  if (value) {
-                    FlameAudio.bgm.play('menu_music.mp3');
-                  } else {
-                    FlameAudio.bgm.stop();
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildSettingTile(
-                icon: Icons.volume_up,
-                title: 'Sound Effects',
-                subtitle: 'Enable in-game sound effects',
-                color: Colors.orangeAccent,
-                value: _sfxEnabled,
-                onChanged: (value) async {
-                  setState(() => _sfxEnabled = value);
-                  widget.onSfxChanged(value);
-                  final prefs = await SharedPreferences.getInstance();
-                  prefs.setBool('sfx_enabled', value);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
+      body: Stack(
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white)),
-                const SizedBox(height: 4),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: 14, color: Colors.white.withOpacity(0.7))),
-              ],
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/background.jpg',
+              fit: BoxFit.cover,
             ),
           ),
-          Switch(
-            value: value,
-            activeColor: color,
-            onChanged: onChanged,
+
+          // Settings UI
+          Column(
+            children: [
+              AppBar(
+                backgroundColor: Colors.black.withOpacity(0.3),
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: widget.onBack,
+                ),
+                title: const Text('Settings',
+                    style: TextStyle(color: Colors.white)),
+                centerTitle: true,
+              ),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Game Music
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: const [
+                                Icon(Icons.music_note,
+                                    color: Colors.lightBlueAccent),
+                                SizedBox(width: 12),
+                                Text('Game Music',
+                                    style: TextStyle(
+                                        fontSize: 18, color: Colors.white)),
+                              ],
+                            ),
+                            Switch(
+                              value: _musicEnabled,
+                              activeColor: Colors.lightBlueAccent,
+                              onChanged: (value) async {
+                                setState(() => _musicEnabled = value);
+                                widget.onMusicChanged(value);
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                prefs.setBool('music_enabled', value);
+                              },
+                            ),
+                          ],
+                        ),
+                        const Divider(color: Colors.white24, height: 32),
+
+                        // Menu Music
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: const [
+                                Icon(Icons.library_music,
+                                    color: Colors.purpleAccent),
+                                SizedBox(width: 12),
+                                Text('Menu Music',
+                                    style: TextStyle(
+                                        fontSize: 18, color: Colors.white)),
+                              ],
+                            ),
+                            Switch(
+                              value: _menuMusicEnabled,
+                              activeColor: Colors.purpleAccent,
+                              onChanged: (value) async {
+                                setState(() => _menuMusicEnabled = value);
+                                widget.onMenuMusicChanged(value);
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                prefs.setBool('menu_music_enabled', value);
+                                if (value) {
+                                  FlameAudio.bgm.play('menu_music.mp3');
+                                } else {
+                                  FlameAudio.bgm.stop();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                        const Divider(color: Colors.white24, height: 32),
+
+                        // SFX
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: const [
+                                Icon(Icons.volume_up,
+                                    color: Colors.orangeAccent),
+                                SizedBox(width: 12),
+                                Text('Sound Effects',
+                                    style: TextStyle(
+                                        fontSize: 18, color: Colors.white)),
+                              ],
+                            ),
+                            Switch(
+                              value: _sfxEnabled,
+                              activeColor: Colors.orangeAccent,
+                              onChanged: (value) async {
+                                setState(() => _sfxEnabled = value);
+                                widget.onSfxChanged(value);
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                prefs.setBool('sfx_enabled', value);
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 40),
+
+                        // Social / Contact buttons
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.pinkAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
+                          ),
+                          icon:
+                              const Icon(Icons.camera_alt, color: Colors.white),
+                          label: const Text("Follow us on Instagram",
+                              style: TextStyle(color: Colors.white)),
+                          onPressed: () {
+                            _launchUrl(
+                                "https://www.instagram.com/mtsquared.techs/?igsh=MWJhNzVnM2FhM243cQ%3D%3D");
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
+                          ),
+                          icon: const Icon(Icons.public, color: Colors.white),
+                          label: const Text("Visit our Website",
+                              style: TextStyle(color: Colors.white)),
+                          onPressed: () {
+                            _launchUrl("https://mtsqtechs.com");
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
