@@ -205,6 +205,12 @@ class MagnetWalkerGame extends FlameGame
   void _clearLevelComponents() {
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
+    
+    // Clear saved demon health when clearing level components (unless it's for ad continue)
+    if (currentState != GameState.gameOver) {
+      waveManager.clearDemonHealth();
+    }
+    
     // Remove player if exists
     if (player != null) {
       player!.removeFromParent();
@@ -345,6 +351,7 @@ class MagnetWalkerGame extends FlameGame
     Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
     if (currentLevelType == LevelType.gravity) {
+      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);  // Add this line
     } else if (currentLevelType == LevelType.survival) {
       // Survival mode: center
       initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
@@ -1357,6 +1364,9 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void SuccessDemonLevel() {
+    // Clear any saved demon health when successfully completing the level
+    waveManager.clearDemonHealth();
+    
     clearAllObjects();
     currentState = GameState.levelComplete;
     //playSound('win.wav');
@@ -1366,13 +1376,28 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startDemonLeve() {
-    if (demon == null) {
-      demon = Demon(position: Vector2(canvasSize.x / 2, 200));
-      add(demon as Component);
+    // Check if we have saved demon health (from watching ad to continue)
+    if (waveManager.hasSavedDemonHealth()) {
+      // Restore demon with saved health
+      if (demon == null) {
+        demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+        add(demon as Component);
+      }
+      demon?.restoreHealth(
+        waveManager.savedDemonHealth!,
+        waveManager.savedDemonMaxHealth!,
+      );
+      // Clear saved health after restoring
+      waveManager.clearDemonHealth();
+    } else {
+      // Start fresh demon
+      if (demon == null) {
+        demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+        add(demon as Component);
+      }
+      demon?.isAlive = true;
     }
     currentState = GameState.playing;
-    //currentState = GameState.playing;
-    demon?.isAlive = true;
   }
 
   void endDemonLevel() {
@@ -1380,7 +1405,77 @@ class MagnetWalkerGame extends FlameGame
     demon?.deleteDemon();
   }
 
+  // void failDemonLevel() {
+  //   endDemonLevel();
+  //   print('failDemonLevel called');
+
+  //   currentState = GameState.gameOver;
+  //   clearAllObjects();
+
+  //   // Position player back to start
+  //   _updatePlayerPositionForLevelType();
+  //   saveProgress();
+
+  //   playSound('lose.mp3');
+  //   stopGameMusic();
+
+  //   // Show failure dialog
+  //   gameUI?.showFailureDialog(
+  //     score: totalScore,
+  //     level: waveManager.level,
+  //     wave: waveManager.currentWave,
+  //     playTime: playTime,
+  //     onRestartLevel: () {
+  //       if (livesManager.lives <= 0) {
+  //         gameUI?.showNoLivesDialog();
+  //       } else {
+  //         livesManager.lives--;
+  //         restartGameMusic();
+  //         _initializeLevel();
+  //         _startLevel();
+  //       }
+  //     },
+  //     onWatchAd: () {
+  //       AdManager.showRewardedAd(
+  //         onRewarded: () {
+  //           _initializeLevel();
+  //           _startLevel();
+  //         },
+  //         onAdDismissed: () {
+  //           // Start music only after ad is dismissed
+  //           restartGameMusic();
+  //         },
+  //         onFailed: () {
+  //           final context = gameUI?.game.buildContext;
+  //           if (context != null) {
+  //             showDialog(
+  //               context: context,
+  //               builder: (context) => AlertDialog(
+  //                 title: const Text('No Ad Available'),
+  //                 content: const Text(
+  //                     'No ad is available right now. Please try again later.'),
+  //                 actions: [
+  //                   TextButton(
+  //                     onPressed: () => Navigator.of(context).pop(),
+  //                     child: const Text('OK'),
+  //                   ),
+  //                 ],
+  //               ),
+  //             );
+  //           }
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
+
+
   void failDemonLevel() {
+    // Save demon's current health before ending the level
+    if (demon != null && demon!.isAlive) {
+      waveManager.saveDemonHealth(demon!.health, demon!.maxHealth);
+    }
+    
     endDemonLevel();
     print('failDemonLevel called');
 
@@ -1394,13 +1489,18 @@ class MagnetWalkerGame extends FlameGame
     playSound('lose.mp3');
     stopGameMusic();
 
-    // Show failure dialog
+    // Show failure dialog with demon health percentage
+    final demonHealthPercent = demon != null ? demon!.getHealthPercentage() : 0.0;
+    
     gameUI?.showFailureDialog(
       score: totalScore,
       level: waveManager.level,
       wave: waveManager.currentWave,
       playTime: playTime,
       onRestartLevel: () {
+        // Clear saved demon health when restarting
+        waveManager.clearDemonHealth();
+        
         if (livesManager.lives <= 0) {
           gameUI?.showNoLivesDialog();
         } else {
@@ -1413,6 +1513,8 @@ class MagnetWalkerGame extends FlameGame
       onWatchAd: () {
         AdManager.showRewardedAd(
           onRewarded: () {
+            // Continue from where the player left off
+            // The saved demon health will be restored in startDemonLeve()
             _initializeLevel();
             _startLevel();
           },
@@ -1421,6 +1523,9 @@ class MagnetWalkerGame extends FlameGame
             restartGameMusic();
           },
           onFailed: () {
+            // If ad fails, clear saved demon health
+            waveManager.clearDemonHealth();
+            
             final context = gameUI?.game.buildContext;
             if (context != null) {
               showDialog(
