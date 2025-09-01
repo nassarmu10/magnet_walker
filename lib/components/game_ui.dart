@@ -295,9 +295,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // add(playTimeText);
 
     // REDESIGNED: Instructions at the bottom with better spacing
+    final adHeight = 50.0; // Approximate banner ad height
     instructionsText = TextComponent(
       text: 'Swipe left/right to move • Collect coins • Avoid bombs',
-      position: Vector2(gameSize.x / 2, gameSize.y - 30),
+      position: Vector2(gameSize.x / 2, gameSize.y - 30 - adHeight), // ✅ Moved up by ad height
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(

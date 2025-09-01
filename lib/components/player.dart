@@ -17,6 +17,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   // Flag to indicate if animating to initial position
   bool isAnimatingToPosition = false;
+  // ADD: Movement tracking for demon level
+  Vector2 _lastPosition = Vector2.zero();
+  double _timeSinceLastMovement = 0.0;
+  bool _hasRecentMovement = false;
+  static const double _movementThreshold = 5.0; // Minimum distance to count as movement
+  static const double _movementTimeWindow = 1.0; // Time window to check for movement
 
   Player({required super.position})
       : super(
@@ -93,16 +99,65 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     await _loadSkin(skinPath);
   }
 
+  // @override
+  // void render(Canvas canvas) {
+  //   // Draw magnetic field
+  //   canvas.drawCircle(
+  //     Offset.zero,
+  //     magnetRadius,
+  //     magnetFieldPaint,
+  //   );
+
+  //   // Draw glow behind the skin
+  //   canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
+
+  //   // The skin sprite is rendered by the SpriteComponent (added as a child)
+  // }
+
   @override
   void render(Canvas canvas) {
-    // Draw magnetic field
-    canvas.drawCircle(
-      Offset.zero,
-      magnetRadius,
-      magnetFieldPaint,
-    );
+    final currentLevelType = LevelTypeConfig.getLevelType(game.waveManager.level);
+    
+    // ✅ MODIFIED: Different magnetic field rendering for demon level
+    if (currentLevelType == LevelType.demon) {
+      // Show magnetic field only when player is moving
+      if (_hasRecentMovement) {
+        // Active magnetic field - brighter and more visible
+        final activeMagnetPaint = Paint()
+          ..color = Colors.redAccent.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
+        
+        canvas.drawCircle(Offset.zero, magnetRadius, activeMagnetPaint);
+        
+        // Add pulsing border to show it's active
+        final activeBorderPaint = Paint()
+          ..color = Colors.redAccent.withOpacity(0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+        
+        canvas.drawCircle(Offset.zero, magnetRadius, activeBorderPaint);
+      } else {
+        // Inactive magnetic field - dim and barely visible
+        final inactiveMagnetPaint = Paint()
+          ..color = Colors.grey.withOpacity(0.1)
+          ..style = PaintingStyle.fill;
+        
+        canvas.drawCircle(Offset.zero, magnetRadius, inactiveMagnetPaint);
+        
+        // Dashed border to show it's inactive
+        final inactiveBorderPaint = Paint()
+          ..color = Colors.grey.withOpacity(0.3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        
+        canvas.drawCircle(Offset.zero, magnetRadius, inactiveBorderPaint);
+      }
+    } else {
+      // Normal magnetic field for other level types
+      canvas.drawCircle(Offset.zero, magnetRadius, magnetFieldPaint);
+    }
 
-    // Draw glow behind the skin
+    // Draw glow behind the skin (keep existing)
     canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
 
     // The skin sprite is rendered by the SpriteComponent (added as a child)
@@ -175,16 +230,25 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
           final closeDistanceThreshold =
               radius + obj.radius + 5; // Very close to player
 
-          if (distance > closeDistanceThreshold) {
+          if (distance > closeDistanceThreshold && _hasRecentMovement) {
             // Repulsive force: push bomb back toward demon
             targetDirection = (demon.position - obj.position)..normalize();
             force =
                 1500 * (1 - distance / magnetRadius); // Strong repulsive force
-          } else {
-            // Bomb is very close to player - reduce force to allow collision
-            // Still push toward demon but with much weaker force
-            targetDirection = (demon.position - obj.position)..normalize();
-            force = 50 * (1 - distance / magnetRadius); // Very weak force
+            obj.isMagnetized = true;
+          } else if (distance <= closeDistanceThreshold) {
+              // Bomb is very close to player - collision damage
+              // Don't apply magnetic force, let it hit the player
+              obj.isMagnetized = false;
+              return;
+            } else {
+            // // Bomb is very close to player - reduce force to allow collision
+            // // Still push toward demon but with much weaker force
+            // targetDirection = (demon.position - obj.position)..normalize();
+            // force = 50 * (1 - distance / magnetRadius); // Very weak force
+            // Player isn't moving - no magnetic repulsion, bomb continues toward player
+            obj.isMagnetized = false;
+            return;
           }
         }
       }
@@ -192,6 +256,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       obj.velocity += targetDirection * force * dt;
       obj.isMagnetized = true;
     }
+  }
+
+  void resetMovementTracking() {
+    _lastPosition = position.clone();
+    _timeSinceLastMovement = 0.0;
+    _hasRecentMovement = false;
   }
 
   void upgradeMagnet(int level) {
@@ -209,6 +279,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       position = Vector2(gameSize.x / 2, gameSize.y / 2);
     }
     magnetRadius = 80.0;
+
+    // Reset movement tracking
+    resetMovementTracking();
   }
 
   // Animate the player to a target position over a duration (in seconds)
@@ -222,6 +295,24 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   @override
   void update(double dt) {
     super.update(dt);
+    // ADD: Track player movement for demon level
+    final currentLevelType = LevelTypeConfig.getLevelType(game.waveManager.level);
+    if (currentLevelType == LevelType.demon) {
+      // Check if player has moved significantly
+      final distanceMoved = position.distanceTo(_lastPosition);
+      
+      if (distanceMoved > _movementThreshold) {
+        _timeSinceLastMovement = 0.0;
+        _hasRecentMovement = true;
+        _lastPosition = position.clone();
+      } else {
+        _timeSinceLastMovement += dt;
+        if (_timeSinceLastMovement > _movementTimeWindow) {
+          _hasRecentMovement = false;
+        }
+      }
+    }
+
     // Animate movement if needed
     if (_targetPosition != null && _moveDuration != null) {
       _moveElapsed += dt;

@@ -37,7 +37,7 @@ class LevelTypeConfig {
       case LevelType.survival:
         return 'Click bombs to destroy • Collect coins • Survive!';
       case LevelType.demon:
-        return 'Launch back rockets on demon • Avoid bombs • Collect coins • Survive!';
+        return 'Keep moving to reflect rockets • Hit the demon!';
     }
   }
 }
