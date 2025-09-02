@@ -200,7 +200,6 @@ class MagnetWalkerGame extends FlameGame
         exitToMainMenu();
       });
     }
-    // TODO - WE NEED TO ADD THIS SOMEWHERE BETTER, NOW IT IS NOT ADDED CORRECTLY
     if (currentLevelType == LevelType.gravity && spawnPortal == null) {
       // Place the portal just under header
       final headerMarginX = gameSize.x * 0.025;
@@ -1217,6 +1216,21 @@ class MagnetWalkerGame extends FlameGame
     } else {
       waveMessage =
           'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in 3';
+    }
+    if (currentLevelType == LevelType.gravity && spawnPortal == null) {
+      // Place the portal just under header
+      final headerMarginX = canvasSize.x * 0.025;
+      final headerMarginY = canvasSize.y * 0.025;
+      final headerWidth = canvasSize.x * 0.95;
+      final headerHeight = canvasSize.y * 0.12;
+      final portalSize = 60.0;
+      spawnPortal = SciFiPortal(
+        position: Vector2(headerMarginX + headerWidth / 2,
+            headerMarginY + headerHeight + portalSize),
+        size: portalSize,
+      );
+
+      add(spawnPortal as Component);
     }
     // Stop any existing spawning
     gravitySpawnManager.stop();
