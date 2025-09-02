@@ -55,7 +55,7 @@ class GravitySpawnManager {
 
     do {
       final x = math.Random().nextDouble() * (gameSize.x - 80) + 40;
-      spawnPosition = Vector2(x, -30);
+      spawnPosition = Vector2(x, gameSize.y * 0.12 + gameSize.y * 0.055);
       attempts++;
       if (attempts >= maxAttempts) break;
     } while (_isTooCloseToRecentSpawns(spawnPosition));
@@ -105,7 +105,16 @@ class GravitySpawnManager {
     if (type == ObjectType.bomb || type == ObjectType.coin) {
       obj.velocity.y *= speedMultiplier;
     }
+    if (game.spawnPortal != null) {
+      game.spawnPortal?.spawnFlash();
+      obj.position = game.spawnPortal!.position;
+    }
 
+    final angle =
+        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 6;
+// math.pi/2 = downward, ±15 degrees spread
+    final speed = 50.0; // adjust
+    obj.velocity = Vector2(math.cos(angle), math.sin(angle)) * speed;
     game.add(obj);
   }
 

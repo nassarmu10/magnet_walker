@@ -3,6 +3,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:magnet_walker/components/demon.dart';
+import 'package:magnet_walker/components/portal.dart';
 import 'package:magnet_walker/skins/skin_model.dart';
 import 'package:magnet_walker/skins/skin_store_screen.dart';
 import 'dart:math' as math;
@@ -45,6 +46,7 @@ class MagnetWalkerGame extends FlameGame
   Demon? demon;
   GameUI? gameUI;
   late Background background;
+  SciFiPortal? spawnPortal;
 
   // Level type management
   late GravitySpawnManager gravitySpawnManager;
@@ -198,6 +200,22 @@ class MagnetWalkerGame extends FlameGame
         exitToMainMenu();
       });
     }
+    // TODO - WE NEED TO ADD THIS SOMEWHERE BETTER, NOW IT IS NOT ADDED CORRECTLY
+    if (currentLevelType == LevelType.gravity && spawnPortal == null) {
+      // Place the portal just under header
+      final headerMarginX = gameSize.x * 0.025;
+      final headerMarginY = gameSize.y * 0.025;
+      final headerWidth = gameSize.x * 0.95;
+      final headerHeight = gameSize.y * 0.12;
+      final portalSize = 60.0;
+      spawnPortal = SciFiPortal(
+        position: Vector2(headerMarginX + headerWidth / 2,
+            headerMarginY + headerHeight + portalSize),
+        size: portalSize,
+      );
+
+      add(spawnPortal as Component);
+    }
   }
 
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
@@ -249,6 +267,12 @@ class MagnetWalkerGame extends FlameGame
     if (demon != null) {
       demon!.removeFromParent();
       demon = null;
+    }
+
+    // Remove portal if exists
+    if (spawnPortal != null) {
+      spawnPortal?.removeCompletely();
+      spawnPortal = null;
     }
     clearAllObjects();
     // Clear any spawned objects, projectiles, etc.
@@ -1325,8 +1349,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this to advance to the next level
   async.Future<void> nextLevel() async {
-    print('nextLevel called');
-    print(waveManager.level);
     waveManager.level++;
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     if (currentLevelType == LevelType.demon) {
