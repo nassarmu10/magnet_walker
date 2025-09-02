@@ -66,135 +66,184 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   void _initializeUI() {
     if (isInitialized) return;
 
-    // Use camera size instead of game size
     final gameSize = game.canvasSize;
 
-    // Move pause button to bottom-right corner
+    // IMPROVED: Enhanced pause button with better visual feedback
     pauseButton = ButtonComponent(
-      position:
-          Vector2(gameSize.x - 16, gameSize.y - 40), // Bottom-right corner
-      size: Vector2(50, 50), // Made it slightly larger
+      position: Vector2(gameSize.x - 20, gameSize.y - 45), // Better positioning
+      size: Vector2(55, 55),
       anchor: Anchor.bottomRight,
       button: RectangleComponent(
-        size: Vector2(50, 50),
+        size: Vector2(55, 55),
         paint: Paint()..color = Colors.transparent,
       ),
       children: [
-        // Background circle with better visibility
+        // Enhanced background with subtle animation potential
         CircleComponent(
-          radius: 25,
+          radius: 27.5,
           paint: Paint()
-            ..color = const Color(0xFF1a1a2e).withOpacity(0.95), // More opaque
-          position: Vector2(25, 25),
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFF1a1a2e).withOpacity(0.98),
+                const Color(0xFF0f0f23).withOpacity(0.95),
+              ],
+              stops: const [0.0, 1.0],
+            ).createShader(const Rect.fromLTWH(0, 0, 55, 55)),
+          position: Vector2(27.5, 27.5),
           anchor: Anchor.center,
         ),
-        // Add border for better visibility
+        // Glowing border effect
         CircleComponent(
-          radius: 25,
+          radius: 27.5,
           paint: Paint()
-            ..color = Colors.cyanAccent.withOpacity(0.8)
+            ..color = const Color(0xFF00ff88).withOpacity(0.6)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2,
-          position: Vector2(25, 25),
+            ..strokeWidth = 2.5,
+          position: Vector2(27.5, 27.5),
           anchor: Anchor.center,
         ),
-        // Pause icon (two rectangles) - made slightly larger
+        // Inner glow
+        CircleComponent(
+          radius: 24,
+          paint: Paint()
+            ..color = const Color(0xFF00ff88).withOpacity(0.15)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+          position: Vector2(27.5, 27.5),
+          anchor: Anchor.center,
+        ),
+        // Enhanced pause icon
         RectangleComponent(
-          position: Vector2(18, 17),
-          size: Vector2(5, 16),
-          paint: Paint()..color = Colors.white,
+          position: Vector2(19, 18.5),
+          size: Vector2(6, 18),
+          paint: Paint()..color = Colors.white.withOpacity(0.95),
         ),
         RectangleComponent(
-          position: Vector2(27, 17),
-          size: Vector2(5, 16),
-          paint: Paint()..color = Colors.white,
+          position: Vector2(30, 18.5),
+          size: Vector2(6, 18),
+          paint: Paint()..color = Colors.white.withOpacity(0.95),
         ),
       ],
       onPressed: () {
-        print('Pause button pressed!'); // Debug log
+        print('Pause button pressed!');
         showPauseDialog();
       },
-      priority: 25, // Higher priority to ensure it's on top
+      priority: 25,
     );
     add(pauseButton);
 
-    // REDESIGNED: Single header container with two rows
-    final headerMarginX = gameSize.x * 0.03; // 3% margin
-    final headerMarginY = gameSize.y * 0.02; // 2% from top
-    final headerWidth = gameSize.x * 0.94; // 94% width
-    final headerHeight = gameSize.y * 0.14; // 14% height
+    // IMPROVED: Better header dimensions and positioning
+    final headerMarginX = gameSize.x * 0.025; // Slightly tighter margins
+    final headerMarginY = gameSize.y * 0.025;
+    final headerWidth = gameSize.x * 0.95;
+    final headerHeight = gameSize.y * 0.12; // Slightly more compact
 
+    // IMPROVED: Enhanced header background with better gradient
     headerBg = RoundedRectComponent(
       position: Vector2(headerMarginX, headerMarginY),
       size: Vector2(headerWidth, headerHeight),
       paint: Paint()
         ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: [
             const Color(0xFF1a1a2e).withOpacity(0.95),
-            const Color(0xFF16213e).withOpacity(0.90),
-            const Color(0xFF0f0f23).withOpacity(0.85),
+            const Color(0xFF16213e).withOpacity(0.92),
+            const Color(0xFF0f0f23).withOpacity(0.88),
           ],
-          stops: const [0.0, 0.5, 1.0],
+          stops: const [0.0, 0.6, 1.0],
         ).createShader(Rect.fromLTWH(
             headerMarginX, headerMarginY, headerWidth, headerHeight)),
-      radius: 16,
+      radius: 18,
       priority: -2,
     );
     add(headerBg);
 
-    // REDESIGNED: Top row background (Score, Level, Lives)
-    final topRowHeight = headerHeight * 0.45;
-    final topRowY = headerMarginY + headerHeight * 0.08;
+    // IMPROVED: Add subtle border to header
+    final headerBorder = RoundedRectComponent(
+      position: Vector2(headerMarginX, headerMarginY),
+      size: Vector2(headerWidth, headerHeight),
+      paint: Paint()
+        ..color = const Color(0xFF00ff88).withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+      radius: 18,
+      priority: -1,
+    );
+    add(headerBorder);
+
+    // IMPROVED: More balanced row heights
+    final topRowHeight = headerHeight * 0.48;
+    final topRowY = headerMarginY + headerHeight * 0.06;
 
     topRowBg = RoundedRectComponent(
-      position: Vector2(headerMarginX + 8, topRowY),
-      size: Vector2(headerWidth - 16, topRowHeight),
-      paint: Paint()..color = const Color(0xFF000000).withOpacity(0.2),
-      radius: 12,
-      priority: -1,
+      position: Vector2(headerMarginX + 10, topRowY),
+      size: Vector2(headerWidth - 20, topRowHeight),
+      paint: Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            const Color(0xFF000000).withOpacity(0.15),
+            const Color(0xFF1a1a2e).withOpacity(0.25),
+            const Color(0xFF000000).withOpacity(0.15),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(Rect.fromLTWH(
+            headerMarginX + 10, topRowY, headerWidth - 20, topRowHeight)),
+      radius: 14,
+      priority: 0,
     );
     add(topRowBg);
 
-    // REDESIGNED: Bottom row background (Target, Time)
-    final bottomRowHeight = headerHeight * 0.35;
-    final bottomRowY = topRowY + topRowHeight + 8;
+    final bottomRowHeight = headerHeight * 0.38;
+    final bottomRowY = topRowY + topRowHeight + 6;
 
     bottomRowBg = RoundedRectComponent(
-      position: Vector2(headerMarginX + 8, bottomRowY),
-      size: Vector2(headerWidth - 16, bottomRowHeight),
-      paint: Paint()..color = const Color(0xFF000000).withOpacity(0.2),
-      radius: 12,
-      priority: -1,
+      position: Vector2(headerMarginX + 10, bottomRowY),
+      size: Vector2(headerWidth - 20, bottomRowHeight),
+      paint: Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            const Color(0xFF000000).withOpacity(0.15),
+            const Color(0xFF1a1a2e).withOpacity(0.25),
+            const Color(0xFF000000).withOpacity(0.15),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(Rect.fromLTWH(
+            headerMarginX + 10, bottomRowY, headerWidth - 20, bottomRowHeight)),
+      radius: 14,
+      priority: 0,
     );
     add(bottomRowBg);
 
-    // REDESIGNED: Top row elements (perfectly aligned)
+    // IMPROVED: Better text positioning and styling
     final topRowCenterY = topRowY + topRowHeight / 2;
-    final topRowLeftX = headerMarginX + 24;
-    final topRowCenterX = headerMarginX + headerWidth / 2;
-    final topRowRightX = headerMarginX + headerWidth - 24;
+    final topRowLeftX = headerMarginX + 28;
+    final topRowRightX = headerMarginX + headerWidth - 28;
 
-    // Score (left)
+    // IMPROVED: Enhanced score text with icon-like prefix
     scoreText = TextComponent(
-      text: 'Score: 0',
+      text: '⭐ Score: 0',
       position: Vector2(topRowLeftX, topRowCenterY),
       textRenderer: TextPaint(
         style: const TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFF00ff88),
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
           shadows: [
             Shadow(
               offset: Offset(0, 0),
-              blurRadius: 8,
+              blurRadius: 12,
               color: Color(0xFF00ff88),
             ),
             Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 4,
+              offset: Offset(2, 2),
+              blurRadius: 6,
               color: Colors.black87,
             ),
           ],
@@ -204,25 +253,26 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(scoreText);
 
-    // Level (center)
+    // IMPROVED: Enhanced level text with better formatting
     levelText = TextComponent(
-      text: 'Level 1 (Wave 1/3)',
+      text: '🏆 Level 1 • Wave 1/3',
       position: Vector2(topRowRightX, topRowCenterY),
       textRenderer: TextPaint(
         style: const TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFF8844ff),
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
           shadows: [
             Shadow(
               offset: Offset(0, 0),
-              blurRadius: 8,
+              blurRadius: 12,
               color: Color(0xFF8844ff),
             ),
             Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 4,
+              offset: Offset(2, 2),
+              blurRadius: 6,
               color: Colors.black87,
             ),
           ],
@@ -232,62 +282,60 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(levelText);
 
-    // REDESIGNED: Bottom row elements (perfectly aligned)
+    // IMPROVED: Enhanced target score with progress indicator feel
     final bottomRowCenterY = bottomRowY + bottomRowHeight / 2;
     final bottomRowCenterX = headerMarginX + headerWidth / 2;
 
-    // Target score (centered in bottom row)
     targetScoreText = TextComponent(
-      text: 'Target: 13',
+      text: '🎯 Target: 13',
       position: Vector2(bottomRowCenterX, bottomRowCenterY),
       textRenderer: TextPaint(
         style: const TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFFff8844),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 1.2,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
           shadows: [
             Shadow(
               offset: Offset(0, 0),
-              blurRadius: 6,
+              blurRadius: 10,
               color: Color(0xFFff8844),
             ),
             Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 3,
+              offset: Offset(2, 2),
+              blurRadius: 5,
               color: Colors.black87,
             ),
           ],
         ),
       ),
-      anchor: Anchor.center, // Changed to center since it's now alone
+      anchor: Anchor.center,
     );
     add(targetScoreText);
 
-    // REDESIGNED: Instructions at the bottom with better spacing
-    final adHeight = 50.0; // Approximate banner ad height
+    // IMPROVED: Better instructions positioning and styling
+    final adHeight = 55.0;
     instructionsText = TextComponent(
-      text: 'Swipe left/right to move • Collect coins • Avoid bombs',
-      position: Vector2(gameSize.x / 2,
-          gameSize.y - 30 - adHeight), // ✅ Moved up by ad height
+      text: 'Swipe to move • Collect ⭐ coins • Avoid 💣 bombs',
+      position: Vector2(gameSize.x / 2, gameSize.y - 35 - adHeight),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFF88aacc),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.5,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.8,
           shadows: [
             Shadow(
               offset: Offset(0, 0),
-              blurRadius: 4,
+              blurRadius: 6,
               color: Color(0xFF44aaff),
             ),
             Shadow(
               offset: Offset(1, 1),
-              blurRadius: 2,
+              blurRadius: 3,
               color: Colors.black54,
             ),
           ],
@@ -583,20 +631,20 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     }
 
     // Update text content with wave information
-    scoreText.text = 'Score: ${game.totalScore}';
-    levelText.text =
-        'Level ${game.waveManager.level} (Wave ${game.waveManager.currentWave}/3)';
-
+    scoreText.text = '⭐Score: ${game.totalScore}';
+    if (game.currentLevelType != LevelType.demon) {
+      levelText.text =
+          '🏆Level ${game.waveManager.level} • Wave ${game.waveManager.currentWave}/3';
+    } else {
+      levelText.text = '🏆Level ${game.waveManager.level}';
+    }
     // Update target score display
-    targetScoreText.text =
-        'Target: ${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
-
-    // Update play time display
-    // final minutes = game.playTime.inMinutes;
-    // final seconds = game.playTime.inSeconds % 60;
-    // final timeString =
-    //     '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    // playTimeText.text = 'Time: $timeString';
+    if (game.currentLevelType != LevelType.demon) {
+      targetScoreText.text =
+          '🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
+    } else {
+      targetScoreText.text = "⚔️ Boss Battle";
+    }
 
     // Update instructions based on level type
     final currentLevelType =
@@ -828,7 +876,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   _buildStatRow('⭐ SCORE', '$score', const Color(0xFF00ff88),
                       statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
-                  _buildStatRow('🚀 LEVEL', '$level', const Color(0xFF8844ff),
+                  _buildStatRow('🏆 LEVEL', '$level', const Color(0xFF8844ff),
                       statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
 
@@ -960,7 +1008,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   _buildStatRow('⭐ SCORE', '$finalScore',
                       const Color(0xFF00ff88), statFontSize),
                   SizedBox(height: dialogWidth * 0.04),
-                  _buildStatRow('🚀 LEVEL', '$finalLevel',
+                  _buildStatRow('🏆 LEVEL', '$finalLevel',
                       const Color(0xFF8844ff), statFontSize),
                   SizedBox(height: dialogWidth * 0.05),
                   Container(
