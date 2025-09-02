@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/services.dart';
 
 import 'components/player.dart';
 import 'components/game_object.dart';
@@ -34,7 +35,12 @@ enum GameState {
 }
 
 class MagnetWalkerGame extends FlameGame
-    with HasCollisionDetection, DragCallbacks, TapCallbacks {
+    with
+        HasCollisionDetection,
+        DragCallbacks,
+        TapCallbacks,
+        HasKeyboardHandlerComponents,
+        WidgetsBindingObserver {
   Player? player;
   Demon? demon;
   GameUI? gameUI;
@@ -108,6 +114,40 @@ class MagnetWalkerGame extends FlameGame
     // Call the exit callback
     if (onExitToMenu != null) {
       onExitToMenu!();
+    }
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    // Register for app lifecycle changes
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // App went to background - pause spawning
+        pauseGame();
+        // You might also want to pause the game itself
+        pauseEngine();
+        break;
+
+      case AppLifecycleState.resumed:
+        // App came to foreground - resume spawning
+        resumeGame();
+        // Resume game if it was paused
+        resumeEngine();
+        break;
+
+      case AppLifecycleState.inactive:
+        // Handle if needed (like when notification panel is pulled down)
+        break;
     }
   }
 
@@ -1050,6 +1090,7 @@ class MagnetWalkerGame extends FlameGame
 
     // Dispose ads
     AdManager.disposeAds();
+    WidgetsBinding.instance.removeObserver(this);
 
     super.onRemove();
   }

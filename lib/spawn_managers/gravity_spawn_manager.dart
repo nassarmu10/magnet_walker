@@ -2,7 +2,6 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
-
 import '../../magnet_walker_game.dart';
 import '../../components/game_object.dart';
 import '../../level_types.dart';
@@ -10,8 +9,7 @@ import '../../level_types.dart';
 class GravitySpawnManager {
   final MagnetWalkerGame game;
   async.Timer? spawnTimer;
-  final double _minDistanceBetweenObjects =
-      60.0; // Minimum distance between objects
+  final double _minDistanceBetweenObjects = 60.0;
   final List<Vector2> _recentSpawnPositions = [];
   static const int _maxRecentPositions = 5;
 
@@ -21,14 +19,22 @@ class GravitySpawnManager {
     spawnTimer?.cancel();
     _recentSpawnPositions.clear();
 
-    // Make spawn rate depend on wave
-    final baseSpawnRate = 2.0;
-    final levelSpawnReduction = game.waveManager.level * 0.15;
-    final waveSpawnReduction =
-        game.waveManager.currentWave * 0.3; // 30% faster per wave
-    final spawnRate = math.max(
-        baseSpawnRate - levelSpawnReduction - waveSpawnReduction,
-        0.3); // Minimum 0.3 seconds
+    // Improved spawn rate calculation - starts faster, scales better
+    final level = game.waveManager.level;
+    final wave = game.waveManager.currentWave;
+
+    // More aggressive early game, smoother scaling
+    double spawnRate;
+    if (level <= 3) {
+      // Early levels: Start at 1.2s, reduce by wave
+      spawnRate = math.max(1.2 - (wave - 1) * 0.15, 0.6);
+    } else if (level <= 8) {
+      // Mid-early levels: Start at 1.0s
+      spawnRate = math.max(1.0 - (wave - 1) * 0.12 - (level - 3) * 0.05, 0.4);
+    } else {
+      // Higher levels: More intense
+      spawnRate = math.max(0.8 - (wave - 1) * 0.1 - (level - 8) * 0.03, 0.2);
+    }
 
     spawnTimer = async.Timer.periodic(
         Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
@@ -42,7 +48,7 @@ class GravitySpawnManager {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
 
-    // Find a valid spawn position that's not too close to recent objects
+    // Find valid spawn position
     Vector2 spawnPosition;
     int attempts = 0;
     final maxAttempts = 10;
@@ -51,20 +57,27 @@ class GravitySpawnManager {
       final x = math.Random().nextDouble() * (gameSize.x - 80) + 40;
       spawnPosition = Vector2(x, -30);
       attempts++;
-
-      // If we've tried too many times, just use this position
       if (attempts >= maxAttempts) break;
     } while (_isTooCloseToRecentSpawns(spawnPosition));
 
-    // Add to recent positions and maintain list size
     _recentSpawnPositions.add(spawnPosition);
     if (_recentSpawnPositions.length > _maxRecentPositions) {
       _recentSpawnPositions.removeAt(0);
     }
 
-    // Bomb/coin ratio increases with wave
-    final bombChance =
-        0.3 + 0.2 * (game.waveManager.currentWave - 1); // 0.3, 0.5, 0.7
+    // Improved bomb chance scaling
+    final level = game.waveManager.level;
+    final wave = game.waveManager.currentWave;
+
+    double bombChance;
+    if (level <= 3) {
+      bombChance = 0.2 + 0.15 * (wave - 1); // 20% → 35% → 50%
+    } else if (level <= 8) {
+      bombChance = 0.3 + 0.2 * (wave - 1); // 30% → 50% → 70%
+    } else {
+      bombChance = math.min(0.4 + 0.25 * (wave - 1), 0.85); // Up to 85% bombs
+    }
+
     final type = math.Random().nextDouble() < (1 - bombChance)
         ? ObjectType.coin
         : ObjectType.bomb;
@@ -72,14 +85,25 @@ class GravitySpawnManager {
     final obj = GameObject(
       position: spawnPosition,
       type: type,
-      level: game.waveManager.level,
+      level: level,
       levelType: LevelType.gravity,
     );
 
-    // Increase speed per wave - make it significantly faster
-    final baseSpeedMultiplier = 1.0 + 0.4 * (game.waveManager.currentWave - 1);
+    // Improved speed scaling - starts with decent speed
+    double speedMultiplier;
+    if (level <= 3) {
+      // Early: Start at 1.3x, increase by 0.3x per wave
+      speedMultiplier = 1.3 + 0.3 * (wave - 1);
+    } else if (level <= 8) {
+      // Mid: Start at 1.5x, increase by 0.35x per wave
+      speedMultiplier = 1.5 + 0.35 * (wave - 1) + 0.1 * (level - 3);
+    } else {
+      // High: More dramatic scaling
+      speedMultiplier = 2.0 + 0.4 * (wave - 1) + 0.15 * (level - 8);
+    }
+
     if (type == ObjectType.bomb || type == ObjectType.coin) {
-      obj.velocity.y *= baseSpeedMultiplier;
+      obj.velocity.y *= speedMultiplier;
     }
 
     game.add(obj);
