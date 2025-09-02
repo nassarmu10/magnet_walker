@@ -317,7 +317,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // IMPROVED: Better instructions positioning and styling
     final adHeight = 55.0;
     instructionsText = TextComponent(
-      text: 'Swipe to move • Collect ⭐ coins • Avoid 💣 bombs',
+      text: 'Collect ⭐ coins • Avoid 💣 bombs',
       position: Vector2(gameSize.x / 2, gameSize.y - 35 - adHeight),
       anchor: Anchor.center,
       textRenderer: TextPaint(
@@ -478,15 +478,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                     ),
                   ),
                   SizedBox(height: padding),
-                  Text(
-                    'Choose an option to continue:',
-                    style: TextStyle(
-                      fontSize: buttonFontSize * 0.9,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ],
               ),
             ),

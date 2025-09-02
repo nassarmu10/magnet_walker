@@ -33,7 +33,7 @@ class LevelTypeConfig {
   static String getLevelInstructions(LevelType type) {
     switch (type) {
       case LevelType.gravity:
-        return 'Swipe left/right to move • Collect coins • Avoid bombs';
+        return 'Collect coins • Avoid bombs';
       case LevelType.survival:
         return 'Click bombs to destroy • Collect coins • Survive!';
       case LevelType.demon:

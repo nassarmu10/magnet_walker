@@ -70,7 +70,7 @@ class GameObject extends CircleComponent
       // Objects move toward player
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
-      final speed = 1.0 + (level * 5.0); // Speed increases with level
+      final speed = 5.0 + (level * 5.0); // Speed increases with level
       velocity = direction * speed;
     }
 
