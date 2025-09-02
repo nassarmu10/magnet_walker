@@ -111,7 +111,7 @@ class GravitySpawnManager {
     }
 
     final angle =
-        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 6;
+        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 2;
 // math.pi/2 = downward, ±15 degrees spread
     final speed = 50.0; // adjust
     obj.velocity = Vector2(math.cos(angle), math.sin(angle)) * speed;

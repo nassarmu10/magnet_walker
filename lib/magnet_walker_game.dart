@@ -219,16 +219,17 @@ class MagnetWalkerGame extends FlameGame
 
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
     final actualSize = camera.viewfinder.visibleGameSize ?? gameSize;
+    const double horizontalOffset = 10.0;
     gameSize = actualSize;
     switch (currentLevelType) {
       case LevelType.gravity:
-        return Vector2(gameSize.x / 2, gameSize.y - 117);
+        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
       case LevelType.demon:
-        return Vector2(gameSize.x / 2, gameSize.y - 117);
+        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
       case LevelType.survival:
-        return Vector2(gameSize.x / 2, gameSize.y / 2);
+        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
       default:
-        return Vector2(gameSize.x / 2, gameSize.y / 2);
+        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     }
   }
 
@@ -396,17 +397,18 @@ class MagnetWalkerGame extends FlameGame
   // Update player position based on current level type
   void _updatePlayerPositionForLevelType() {
     final gameSize = canvasSize;
+    const double horizontalOffset = 10.0;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
     if (currentLevelType == LevelType.gravity) {
       initialPosition =
-          Vector2(gameSize.x / 2, gameSize.y - 117); // Add this line
+          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117); // Add this line
     } else if (currentLevelType == LevelType.survival) {
       // Survival mode: center
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
+      initialPosition = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     } else if (currentLevelType == LevelType.demon) {
-      initialPosition = Vector2(gameSize.x / 2, gameSize.y - 117);
+      initialPosition = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
     }
     // Animate player to new position
     player?.animateToPosition(initialPosition, 2.7);

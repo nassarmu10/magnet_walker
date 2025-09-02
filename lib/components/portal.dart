@@ -8,6 +8,11 @@ class SciFiPortal extends PositionComponent {
   double time = 0;
   final List<PortalRing> rings = [];
   final math.Random _random = math.Random();
+  
+  // Simple flash effect properties
+  bool isFlashing = false;
+  double flashTimer = 0.0;
+  static const double flashDuration = 0.5;
 
   SciFiPortal({
     required Vector2 position,
@@ -41,7 +46,7 @@ class SciFiPortal extends PositionComponent {
         colors: [Colors.blue.withOpacity(0.2), Colors.transparent],
         stops: [0.0, 0.7],
       ).createShader(Rect.fromCircle(center: center, radius: size.x / 2))
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
     canvas.drawCircle(center, size.x / 2, backgroundPaint);
 
@@ -50,29 +55,113 @@ class SciFiPortal extends PositionComponent {
       ring.render(canvas, center, time);
     }
 
-    // Draw central energy core
-    final corePaint = Paint()
-      ..shader = RadialGradient(
-        colors: [Colors.white, Colors.cyanAccent, Colors.blue],
-        stops: [0.0, 0.7, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: size.x * 0.15))
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5);
+    // Draw central energy core with simple spiral
+    _renderCore(canvas, center);
 
-    canvas.drawCircle(
-        center, size.x * 0.15 * (0.9 + 0.1 * math.sin(time * 5)), corePaint);
+    // Simple flash effect when spawning
+    if (isFlashing) {
+      _renderFlash(canvas, center);
+    }
 
     // Draw outer glow
     final outerGlowPaint = Paint()
       ..color = Colors.cyan.withOpacity(0.1)
-      ..maskFilter = MaskFilter.blur(BlurStyle.outer, 15);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 15);
 
     canvas.drawCircle(center, size.x / 2, outerGlowPaint);
+  }
+
+  void _renderCore(Canvas canvas, Offset center) {
+    final coreRadius = size.x * 0.15;
+    final pulseScale = 0.9 + 0.1 * math.sin(time * 5);
+    
+    // Simple spinning spiral lines in core
+    final spiralPaint = Paint()
+      ..color = Colors.white.withOpacity(0.6)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    
+    for (int i = 0; i < 2; i++) {
+      final startAngle = time * 3 + i * math.pi;
+      final endRadius = coreRadius * pulseScale;
+      
+      canvas.drawLine(
+        center,
+        Offset(
+          center.dx + endRadius * math.cos(startAngle),
+          center.dy + endRadius * math.sin(startAngle),
+        ),
+        spiralPaint,
+      );
+    }
+    
+    // Core gradient
+    final corePaint = Paint()
+      ..shader = RadialGradient(
+        colors: [Colors.white, Colors.cyanAccent, Colors.blue],
+        stops: [0.0, 0.7, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: coreRadius * pulseScale))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+    canvas.drawCircle(center, coreRadius * pulseScale, corePaint);
+  }
+
+  void _renderFlash(Canvas canvas, Offset center) {
+    final flashProgress = 1.0 - (flashTimer / flashDuration);
+    final flashIntensity = math.sin(flashProgress * math.pi) * 0.8;
+    
+    // Simple bright flash
+    final flashPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withOpacity(flashIntensity),
+          Colors.cyanAccent.withOpacity(flashIntensity * 0.7),
+          Colors.transparent,
+        ],
+        stops: [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: size.x * 0.6))
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 8);
+
+    canvas.drawCircle(center, size.x * 0.4, flashPaint);
+    
+    // Add a few simple energy sparks
+    _renderSparks(canvas, center, flashIntensity);
+  }
+
+  void _renderSparks(Canvas canvas, Offset center, double intensity) {
+    final sparkPaint = Paint()
+      ..color = Colors.white.withOpacity(intensity)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    for (int i = 0; i < 4; i++) {
+      final angle = (i * math.pi / 2) + time * 8;
+      final length = size.x * 0.25 * intensity;
+      
+      canvas.drawLine(
+        center,
+        Offset(
+          center.dx + length * math.cos(angle),
+          center.dy + length * math.sin(angle),
+        ),
+        sparkPaint,
+      );
+    }
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     time += dt;
+    
+    // Update flash timer
+    if (isFlashing) {
+      flashTimer -= dt;
+      if (flashTimer <= 0) {
+        isFlashing = false;
+      }
+    }
   }
 
   void removeCompletely() {
@@ -89,12 +178,15 @@ class SciFiPortal extends PositionComponent {
 
   @override
   void onRemove() {
-    // Clean up any controllers, streams, or other resources
     removeCompletely();
     super.onRemove();
   }
 
   void spawnFlash() {
+    // Simple flash trigger
+    isFlashing = true;
+    flashTimer = flashDuration;
+    
     final flashCount = _random.nextInt(3) + 2; // 2-4 flashes
 
     for (int i = 0; i < flashCount; i++) {
@@ -149,7 +241,7 @@ class PortalRing {
       ..color = color.withAlpha(alpha)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 3);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
     canvas.drawCircle(center, radius * scale, paint);
 
@@ -195,7 +287,7 @@ class EnergyFlash extends PositionComponent with HasPaint {
       ),
     ));
 
-    // Custom fade effect using update
+    // Fade effect
     add(
       OpacityEffect.to(
         0,

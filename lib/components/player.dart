@@ -34,7 +34,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Future<void> onLoad() async {
     super.onLoad();
     // Set size for collision detection
-    size = Vector2.all(radius * 2);
+    // size = Vector2.all(radius * 2);
 
     magnetFieldPaint = Paint()
       ..color = Colors.blueAccent.withOpacity(0.2)
@@ -175,23 +175,28 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
 
       // For demon levels, restrict upward movement to avoid collision area
-      if (currentLevelType == LevelType.demon &&
-          game.currentState == GameState.playing) {
-        // Set minimum Y to keep player away from demon patrol area
-        // Adjust this value based on your demon's patrol area and desired safe zone
-        final demon = game.demon!;
-        final minY = demon.patrolOrigin.y * 2 + demon.patrolRadius + 50.0;
-
-        position.y = (position.y + deltaY).clamp(minY, gameSize.y - 20);
-      } else {
-        // Normal gravity level movement
-        final minY = gameSize.y / 4;
-
-        position.y = (position.y + deltaY).clamp(minY, gameSize.y - 20);
-        //position.y = (position.y + deltaY).clamp(20.0, gameSize.y - 20);
+      if (currentLevelType == LevelType.gravity) {
+        // GRAVITY LEVELS: Limit player to upper half of screen
+        final minY = gameSize.y * 0.5; // Middle of screen (can't go higher)
+        final maxY = gameSize.y - 20;  // Near bottom (with small margin)
+        
+        position.y = (position.y + deltaY).clamp(minY, maxY);
+        
+      } else if (currentLevelType == LevelType.demon) {
+        // DEMON LEVELS: Keep existing demon collision avoidance
+        if (game.currentState == GameState.playing) {
+          final demon = game.demon!;
+          final minY = demon.patrolOrigin.y * 2 + demon.patrolRadius + 50.0;
+          position.y = (position.y + deltaY).clamp(minY, gameSize.y - 20);
+        } else {
+          // When demon is not active, also limit to upper half like gravity
+          final minY = gameSize.y * 0.5;
+          final maxY = gameSize.y - 20;
+          position.y = (position.y + deltaY).clamp(minY, maxY);
+        }
       }
     } else if (currentLevelType == LevelType.survival) {
-      // In survival mode, player stays stationary in center
+      // SURVIVAL MODE: No movement allowed (player stays stationary)
       // No movement allowed
     }
   }
@@ -273,10 +278,11 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
+    const double horizontalOffset = 10.0;
     if (currentLevelType == LevelType.gravity) {
-      position = Vector2(gameSize.x / 2, gameSize.y - 117);
+      position = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
     } else {
-      position = Vector2(gameSize.x / 2, gameSize.y / 2);
+      position = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     }
     magnetRadius = 80.0;
 
