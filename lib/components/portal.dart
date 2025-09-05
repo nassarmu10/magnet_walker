@@ -8,11 +8,12 @@ class SciFiPortal extends PositionComponent {
   double time = 0;
   final List<PortalRing> rings = [];
   final math.Random _random = math.Random();
-  
-  // Simple flash effect properties
+
+  // Enhanced flash effect properties
   bool isFlashing = false;
   double flashTimer = 0.0;
-  static const double flashDuration = 0.5;
+  static const double flashDuration = 1.2;
+  final List<EnergyWave> energyWaves = [];
 
   SciFiPortal({
     required Vector2 position,
@@ -55,12 +56,17 @@ class SciFiPortal extends PositionComponent {
       ring.render(canvas, center, time);
     }
 
-    // Draw central energy core with simple spiral
+    // Draw central energy core with enhanced spiral
     _renderCore(canvas, center);
 
-    // Simple flash effect when spawning
+    // Enhanced flash effect when spawning
     if (isFlashing) {
-      _renderFlash(canvas, center);
+      _renderEnhancedFlash(canvas, center);
+    }
+
+    // Draw energy waves
+    for (final wave in energyWaves) {
+      wave.render(canvas, center);
     }
 
     // Draw outer glow
@@ -74,79 +80,183 @@ class SciFiPortal extends PositionComponent {
   void _renderCore(Canvas canvas, Offset center) {
     final coreRadius = size.x * 0.15;
     final pulseScale = 0.9 + 0.1 * math.sin(time * 5);
-    
-    // Simple spinning spiral lines in core
+
+    // Enhanced spinning spiral lines in core
     final spiralPaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    
-    for (int i = 0; i < 2; i++) {
-      final startAngle = time * 3 + i * math.pi;
+      ..color = Colors.white.withOpacity(0.8)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1);
+
+    for (int i = 0; i < 4; i++) {
+      final startAngle = time * 4 + i * (math.pi / 2);
       final endRadius = coreRadius * pulseScale;
-      
-      canvas.drawLine(
-        center,
-        Offset(
-          center.dx + endRadius * math.cos(startAngle),
-          center.dy + endRadius * math.sin(startAngle),
-        ),
-        spiralPaint,
-      );
+
+      // Create spiral effect
+      final path = Path();
+      path.moveTo(center.dx, center.dy);
+
+      for (double t = 0; t <= 1; t += 0.1) {
+        final spiralRadius = endRadius * t;
+        final spiralAngle = startAngle + t * math.pi * 2;
+        path.lineTo(
+          center.dx + spiralRadius * math.cos(spiralAngle),
+          center.dy + spiralRadius * math.sin(spiralAngle),
+        );
+      }
+
+      canvas.drawPath(path, spiralPaint);
     }
-    
-    // Core gradient
+
+    // Core gradient with enhanced glow
     final corePaint = Paint()
       ..shader = RadialGradient(
-        colors: [Colors.white, Colors.cyanAccent, Colors.blue],
-        stops: [0.0, 0.7, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: coreRadius * pulseScale))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+        colors: [Colors.white, Colors.cyanAccent, Colors.blue.withOpacity(0.8)],
+        stops: [0.0, 0.6, 1.0],
+      ).createShader(
+          Rect.fromCircle(center: center, radius: coreRadius * pulseScale))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
     canvas.drawCircle(center, coreRadius * pulseScale, corePaint);
   }
 
-  void _renderFlash(Canvas canvas, Offset center) {
-    final flashProgress = 1.0 - (flashTimer / flashDuration);
-    final flashIntensity = math.sin(flashProgress * math.pi) * 0.8;
-    
-    // Simple bright flash
-    final flashPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          Colors.white.withOpacity(flashIntensity),
-          Colors.cyanAccent.withOpacity(flashIntensity * 0.7),
-          Colors.transparent,
-        ],
-        stops: [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: size.x * 0.6))
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 8);
+  void _renderEnhancedFlash(Canvas canvas, Offset center) {
+    final flashProgress = flashTimer / flashDuration;
+    final fadeProgress = 1.0 - flashProgress;
 
-    canvas.drawCircle(center, size.x * 0.4, flashPaint);
-    
-    // Add a few simple energy sparks
-    _renderSparks(canvas, center, flashIntensity);
+    // Multiple flash layers for depth
+    _renderFlashWave(canvas, center, flashProgress, fadeProgress);
+    _renderEnergyBurst(canvas, center, flashProgress, fadeProgress);
+    _renderLightningBolts(canvas, center, flashProgress, fadeProgress);
+    _renderParticleRing(canvas, center, flashProgress, fadeProgress);
   }
 
-  void _renderSparks(Canvas canvas, Offset center, double intensity) {
-    final sparkPaint = Paint()
-      ..color = Colors.white.withOpacity(intensity)
-      ..strokeWidth = 2.0
+  void _renderFlashWave(
+      Canvas canvas, Offset center, double progress, double fade) {
+    // Expanding energy wave
+    final waveRadius = size.x * progress * 2.5;
+    final intensity = math.sin(fade * math.pi) * 0.9;
+
+    final wavePaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withOpacity(intensity * 0.8),
+          Colors.cyanAccent.withOpacity(intensity * 0.6),
+          Colors.blue.withOpacity(intensity * 0.3),
+          Colors.transparent,
+        ],
+        stops: [0.0, 0.3, 0.7, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: waveRadius))
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * (1 - progress));
+
+    canvas.drawCircle(center, waveRadius, wavePaint);
+  }
+
+  void _renderEnergyBurst(
+      Canvas canvas, Offset center, double progress, double fade) {
+    // Central energy burst
+    final burstSize = size.x * 0.8 * (1 - progress);
+    final intensity = math.exp(-progress * 3) * 0.9;
+
+    final burstPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withOpacity(intensity),
+          Colors.cyanAccent.withOpacity(intensity * 0.7),
+          Colors.purpleAccent.withOpacity(intensity * 0.4),
+          Colors.transparent,
+        ],
+        stops: [0.0, 0.4, 0.7, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: burstSize))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    canvas.drawCircle(center, burstSize, burstPaint);
+  }
+
+  void _renderLightningBolts(
+      Canvas canvas, Offset center, double progress, double fade) {
+    final boltPaint = Paint()
+      ..color = Colors.white.withOpacity(fade * 0.9)
+      ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
 
-    for (int i = 0; i < 4; i++) {
-      final angle = (i * math.pi / 2) + time * 8;
-      final length = size.x * 0.25 * intensity;
-      
-      canvas.drawLine(
-        center,
-        Offset(
-          center.dx + length * math.cos(angle),
-          center.dy + length * math.sin(angle),
-        ),
-        sparkPaint,
+    // Draw jagged lightning bolts radiating outward
+    for (int i = 0; i < 8; i++) {
+      final baseAngle = (i * math.pi / 4) + (time * 2);
+      final boltLength = size.x * 0.6 * (1 - progress);
+
+      final path = Path();
+      path.moveTo(center.dx, center.dy);
+
+      // Create jagged lightning path
+      Vector2 currentPos = Vector2(center.dx, center.dy);
+      final segments = 5;
+
+      for (int j = 1; j <= segments; j++) {
+        final segmentProgress = j / segments;
+        final targetRadius = boltLength * segmentProgress;
+
+        // Add random jitter for lightning effect
+        final jitterAngle = baseAngle + (_random.nextDouble() - 0.5) * 0.5;
+        final jitterRadius = targetRadius + (_random.nextDouble() - 0.5) * 10;
+
+        final nextPos = Vector2(
+          center.dx + jitterRadius * math.cos(jitterAngle),
+          center.dy + jitterRadius * math.sin(jitterAngle),
+        );
+
+        path.lineTo(nextPos.x, nextPos.y);
+        currentPos = nextPos;
+      }
+
+      canvas.drawPath(path, boltPaint);
+
+      // Draw glow for each bolt
+      final glowPaint = Paint()
+        ..color = Colors.cyanAccent.withOpacity(fade * 0.4)
+        ..strokeWidth = 6.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+      canvas.drawPath(path, glowPaint);
+    }
+  }
+
+  void _renderParticleRing(
+      Canvas canvas, Offset center, double progress, double fade) {
+    // Animated particle ring
+    final particlePaint = Paint()
+      ..color = Colors.white.withOpacity(fade * 0.8)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    final ringRadius = size.x * 0.4 + (progress * size.x * 0.3);
+
+    for (int i = 0; i < 16; i++) {
+      final angle = (i * math.pi / 8) + (time * 5);
+      final particleSize = 4.0 * fade * (0.5 + 0.5 * math.sin(time * 8 + i));
+
+      final particlePos = Offset(
+        center.dx + ringRadius * math.cos(angle),
+        center.dy + ringRadius * math.sin(angle),
       );
+
+      canvas.drawCircle(particlePos, particleSize, particlePaint);
+
+      // Add particle trails
+      final trailPaint = Paint()
+        ..color = Colors.cyanAccent.withOpacity(fade * 0.3)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+
+      final trailStart = Offset(
+        center.dx + (ringRadius - 15) * math.cos(angle),
+        center.dy + (ringRadius - 15) * math.sin(angle),
+      );
+
+      canvas.drawLine(trailStart, particlePos, trailPaint);
     }
   }
 
@@ -154,13 +264,20 @@ class SciFiPortal extends PositionComponent {
   void update(double dt) {
     super.update(dt);
     time += dt;
-    
+
     // Update flash timer
     if (isFlashing) {
-      flashTimer -= dt;
-      if (flashTimer <= 0) {
+      flashTimer += dt;
+      if (flashTimer >= flashDuration) {
         isFlashing = false;
+        flashTimer = 0;
       }
+    }
+
+    // Update energy waves
+    energyWaves.removeWhere((wave) => wave.isComplete);
+    for (final wave in energyWaves) {
+      wave.update(dt);
     }
   }
 
@@ -183,35 +300,29 @@ class SciFiPortal extends PositionComponent {
   }
 
   void spawnFlash() {
-    // Simple flash trigger
+    // Enhanced flash trigger
     isFlashing = true;
-    flashTimer = flashDuration;
-    
-    final flashCount = _random.nextInt(3) + 2; // 2-4 flashes
+    flashTimer = 0.0;
+
+    // Create energy waves
+    for (int i = 0; i < 3; i++) {
+      energyWaves.add(EnergyWave(
+        delay: i * 0.15,
+        maxRadius: size.x * (1.2 + i * 0.3),
+        duration: 1.0 + i * 0.2,
+      ));
+    }
+
+    // Create enhanced energy flashes
+    final flashCount = _random.nextInt(4) + 6; // 6-9 flashes
 
     for (int i = 0; i < flashCount; i++) {
       final angle = _random.nextDouble() * 2 * math.pi;
-      final distance = _random.nextDouble() * size.x * 0.3;
+      final distance = _random.nextDouble() * size.x * 0.4;
       final flashPosition = Vector2(
         size.x / 2 + math.cos(angle) * distance,
         size.y / 2 + math.sin(angle) * distance,
       );
-
-      final flash = EnergyFlash(
-        position: flashPosition,
-        angle: angle,
-        size: Vector2(15, 4 + _random.nextDouble() * 8),
-        color: _random.nextBool() ? Colors.cyanAccent : Colors.purpleAccent,
-      );
-
-      add(flash);
-
-      // Random delay for each flash
-      Future.delayed(Duration(milliseconds: _random.nextInt(100)), () {
-        if (flash.isMounted) {
-          flash.activate();
-        }
-      });
     }
   }
 }
@@ -255,79 +366,50 @@ class PortalRing {
   }
 }
 
-class EnergyFlash extends PositionComponent with HasPaint {
-  final Color color;
-  final double angle;
-  bool activated = false;
-  double opacity = 1.0;
+class EnergyWave {
+  double currentRadius = 0;
+  double timer = 0;
+  final double delay;
+  final double maxRadius;
+  final double duration;
+  bool started = false;
+  bool isComplete = false;
 
-  EnergyFlash({
-    required Vector2 position,
-    required this.angle,
-    required Vector2 size,
-    required this.color,
-  }) : super(
-          position: position,
-          size: size,
-          anchor: Anchor.center,
-        ) {
-    paint.color = color;
+  EnergyWave({
+    required this.delay,
+    required this.maxRadius,
+    required this.duration,
+  });
+
+  void update(double dt) {
+    timer += dt;
+
+    if (!started && timer >= delay) {
+      started = true;
+    }
+
+    if (started) {
+      final progress = (timer - delay) / duration;
+      currentRadius = maxRadius * math.min(1.0, progress);
+
+      if (progress >= 1.0) {
+        isComplete = true;
+      }
+    }
   }
 
-  void activate() {
-    if (activated) return;
-    activated = true;
+  void render(Canvas canvas, Offset center) {
+    if (!started || isComplete) return;
 
-    // Scale effect
-    add(ScaleEffect.by(
-      Vector2(3.0, 1.0),
-      EffectController(
-        duration: 0.3,
-        curve: Curves.easeOut,
-      ),
-    ));
+    final progress = (timer - delay) / duration;
+    final fade = 1.0 - progress;
 
-    // Fade effect
-    add(
-      OpacityEffect.to(
-        0,
-        EffectController(duration: 0.3),
-      )..onComplete = () {
-          removeFromParent();
-        },
-    );
+    final wavePaint = Paint()
+      ..color = Colors.cyanAccent.withOpacity(fade * 0.3) // Reduced opacity
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0 // Reduced from 3.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4); // Reduced blur
 
-    // Rotation effect
-    add(RotateEffect.by(
-      math.pi / 4 * (math.sin(angle) > 0 ? 1 : -1),
-      EffectController(duration: 0.3),
-    ));
-  }
-
-  @override
-  void render(Canvas canvas) {
-    if (!activated) return;
-
-    // Draw main flash
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset.zero, width: size.x, height: size.y),
-        const Radius.circular(8),
-      ),
-      paint,
-    );
-
-    // Draw glow effect
-    final glowPaint = Paint()
-      ..color = color.withOpacity(0.5)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset.zero, width: size.x, height: size.y),
-        const Radius.circular(2),
-      ),
-      glowPaint,
-    );
+    canvas.drawCircle(center, currentRadius, wavePaint);
   }
 }
