@@ -58,6 +58,33 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp>
     }
   }
 
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // App went to background - pause menu music
+        FlameAudio.bgm.pause();
+        break;
+
+      case AppLifecycleState.resumed:
+        // App came to foreground - resume menu music if enabled
+        if (_menuMusicEnabled) {
+          FlameAudio.bgm.resume();
+        }
+        break;
+
+      case AppLifecycleState.inactive:
+        // Pause music during phone calls, notifications, etc.
+        FlameAudio.bgm.pause();
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -65,17 +92,19 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp>
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue, fontFamily: 'Arial'),
       routes: {
-        '/': (context) => MenuScreen(
-              onSettings: () => Navigator.pushNamed(context, '/settings'),
-              onPlay: () => Navigator.pushReplacementNamed(context, '/game'),
-              onSkins: () async {
-                if (!AdManager.isAdsInitialized) {
-                  await AdManager.initialize();
-                  await AdManager.loadRewardedAd();
-                }
-                Navigator.pushNamed(context, '/skins');
-              },
-            ),
+        '/': (context) {
+          return MenuScreen(
+            onSettings: () => Navigator.pushNamed(context, '/settings'),
+            onPlay: () => Navigator.pushReplacementNamed(context, '/game'),
+            onSkins: () async {
+              if (!AdManager.isAdsInitialized) {
+                await AdManager.initialize();
+                await AdManager.loadRewardedAd();
+              }
+              Navigator.pushNamed(context, '/skins');
+            },
+          );
+        },
         '/game': (context) => GameScreen(
               musicEnabled: _musicEnabled,
               sfxEnabled: _sfxEnabled,

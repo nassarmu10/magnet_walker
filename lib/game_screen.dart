@@ -31,11 +31,11 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     game = MagnetWalkerGame();
     FlameAudio.bgm.stop();
-    game.setExitCallback(() {
+    game.setExitCallback(() async {
+      // Stop game music completely
       FlameAudio.bgm.stop();
-      if (widget.menuMusicEnabled) {
-        FlameAudio.bgm.play('menu_music.mp3');
-      }
+      
+      // Navigate back to menu - the main app will handle restarting menu music
       Navigator.pushReplacementNamed(context, '/');
     });
 

@@ -18,65 +18,137 @@ class SkinManager {
       rarity: 'common',
     ),
     const Skin(
-      id: 'mars',
-      name: 'Mars',
-      description: 'The red planet of war',
-      imagePath: 'spaceship1.png',
-      price: 3, // Available for purchase from level 3
+      id: 'white',
+      name: 'White Spirit',
+      description: 'Pure and elegant essence',
+      imagePath: 'whiteSS.png',
+      price: 2, // Available for purchase from level 2
       isUnlocked: false,
       rarity: 'common',
     ),
     const Skin(
-      id: 'venus',
-      name: 'Venus',
-      description: 'The beautiful morning star',
-      imagePath: 'spaceship2.png',
-      price: 5, // Available for purchase from level 5
+      id: 'blue_yellow',
+      name: 'Ocean Sunset',
+      description: 'Where sea meets golden sky',
+      imagePath: 'blue-yellow-SS.png',
+      price: 4, // Available for purchase from level 4
       isUnlocked: false,
       rarity: 'common',
     ),
     const Skin(
-      id: 'jupiter',
-      name: 'Jupiter',
-      description: 'The gas giant with storms',
-      imagePath: 'spaceship3.png',
-      price: 8, // Available for purchase from level 8
+      id: 'red_yellow',
+      name: 'Fire Storm',
+      description: 'Blazing flames and lightning',
+      imagePath: 'red-yellow-SS.png',
+      price: 8, // Available for purchase from level 6
+      isUnlocked: false,
+      rarity: 'common',
+    ),
+    const Skin(
+      id: 'gray',
+      name: 'Steel Guardian',
+      description: 'Metallic armor of protection',
+      imagePath: 'graySS.png',
+      price: 13, // Available for purchase from level 7
       isUnlocked: false,
       rarity: 'rare',
     ),
     const Skin(
-      id: 'saturn',
-      name: 'Saturn',
-      description: 'The ringed beauty',
-      imagePath: 'spaceship4.png',
-      price: 12, // Available for purchase from level 12
+      id: 'bird',
+      name: 'Sky Soarer',
+      description: 'Graceful wings of freedom',
+      imagePath: 'birdSS.png',
+      price: 17, // Available for purchase from level 9
       isUnlocked: false,
       rarity: 'rare',
     ),
     const Skin(
-      id: 'neptune',
-      name: 'Neptune',
-      description: 'The mysterious ice giant',
-      imagePath: 'spaceship2.png',
-      price: 18, // Available for purchase from level 18
+      id: 'dog',
+      name: 'Loyal Companion',
+      description: 'Faithful friend forever',
+      imagePath: 'dogSS.png',
+      price: 20, // Available for purchase from level 10
+      isUnlocked: false,
+      rarity: 'rare',
+    ),
+    const Skin(
+      id: 'dragon',
+      name: 'Dragon Champion',
+      description: 'Fire Dragon',
+      imagePath: 'tenninSS.png',
+      price: 25, // Available for purchase from level 11
+      isUnlocked: false,
+      rarity: 'rare',
+    ),
+    const Skin(
+      id: 'giraffe',
+      name: 'Tall Explorer',
+      description: 'Reaching for the stars above',
+      imagePath: 'GiraffeSS.png',
+      price: 29, // Available for purchase from level 13
       isUnlocked: false,
       rarity: 'epic',
     ),
     const Skin(
-      id: 'sun',
-      name: 'The Sun',
-      description: 'The blazing star itself',
-      imagePath: 'player_sun.png',
-      price: 25, // Available for purchase from level 25
+      id: 'mystery',
+      name: 'Dark Mystery',
+      description: 'The unknown lurks within',
+      imagePath: 'shitSS.png',
+      price: 33, // Available for purchase from level 14
+      isUnlocked: false,
+      rarity: 'epic',
+    ),
+    const Skin(
+      id: 'dolphin',
+      name: 'Ocean Dancer',
+      description: 'Playful spirit of the seas',
+      imagePath: 'dolphinSS.png',
+      price: 40, // Available for purchase from level 15
+      isUnlocked: false,
+      rarity: 'epic',
+    ),
+    const Skin(
+      id: 'hippo',
+      name: 'River Giant',
+      description: 'Mighty ruler of the waters',
+      imagePath: 'hippoSS.png',
+      price: 46, // Available for purchase from level 16
+      isUnlocked: false,
+      rarity: 'epic',
+    ),
+    const Skin(
+      id: 'lion',
+      name: 'Jungle King',
+      description: 'Majestic ruler of the wild',
+      imagePath: 'lionSS.png',
+      price: 52, // Available for purchase from level 17
+      isUnlocked: false,
+      rarity: 'epic',
+    ),
+    const Skin(
+      id: 'pig',
+      name: 'Happy Piglet',
+      description: 'Joyful and carefree spirit',
+      imagePath: 'pigSS.png',
+      price: 60, // Available for purchase from level 19
+      isUnlocked: false,
+      rarity: 'epic',
+    ),
+    const Skin(
+      id: 'star',
+      name: 'Celestial Star',
+      description: 'Shining bright in the cosmos',
+      imagePath: 'starSS.png',
+      price: 68, // Available for purchase from level 20
       isUnlocked: false,
       rarity: 'legendary',
     ),
     const Skin(
-      id: 'blackhole',
-      name: 'Black Hole',
-      description: 'The ultimate cosmic mystery',
-      imagePath: 'player_blackhole.png',
-      price: 35, // Available for purchase from level 35
+      id: 'tiger',
+      name: 'Fierce Hunter',
+      description: 'Striped predator of power',
+      imagePath: 'tigerSS.png',
+      price: 75, // Available for purchase from level 22
       isUnlocked: false,
       rarity: 'legendary',
     ),

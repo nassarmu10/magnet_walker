@@ -74,7 +74,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       final skinImage = await game.images.load(skinPath);
       playerSpriteComponent = SpriteComponent(
         sprite: Sprite(skinImage),
-        size: Vector2.all(radius * 5),
+        size: Vector2.all(radius * 7),
         anchor: Anchor.center,
         priority: 1,
       );

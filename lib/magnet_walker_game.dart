@@ -113,7 +113,8 @@ class MagnetWalkerGame extends FlameGame
     // Save progress
     saveProgress();
     stopGameMusic();
-    // Call the exit callback
+    
+    // Call the exit callback - this should handle menu music restart
     if (onExitToMenu != null) {
       onExitToMenu!();
     }
@@ -134,21 +135,25 @@ class MagnetWalkerGame extends FlameGame
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
-        // App went to background - pause spawning
-        pauseGame();
-        // You might also want to pause the game itself
+        // App went to background - pause music and game
+        FlameAudio.bgm.pause();
+        pauseGameForAppLifecycle();
         pauseEngine();
         break;
 
       case AppLifecycleState.resumed:
-        // App came to foreground - resume spawning
-        resumeGame();
-        // Resume game if it was paused
+        // App came to foreground - resume music and game
+        if (musicEnabled) {
+          FlameAudio.bgm.resume();
+        }
+        resumeGameFromAppLifecycle();
         resumeEngine();
         break;
 
       case AppLifecycleState.inactive:
         // Handle if needed (like when notification panel is pulled down)
+        // Pause music but don't pause the entire game
+        FlameAudio.bgm.pause();
         break;
     }
   }
@@ -359,18 +364,22 @@ class MagnetWalkerGame extends FlameGame
 
   Future<void> _preloadSkinImages() async {
     final skinImages = [
-      'player.png', // default
-      'player_mars.png',
-      'player_venus.png',
-      'player_jupiter.png',
-      'player_saturn.png',
-      'player_neptune.png',
-      'player_sun.png',
-      'player_blackhole.png',
-      'spaceship1.png',
-      'spaceship2.png',
-      'spaceship3.png',
-      'spaceship4.png',
+      "player.png", // default
+      "whiteSS.png",
+      "blue-yellow-SS.png",
+      "red-yellow-SS.png",
+      "graySS.png",
+      "birdSS.png",
+      "dogSS.png",
+      "tenninSS.png",
+      "GiraffeSS.png",
+      "shitSS.png",
+      "dolphinSS.png",
+      "hippoSS.png",
+      "lionSS.png",
+      "pigSS.png",
+      "starSS.png",
+      "tigerSS.png",
     ];
 
     try {
@@ -1198,6 +1207,31 @@ class MagnetWalkerGame extends FlameGame
       restartWave();
     }
     restartGameMusic();
+  }
+
+  // Method to pause the game for app lifecycle (without stopping music)
+  void pauseGameForAppLifecycle() {
+    currentState = GameState.paused;
+
+    // Stop all spawning
+    gravitySpawnManager.stop();
+    survivalSpawnManager.stop();
+    if (currentLevelType == LevelType.demon)
+      demon?.isAlive = false; // TODO handle pause demon level
+
+    // The game objects will remain in their current positions
+    // Music is handled separately in didChangeAppLifecycleState
+  }
+
+  // Method to resume the game from app lifecycle (without restarting music)
+  void resumeGameFromAppLifecycle() {
+    currentState = GameState.playing;
+
+    // Resume spawning only if wave is active
+    if (currentState == GameState.playing) {
+      restartWave();
+    }
+    // Music is handled separately in didChangeAppLifecycleState
   }
 
 // Prepares the current wave (shows countdown, positions player, etc.)
