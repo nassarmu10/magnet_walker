@@ -113,7 +113,7 @@ class MagnetWalkerGame extends FlameGame
     // Save progress
     saveProgress();
     stopGameMusic();
-    
+
     // Call the exit callback - this should handle menu music restart
     if (onExitToMenu != null) {
       onExitToMenu!();
@@ -351,6 +351,7 @@ class MagnetWalkerGame extends FlameGame
 
     // Initialize wave manager first
     waveManager = WaveManager();
+    waveManager.setTarget();
 
     // Load saved progress (level and wave)
     await loadProgress();
@@ -411,13 +412,15 @@ class MagnetWalkerGame extends FlameGame
     Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
     if (currentLevelType == LevelType.gravity) {
-      initialPosition =
-          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117); // Add this line
+      initialPosition = Vector2(
+          gameSize.x / 2 + horizontalOffset, gameSize.y - 117); // Add this line
     } else if (currentLevelType == LevelType.survival) {
       // Survival mode: center
-      initialPosition = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+      initialPosition =
+          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     } else if (currentLevelType == LevelType.demon) {
-      initialPosition = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+      initialPosition =
+          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
     }
     // Animate player to new position
     player?.animateToPosition(initialPosition, 2.7);

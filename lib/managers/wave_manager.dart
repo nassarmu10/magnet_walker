@@ -24,10 +24,31 @@ class WaveManager {
     currentWave = wave;
     waveScore = 0;
     // Calculate wave target based on level using the new formula
-    waveTarget = 1; //TODO: Change to formula
-    // waveTarget = level <= 3
-    //     ? (3 + level)
-    //     : min(8 + (level * 2), 25 + (level * 0.5)).round();
+    if (level <= 5) {
+      // Early: give slightly more to collect
+      waveTarget = 5 + level; // 6 → 10
+    } else if (level <= 20) {
+      // Mid: smooth ramp
+      waveTarget = 10 + (level ~/ 3); // 12 → 16
+    } else {
+      // High: cap at around 15–17
+      waveTarget = 15 + ((level - 20) ~/ 10);
+      waveTarget = waveTarget.clamp(12, 17); // safety cap
+    }
+  }
+
+  void setTarget() {
+    if (level <= 5) {
+      // Early: give slightly more to collect
+      waveTarget = 5 + level; // 6 → 10
+    } else if (level <= 20) {
+      // Mid: smooth ramp
+      waveTarget = 10 + (level ~/ 3); // 12 → 16
+    } else {
+      // High: cap at around 15–17
+      waveTarget = 15 + ((level - 20) ~/ 10);
+      waveTarget = waveTarget.clamp(12, 17); // safety cap
+    }
   }
 
   // Add score to current wave

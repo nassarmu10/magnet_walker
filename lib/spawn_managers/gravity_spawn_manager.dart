@@ -19,40 +19,41 @@ class GravitySpawnManager {
     spawnTimer?.cancel();
     _recentSpawnPositions.clear();
 
-    // Improved spawn rate calculation - starts faster, scales better
     final level = game.waveManager.level;
     final wave = game.waveManager.currentWave;
 
-    // More aggressive early game, smoother scaling
+    // Smooth spawn rate scaling
     double spawnRate;
-    if (level <= 3) {
-      // Early levels: Start at 1.2s, reduce by wave
-      spawnRate = math.max(1.2 - (wave - 1) * 0.15, 0.6);
-    } else if (level <= 8) {
-      // Mid-early levels: Start at 1.0s
-      spawnRate = math.max(1.0 - (wave - 1) * 0.12 - (level - 3) * 0.05, 0.4);
+    if (level <= 10) {
+      // Early–mid game: start at 1.2s → around 0.8s
+      spawnRate = math.max(1.2 - (wave - 1) * 0.08 - (level - 1) * 0.03, 0.6);
+    } else if (level <= 25) {
+      // Mid–high game: scale more gradually
+      spawnRate = math.max(0.9 - (wave - 1) * 0.05 - (level - 10) * 0.02, 0.45);
     } else {
-      // Higher levels: More intense
-      spawnRate = math.max(0.8 - (wave - 1) * 0.1 - (level - 8) * 0.03, 0.2);
+      // High levels: don’t flood, cap around 0.35s
+      spawnRate =
+          math.max(0.7 - (wave - 1) * 0.04 - (level - 25) * 0.015, 0.35);
     }
 
     spawnTimer = async.Timer.periodic(
-        Duration(milliseconds: (spawnRate * 1000).round()), (timer) {
-      if (game.currentState == GameState.playing) {
-        spawnObject();
-      }
-    });
+      Duration(milliseconds: (spawnRate * 1000).round()),
+      (timer) {
+        if (game.currentState == GameState.playing) {
+          spawnObject();
+        }
+      },
+    );
   }
 
   void spawnObject() {
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
 
-    // Find valid spawn position
+    // Choose x position
     Vector2 spawnPosition;
     int attempts = 0;
     final maxAttempts = 10;
-
     do {
       final x = math.Random().nextDouble() * (gameSize.x - 80) + 40;
       spawnPosition = Vector2(x, gameSize.y * 0.12 + gameSize.y * 0.055);
@@ -65,17 +66,17 @@ class GravitySpawnManager {
       _recentSpawnPositions.removeAt(0);
     }
 
-    // Improved bomb chance scaling
     final level = game.waveManager.level;
     final wave = game.waveManager.currentWave;
 
+    // Smooth bomb chance scaling
     double bombChance;
-    if (level <= 3) {
-      bombChance = 0.2 + 0.15 * (wave - 1); // 20% → 35% → 50%
-    } else if (level <= 8) {
-      bombChance = 0.3 + 0.2 * (wave - 1); // 30% → 50% → 70%
+    if (level <= 10) {
+      bombChance = 0.25 + 0.08 * (wave - 1); // ~25% → 50%
+    } else if (level <= 25) {
+      bombChance = 0.35 + 0.1 * (wave - 1); // ~35% → 70%
     } else {
-      bombChance = math.min(0.4 + 0.25 * (wave - 1), 0.85); // Up to 85% bombs
+      bombChance = math.min(0.5 + 0.12 * (wave - 1), 0.85); // cap at 85%
     }
 
     final type = math.Random().nextDouble() < (1 - bombChance)
@@ -89,32 +90,28 @@ class GravitySpawnManager {
       levelType: LevelType.gravity,
     );
 
-    // Improved speed scaling - starts with decent speed
+    // Smooth velocity scaling
     double speedMultiplier;
-    if (level <= 3) {
-      // Early: Start at 1.3x, increase by 0.3x per wave
-      speedMultiplier = 1.3 + 0.3 * (wave - 1);
-    } else if (level <= 8) {
-      // Mid: Start at 1.5x, increase by 0.35x per wave
-      speedMultiplier = 1.5 + 0.35 * (wave - 1) + 0.1 * (level - 3);
+    if (level <= 10) {
+      speedMultiplier = 1.2 + 0.15 * (wave - 1);
+    } else if (level <= 25) {
+      speedMultiplier = 1.5 + 0.2 * (wave - 1) + 0.05 * (level - 10);
     } else {
-      // High: More dramatic scaling
-      speedMultiplier = 2.0 + 0.4 * (wave - 1) + 0.15 * (level - 8);
+      speedMultiplier = 2.0 + 0.25 * (wave - 1) + 0.1 * (level - 25);
     }
 
-    if (type == ObjectType.bomb || type == ObjectType.coin) {
-      obj.velocity.y *= speedMultiplier;
-    }
+    // Apply downward velocity with slight random angle
+    final angle =
+        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 3;
+    final baseSpeed = 60.0;
+    obj.velocity =
+        Vector2(math.cos(angle), math.sin(angle)) * baseSpeed * speedMultiplier;
+
     if (game.spawnPortal != null) {
       game.spawnPortal?.spawnFlash();
       obj.position = game.spawnPortal!.position;
     }
 
-    final angle =
-        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 2;
-// math.pi/2 = downward, ±15 degrees spread
-    final speed = 50.0; // adjust
-    obj.velocity = Vector2(math.cos(angle), math.sin(angle)) * speed;
     game.add(obj);
   }
 
