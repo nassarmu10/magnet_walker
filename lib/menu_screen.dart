@@ -24,18 +24,21 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   int _lives = 5;
   int _maxLives = 5;
-  int _lifeRegenMinutes = 1;
+  int _lifeRegenMinutes = 5;
   int? _lastLifeTimestamp;
   Timer? _regenTimer;
   String _timeUntilNextLife = '';
+  bool _soundEnabled = true;
 
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   late AnimationController _titleController;
+  late AnimationController _staggerController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<Offset> _titleSlideAnimation;
   late Animation<double> _titleFadeAnimation;
+  late Animation<double> _buttonStaggerAnimation;
 
   @override
   void initState() {
@@ -47,19 +50,13 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _ensureMenuMusicPlaying() async {
-    // Check if menu music is enabled via SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final menuMusicEnabled = prefs.getBool('menu_music_enabled') ?? true;
 
     if (menuMusicEnabled) {
-      // Add delay to ensure clean transition from game screen
       await Future.delayed(const Duration(milliseconds: 200));
-
-      // Stop any existing music and start menu music
       FlameAudio.bgm.stop();
       await Future.delayed(const Duration(milliseconds: 100));
-
-      // Start menu music if still enabled
       if (menuMusicEnabled) {
         FlameAudio.bgm.play('menu_music.mp3');
       }
@@ -68,15 +65,19 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
 
   void _initAnimations() {
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
     _titleController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 2200),
+      vsync: this,
+    );
+    _staggerController = AnimationController(
+      duration: const Duration(milliseconds: 2400),
       vsync: this,
     );
 
@@ -89,19 +90,19 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     ));
 
     _pulseAnimation = Tween<double>(
-      begin: 0.95,
-      end: 1.05,
+      begin: 1.0,
+      end: 1.02,
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
     ));
 
     _titleSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, -0.3),
+      begin: const Offset(0, -0.4),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _titleController,
-      curve: Curves.easeOutCubic,
+      curve: Curves.elasticOut,
     ));
 
     _titleFadeAnimation = Tween<double>(
@@ -112,8 +113,24 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
       curve: Curves.easeOut,
     ));
 
-    _titleController.forward();
-    _fadeController.forward();
+    _buttonStaggerAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _staggerController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Start animations with delays
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _titleController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 800), () {
+      _fadeController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      _staggerController.forward();
+    });
     _pulseController.repeat(reverse: true);
   }
 
@@ -124,6 +141,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     _fadeController.dispose();
     _pulseController.dispose();
     _titleController.dispose();
+    _staggerController.dispose();
     super.dispose();
   }
 
@@ -231,26 +249,35 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
 
   Widget _buildGlassContainer({
     required Widget child,
-    double opacity = 0.08,
+    double opacity = 0.1,
     Color color = Colors.white,
-    double blur = 15,
+    double blur = 20,
     double borderRadius = 20,
+    bool hasShadow = true,
   }) {
     return Container(
       decoration: BoxDecoration(
         color: color.withOpacity(opacity),
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: Colors.white.withOpacity(0.15),
-          width: 1,
+          color: Colors.white.withOpacity(0.2),
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: blur,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: hasShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: blur * 0.8,
+                  offset: const Offset(0, 6),
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: blur * 0.4,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -270,64 +297,97 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     IconData? icon,
     bool isPrimary = false,
     bool isOutlined = false,
+    int animationDelay = 0,
   }) {
     return AnimatedBuilder(
-      animation: isPrimary ? _pulseAnimation : _fadeAnimation,
+      animation: _buttonStaggerAnimation,
       builder: (context, child) {
-        return Transform.scale(
-          scale: isPrimary ? _pulseAnimation.value : 1.0,
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            height: 56,
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            child: isOutlined
-                ? OutlinedButton.icon(
-                    onPressed: onPressed,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: backgroundColor, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      backgroundColor: backgroundColor.withOpacity(0.1),
-                    ),
-                    icon: icon != null
-                        ? Icon(icon, color: backgroundColor, size: 20)
-                        : const SizedBox.shrink(),
-                    label: Text(
-                      text,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: backgroundColor,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  )
-                : ElevatedButton.icon(
-                    onPressed: onPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: backgroundColor,
-                      foregroundColor: textColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: onPressed != null ? 8 : 0,
-                      shadowColor: backgroundColor.withOpacity(0.3),
-                      disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-                    ),
-                    icon: icon != null
-                        ? Icon(icon, color: textColor, size: 20)
-                        : const SizedBox.shrink(),
-                    label: Text(
-                      text,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                        letterSpacing: 0.5,
-                      ),
+        final delayedProgress = Curves.easeOutCubic.transform(
+          ((_buttonStaggerAnimation.value * 3) - animationDelay)
+              .clamp(0.0, 1.0),
+        );
+
+        return Transform.translate(
+          offset: Offset(0, 30 * (1 - delayedProgress)),
+          child: Opacity(
+            opacity: delayedProgress,
+            child: AnimatedBuilder(
+              animation: isPrimary ? _pulseAnimation : _fadeAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: isPrimary ? _pulseAnimation.value : 1.0,
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    height: 60,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: Material(
+                      elevation: onPressed != null ? (isPrimary ? 12 : 8) : 0,
+                      shadowColor: backgroundColor.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(18),
+                      color: Colors.transparent,
+                      child: isOutlined
+                          ? OutlinedButton.icon(
+                              onPressed: onPressed,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                    color: backgroundColor, width: 2.5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                backgroundColor:
+                                    backgroundColor.withOpacity(0.12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                              ),
+                              icon: icon != null
+                                  ? Icon(icon, color: backgroundColor, size: 22)
+                                  : const SizedBox.shrink(),
+                              label: Text(
+                                text,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: backgroundColor,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: onPressed,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: backgroundColor,
+                                foregroundColor: textColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                elevation: 0,
+                                disabledBackgroundColor:
+                                    Colors.grey.withOpacity(0.4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                              ),
+                              icon: icon != null
+                                  ? Icon(icon, color: textColor, size: 22)
+                                  : const SizedBox.shrink(),
+                              label: Text(
+                                text,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
+                );
+              },
+            ),
           ),
         );
       },
@@ -337,6 +397,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
 
     return Scaffold(
       body: Container(
@@ -354,163 +415,198 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withOpacity(0.4),
-                Colors.black.withOpacity(0.6),
+                Colors.black.withOpacity(0.3),
                 Colors.black.withOpacity(0.5),
+                Colors.black.withOpacity(0.4),
               ],
             ),
           ),
           child: SafeArea(
             child: Column(
               children: [
-                // Status bar area and lives - positioned at top
+                // Enhanced status bar with better spacing
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  padding:
+                      EdgeInsets.fromLTRB(24, isSmallScreen ? 12 : 20, 24, 0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Empty space for balance
-                      const SizedBox(width: 50),
+                      // Left placeholder (you can add coins, score, etc.)
+                      const SizedBox(width: 40),
 
-                      // Lives display - centered at top
-                      _buildGlassContainer(
-                        borderRadius: 25,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFFE53E3E).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
+                      // Center Lives
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildGlassContainer(
+                          borderRadius: 24,
+                          opacity: 0.12,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE53E3E)
+                                            .withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFE53E3E)
+                                                .withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.favorite,
+                                        color: Color(0xFFE53E3E),
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      '$_lives/$_maxLives',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: const Icon(
-                                  Icons.favorite,
-                                  color: Color(0xFFE53E3E),
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                '$_lives/$_maxLives',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                                if (_lives < _maxLives &&
+                                    _timeUntilNextLife.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      _timeUntilNextLife,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFF59E0B),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
 
-                      // Get Lives button when needed
+                      // Right Side Button (+ or Sound)
                       if (_lives < _maxLives)
-                        GestureDetector(
-                          onTap: _showGetLivesDialog,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF3B82F6).withOpacity(0.3),
-                                width: 1,
+                        FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: GestureDetector(
+                            onTap: _showGetLivesDialog,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF3B82F6).withOpacity(0.35),
+                                    const Color(0xFF1E3A8A).withOpacity(0.35),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color:
+                                      const Color(0xFF3B82F6).withOpacity(0.5),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF3B82F6)
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ),
-                            child: const Icon(
-                              Icons.add_circle_outline,
-                              color: Color(0xFF3B82F6),
-                              size: 24,
+                              child: const Icon(
+                                Icons.add_circle_outline,
+                                color: Color(0xFF3B82F6),
+                                size: 26,
+                              ),
                             ),
                           ),
                         )
                       else
-                        const SizedBox(width: 50),
+                        FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: GestureDetector(
+                            onTap: _toggleSound,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: Icon(
+                                (_soundEnabled
+                                    ? Icons.volume_up_rounded
+                                    : Icons.volume_off_rounded),
+                                key: ValueKey<bool>(_soundEnabled),
+                                color: Colors.white.withOpacity(0.85),
+                                size: 26,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
 
-                // Timer display if applicable
-                if (_lives < _maxLives && _timeUntilNextLife.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFFF59E0B).withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.schedule,
-                            color: Color(0xFFF59E0B),
-                            size: 14,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _timeUntilNextLife,
-                            style: const TextStyle(
-                              color: Color(0xFFF59E0B),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                SizedBox(height: isSmallScreen ? 30 : 50),
 
-                const Spacer(flex: 2),
-
-                // Game Title - Better positioned and designed
+                // Enhanced game title with better typography
                 SlideTransition(
                   position: _titleSlideAnimation,
                   child: FadeTransition(
                     opacity: _titleFadeAnimation,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
-                          // Main title
+                          // Main title with enhanced styling
                           Text(
                             'MAGNET',
                             style: TextStyle(
-                              fontSize: screenSize.width * 0.14,
+                              fontSize: screenSize.width *
+                                  (isSmallScreen ? 0.12 : 0.135),
                               fontWeight: FontWeight.w900,
-                              height: 0.9,
+                              height: 0.85,
                               foreground: Paint()
                                 ..shader = const LinearGradient(
                                   colors: [
                                     Color(0xFF1E40AF),
                                     Color(0xFF3B82F6),
                                     Color(0xFF60A5FA),
+                                    Color(0xFF93C5FD),
                                   ],
                                 ).createShader(
-                                    const Rect.fromLTWH(0, 0, 300, 80)),
-                              letterSpacing: 4.0,
+                                    const Rect.fromLTWH(0, 0, 400, 100)),
+                              letterSpacing: 5.0,
                               shadows: [
                                 Shadow(
                                   offset: const Offset(0, 0),
-                                  blurRadius: 30,
+                                  blurRadius: 40,
                                   color:
-                                      const Color(0xFF3B82F6).withOpacity(0.5),
+                                      const Color(0xFF3B82F6).withOpacity(0.6),
                                 ),
                                 const Shadow(
-                                  offset: Offset(0, 2),
-                                  blurRadius: 6,
+                                  offset: Offset(0, 3),
+                                  blurRadius: 12,
                                   color: Colors.black54,
+                                ),
+                                const Shadow(
+                                  offset: Offset(2, 6),
+                                  blurRadius: 20,
+                                  color: Colors.black26,
                                 ),
                               ],
                             ),
@@ -519,46 +615,65 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                           Text(
                             'Lord',
                             style: TextStyle(
-                              fontSize: screenSize.width * 0.14,
+                              fontSize: screenSize.width *
+                                  (isSmallScreen ? 0.12 : 0.135),
                               fontWeight: FontWeight.w900,
-                              height: 0.9,
+                              height: 0.85,
                               foreground: Paint()
                                 ..shader = const LinearGradient(
                                   colors: [
                                     Color(0xFF1E40AF),
                                     Color(0xFF3B82F6),
                                     Color(0xFF60A5FA),
+                                    Color(0xFF93C5FD),
                                   ],
                                 ).createShader(
-                                    const Rect.fromLTWH(0, 0, 300, 80)),
-                              letterSpacing: 4.0,
+                                    const Rect.fromLTWH(0, 0, 400, 100)),
+                              letterSpacing: 5.0,
                               shadows: [
                                 Shadow(
                                   offset: const Offset(0, 0),
-                                  blurRadius: 30,
+                                  blurRadius: 40,
                                   color:
-                                      const Color(0xFF3B82F6).withOpacity(0.5),
+                                      const Color(0xFF3B82F6).withOpacity(0.6),
                                 ),
                                 const Shadow(
-                                  offset: Offset(0, 2),
-                                  blurRadius: 6,
+                                  offset: Offset(0, 3),
+                                  blurRadius: 12,
                                   color: Colors.black54,
+                                ),
+                                const Shadow(
+                                  offset: Offset(2, 6),
+                                  blurRadius: 20,
+                                  color: Colors.black26,
                                 ),
                               ],
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          // Subtle tagline
-                          const SizedBox(height: 8),
-                          Text(
-                            'Navigate the magnetic field',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.7),
-                              fontWeight: FontWeight.w400,
-                              letterSpacing: 1.0,
+                          // Enhanced tagline
+                          SizedBox(height: isSmallScreen ? 12 : 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.15),
+                                width: 1,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
+                            child: Text(
+                              'Navigate the magnetic field',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.white.withOpacity(0.9),
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 1.2,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -566,31 +681,33 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   ),
                 ),
 
-                const Spacer(flex: 2),
+                SizedBox(height: isSmallScreen ? 40 : 60),
 
-                // Buttons with better spacing and colors
-                FadeTransition(
-                  opacity: _fadeAnimation,
+                // Enhanced buttons with staggered animation
+                Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildAnimatedButton(
                           text: _lives > 0 ? 'PLAY GAME' : 'NO LIVES LEFT',
                           onPressed: _lives > 0 ? widget.onPlay : null,
                           backgroundColor: _lives > 0
                               ? const Color(0xFF059669)
-                              : Colors.grey,
+                              : Colors.grey.shade600,
                           icon: _lives > 0
                               ? Icons.play_arrow_rounded
-                              : Icons.block,
+                              : Icons.block_rounded,
                           isPrimary: _lives > 0,
+                          animationDelay: 0,
                         ),
                         _buildAnimatedButton(
                           text: 'CHARACTER SKINS',
                           onPressed: widget.onSkins,
                           backgroundColor: const Color(0xFF7C3AED),
                           icon: Icons.palette_outlined,
+                          animationDelay: 1,
                         ),
                         _buildAnimatedButton(
                           text: 'SETTINGS',
@@ -598,13 +715,15 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                           backgroundColor: const Color(0xFF475569),
                           icon: Icons.settings_outlined,
                           isOutlined: true,
+                          animationDelay: 2,
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                const Spacer(flex: 3),
+                // Bottom spacing
+                SizedBox(height: isSmallScreen ? 20 : 40),
               ],
             ),
           ),
@@ -613,82 +732,114 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _toggleSound() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentEnabled = prefs.getBool('menu_music_enabled') ?? true;
+    await prefs.setBool('menu_music_enabled', !currentEnabled);
+
+    if (!currentEnabled) {
+      FlameAudio.bgm.play('menu_music.mp3');
+    } else {
+      FlameAudio.bgm.stop();
+    }
+    setState(() {
+      _soundEnabled = currentEnabled;
+    });
+  }
+
   void _showGetLivesDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         backgroundColor: Colors.transparent,
         child: _buildGlassContainer(
-          opacity: 0.12,
-          blur: 20,
-          borderRadius: 24,
+          opacity: 0.15,
+          blur: 25,
+          borderRadius: 28,
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE53E3E).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(50),
+                    color: const Color(0xFFE53E3E).withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(60),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE53E3E).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.favorite,
                     color: Color(0xFFE53E3E),
-                    size: 40,
+                    size: 48,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 const Text(
                   'Restore Lives',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Text(
-                  'Current: $_lives/$_maxLives lives',
+                  '$_lives/$_maxLives lives',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 if (_timeUntilNextLife.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      color: const Color(0xFFF59E0B).withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: const Color(0xFFF59E0B).withOpacity(0.3),
-                        width: 1,
+                        color: const Color(0xFFF59E0B).withOpacity(0.4),
+                        width: 1.5,
                       ),
                     ),
                     child: Text(
                       'Next free life: $_timeUntilNextLife',
                       style: const TextStyle(
                         color: Color(0xFFF59E0B),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: ElevatedButton.icon(
                     onPressed: () {
@@ -699,31 +850,37 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
                     icon: const Icon(Icons.play_circle_outline,
-                        color: Colors.white),
+                        color: Colors.white, size: 24),
                     label: const Text(
                       'Watch Ad (+1 Life)',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                  ),
                   child: Text(
                     'Wait for Free Lives',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
@@ -747,19 +904,31 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                  Icon(Icons.favorite, color: Color(0xFFE53E3E)),
-                  SizedBox(width: 8),
-                  Text('Life restored!',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.favorite,
+                        color: Color(0xFFE53E3E), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Life restored!',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      )),
                 ],
               ),
               backgroundColor: const Color(0xFF059669),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
@@ -768,19 +937,31 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Ad not available. Try again later.',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.error_outline,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Ad not available. Try again later.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      )),
                 ],
               ),
               backgroundColor: const Color(0xFFDC2626),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
