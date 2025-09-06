@@ -28,8 +28,11 @@ class SurvivalSpawnManager {
         (game.waveManager.currentWave - 1) * 0.05; // small wave boost
 
     // Final spawn rate (never faster than 0.8s before lvl 30, 0.3s after)
-    final spawnRate = (baseSpawnRate - levelFactor - waveFactor)
-        .clamp(0.8, game.waveManager.level < 30 ? 0.8 : 0.3);
+    double minRate = (game.waveManager.level < 30) ? 0.8 : 0.3;
+    double maxRate = 2.0; // or whatever your starting rate is
+
+    final spawnRate =
+        (baseSpawnRate - levelFactor - waveFactor).clamp(minRate, maxRate);
 
     spawnTimer = async.Timer.periodic(
       Duration(milliseconds: (spawnRate * 1000).round()),

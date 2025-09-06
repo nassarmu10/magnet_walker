@@ -1404,6 +1404,19 @@ class MagnetWalkerGame extends FlameGame
   async.Future<void> nextLevel() async {
     waveManager.level++;
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
+    // Show interstitial every 5 levels after level 15
+    if (waveManager.level >= 15 && waveManager.level % 5 == 0) {
+      //pauseGame();
+      AdManager.showInterstitialAd();
+      //resumeGame();
+    }
+    // FIX A BUG where portal didn't go
+    if (currentLevelType == LevelType.survival) {
+      if (spawnPortal != null) {
+        spawnPortal!.removeCompletely();
+        spawnPortal = null;
+      }
+    }
     if (currentLevelType == LevelType.demon) {
       await _initializeLevel();
       await _startLevel();

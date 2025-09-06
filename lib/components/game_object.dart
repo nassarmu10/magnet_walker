@@ -70,15 +70,11 @@ class GameObject extends CircleComponent
       // Objects move toward player
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
-      final baseSpeed = 8.0;
-      final speedGrowth = 1.0 + (level * 0.08); // 8% per level
-      final speed = baseSpeed * speedGrowth;
-
-      velocity = direction * speed;
-
-      // Optional: extra intensity per wave
-      final waveGrowth = 1.0 + (game.waveManager.currentWave - 1) * 0.07;
-      velocity *= waveGrowth;
+      final baseSpeed = 12.0; // was 8.0, increase for higher speed
+      final speedGrowth = 1.0 + (level * 0.12); // was 0.08, faster per level
+      final waveGrowth =
+          1.0 + (game.waveManager.currentWave - 1) * 0.1; // was 0.07
+      velocity = direction * baseSpeed * speedGrowth * waveGrowth;
     }
 
     if (type == ObjectType.coin) {
