@@ -563,121 +563,108 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
 
                 SizedBox(height: isSmallScreen ? 30 : 50),
 
-                // Enhanced game title with better typography
-                SlideTransition(
-                  position: _titleSlideAnimation,
-                  child: FadeTransition(
-                    opacity: _titleFadeAnimation,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          // Main title with enhanced styling
-                          Text(
-                            'MAGNET',
-                            style: TextStyle(
-                              fontSize: screenSize.width *
-                                  (isSmallScreen ? 0.12 : 0.135),
-                              fontWeight: FontWeight.w900,
-                              height: 0.85,
-                              foreground: Paint()
-                                ..shader = const LinearGradient(
-                                  colors: [
-                                    Color(0xFF1E40AF),
-                                    Color(0xFF3B82F6),
-                                    Color(0xFF60A5FA),
-                                    Color(0xFF93C5FD),
-                                  ],
-                                ).createShader(
-                                    const Rect.fromLTWH(0, 0, 400, 100)),
-                              letterSpacing: 5.0,
-                              shadows: [
-                                Shadow(
-                                  offset: const Offset(0, 0),
-                                  blurRadius: 40,
-                                  color:
-                                      const Color(0xFF3B82F6).withOpacity(0.6),
-                                ),
-                                const Shadow(
-                                  offset: Offset(0, 3),
-                                  blurRadius: 12,
-                                  color: Colors.black54,
-                                ),
-                                const Shadow(
-                                  offset: Offset(2, 6),
-                                  blurRadius: 20,
-                                  color: Colors.black26,
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          Text(
-                            'Lord',
-                            style: TextStyle(
-                              fontSize: screenSize.width *
-                                  (isSmallScreen ? 0.12 : 0.135),
-                              fontWeight: FontWeight.w900,
-                              height: 0.85,
-                              foreground: Paint()
-                                ..shader = const LinearGradient(
-                                  colors: [
-                                    Color(0xFF1E40AF),
-                                    Color(0xFF3B82F6),
-                                    Color(0xFF60A5FA),
-                                    Color(0xFF93C5FD),
-                                  ],
-                                ).createShader(
-                                    const Rect.fromLTWH(0, 0, 400, 100)),
-                              letterSpacing: 5.0,
-                              shadows: [
-                                Shadow(
-                                  offset: const Offset(0, 0),
-                                  blurRadius: 40,
-                                  color:
-                                      const Color(0xFF3B82F6).withOpacity(0.6),
-                                ),
-                                const Shadow(
-                                  offset: Offset(0, 3),
-                                  blurRadius: 12,
-                                  color: Colors.black54,
-                                ),
-                                const Shadow(
-                                  offset: Offset(2, 6),
-                                  blurRadius: 20,
-                                  color: Colors.black26,
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          // Enhanced tagline
-                          SizedBox(height: isSmallScreen ? 12 : 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.15),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              'Navigate the magnetic field',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.white.withOpacity(0.9),
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.2,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
+                // Title: "MAGNET"
+                Text(
+                  'MAGNET',
+                  style: TextStyle(
+                    fontSize: screenSize.width * (isSmallScreen ? 0.12 : 0.135),
+                    fontWeight: FontWeight.w900,
+                    height: 0.85,
+                    foreground: Paint()
+                      ..shader = const LinearGradient(
+                        colors: [
+                          Color(0xFF00F5FF), // Neon cyan
+                          Color(0xFF0084FF), // Electric blue
+                          Color(0xFF7C3AED), // Purple accent
                         ],
+                      ).createShader(const Rect.fromLTWH(0, 0, 400, 100)),
+                    letterSpacing: 5.0,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 0),
+                        blurRadius: 40,
+                        color: const Color(0xFF00E5FF).withOpacity(0.8),
                       ),
+                      const Shadow(
+                        offset: Offset(0, 3),
+                        blurRadius: 12,
+                        color: Colors.black54,
+                      ),
+                      const Shadow(
+                        offset: Offset(2, 6),
+                        blurRadius: 20,
+                        color: Colors.black26,
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                // Title: "Lord"
+                Text(
+                  'Lord',
+                  style: TextStyle(
+                    fontSize: screenSize.width * (isSmallScreen ? 0.12 : 0.135),
+                    fontWeight: FontWeight.w900,
+                    height: 0.85,
+                    foreground: Paint()
+                      ..shader = const LinearGradient(
+                        colors: [
+                          Color(0xFF00F5FF), // Neon cyan
+                          Color(0xFF0084FF), // Electric blue
+                          Color(0xFF7C3AED), // Purple accent
+                        ],
+                      ).createShader(const Rect.fromLTWH(0, 0, 400, 100)),
+                    letterSpacing: 5.0,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 0),
+                        blurRadius: 40,
+                        color: const Color(0xFFFF4500).withOpacity(0.7),
+                      ),
+                      const Shadow(
+                        offset: Offset(0, 3),
+                        blurRadius: 12,
+                        color: Colors.black54,
+                      ),
+                      const Shadow(
+                        offset: Offset(2, 6),
+                        blurRadius: 20,
+                        color: Colors.black26,
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                // Subtitle
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.25),
+                      width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blueAccent.withOpacity(0.5),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'RULE THE MAGNETIC FIELD 🧲',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 14, // smaller than before
+                      color: Colors.white.withOpacity(0.85),
+                      fontWeight: FontWeight.w400, // lighter than title
+                      letterSpacing: 1.0, // reduced spacing
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
 
