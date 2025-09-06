@@ -158,11 +158,11 @@ class GameObject extends CircleComponent
           // 1.2 to give a little leeway
 
           if (type == ObjectType.bomb) {
-            print("💥 HIT A DEMON BY BOMB");
             demon.onHitByBomb();
 
             // Mark bomb as destroyed
             collected = true;
+            game.createParticles(demon.position, Colors.red);
             game.gameObjects.remove(this);
             removeFromParent();
           }

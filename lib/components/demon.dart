@@ -37,7 +37,13 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Future<void> onLoad() async {
     await super.onLoad();
     // Load and add the demon sprite as a child
-    final sprite = await game.loadSprite('demon.png');
+    String demonImage = 'demon.png';
+    if (game.waveManager.level > 10 && game.waveManager.level < 20) {
+      demonImage = 'demon2.png';
+    } else {
+      demonImage = 'demon3.png';
+    }
+    final sprite = await game.loadSprite(demonImage);
     demonSprite = SpriteComponent(
       sprite: sprite,
       size: Vector2.all(radius * 2),

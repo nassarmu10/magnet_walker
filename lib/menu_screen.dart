@@ -50,15 +50,15 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     // Check if menu music is enabled via SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final menuMusicEnabled = prefs.getBool('menu_music_enabled') ?? true;
-    
+
     if (menuMusicEnabled) {
       // Add delay to ensure clean transition from game screen
       await Future.delayed(const Duration(milliseconds: 200));
-      
+
       // Stop any existing music and start menu music
       FlameAudio.bgm.stop();
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       // Start menu music if still enabled
       if (menuMusicEnabled) {
         FlameAudio.bgm.play('menu_music.mp3');
@@ -517,7 +517,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                             textAlign: TextAlign.center,
                           ),
                           Text(
-                            'WALKER',
+                            'Lord',
                             style: TextStyle(
                               fontSize: screenSize.width * 0.14,
                               fontWeight: FontWeight.w900,
