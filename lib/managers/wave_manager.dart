@@ -23,32 +23,28 @@ class WaveManager {
   void startWave(int wave) {
     currentWave = wave;
     waveScore = 0;
-    // Calculate wave target based on level using the new formula
-    if (level <= 5) {
-      // Early: give slightly more to collect
-      waveTarget = 5 + level; // 6 → 10
-    } else if (level <= 20) {
-      // Mid: smooth ramp
-      waveTarget = 10 + (level ~/ 3); // 12 → 16
-    } else {
-      // High: cap at around 15–17
-      waveTarget = 15 + ((level - 20) ~/ 10);
-      waveTarget = waveTarget.clamp(12, 17); // safety cap
-    }
+    // Use the same logic as setTarget() for consistency
+    setTarget();
   }
 
   void setTarget() {
-    if (level <= 5) {
-      // Early: give slightly more to collect
-      waveTarget = 5 + level; // 6 → 10
+    print('WaveManager: Setting target for level $level');
+    if (level == 1) {
+      waveTarget = 1; // Just 1 coin for level 1
+    } else if (level == 2) {
+      waveTarget = 2; // 2 coins for level 2
+    } else if (level <= 10) {
+      // Gradually increase: level 3=3, level 4=4, etc up to level 10=10
+      waveTarget = level;
     } else if (level <= 20) {
-      // Mid: smooth ramp
-      waveTarget = 10 + (level ~/ 3); // 12 → 16
+      // Mid levels: gradual increase from 10-15
+      waveTarget = 10 + ((level - 10) ~/ 2); // 10, 11, 12, 13, 14, 15
     } else {
-      // High: cap at around 15–17
-      waveTarget = 15 + ((level - 20) ~/ 10);
-      waveTarget = waveTarget.clamp(12, 17); // safety cap
+      // High levels: cap at around 15–20
+      waveTarget = 15 + ((level - 20) ~/ 5);
+      waveTarget = waveTarget.clamp(15, 20); // safety cap
     }
+    print('WaveManager: Target set to $waveTarget for level $level');
   }
 
   // Add score to current wave

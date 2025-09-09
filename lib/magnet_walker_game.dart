@@ -71,7 +71,14 @@ class MagnetWalkerGame extends FlameGame
   // Score and level progression
   int totalScore =
       0; // Accumulative score across all levels/waves (never resets)
-  int wavesNeededToNextLevel = 3; // Waves needed to complete current level
+  // Waves needed to complete current level - calculated dynamically
+  int get wavesNeededToNextLevel {
+    if (waveManager.level <= 5) {
+      return 1; // First 5 levels only need 1 wave
+    } else {
+      return 3; // Later levels need 3 waves
+    }
+  }
   int wavesCompletedInLevel = 0; // Waves completed in current level
 
   // Spawning
@@ -1146,6 +1153,7 @@ class MagnetWalkerGame extends FlameGame
     final savedTotalScore = prefs.getInt('saved_total_score');
     if (savedLevel != null) {
       waveManager.level = savedLevel;
+      waveManager.setTarget(); // Update target after loading saved level
     }
     if (savedTotalScore != null) {
       totalScore = savedTotalScore;
@@ -1403,6 +1411,7 @@ class MagnetWalkerGame extends FlameGame
 // Call this to advance to the next level
   async.Future<void> nextLevel() async {
     waveManager.level++;
+    waveManager.setTarget(); // Update target for new level
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     // Show interstitial every 5 levels after level 15
     if (waveManager.level >= 15 && waveManager.level % 5 == 0) {
@@ -1610,7 +1619,7 @@ class MagnetWalkerGame extends FlameGame
       } else {
         if (currentLevelType != LevelType.demon) {
           waveMessage =
-              'Wave ${waveManager.currentWave}/3 starting in ${waveCountdown.ceil()}';
+              'Wave ${waveManager.currentWave}/$wavesNeededToNextLevel starting in ${waveCountdown.ceil()}';
         } else {
           waveMessage = 'Demon Attacks in ${waveCountdown.ceil()}';
         }

@@ -255,7 +255,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // IMPROVED: Enhanced level text with better formatting
     levelText = TextComponent(
-      text: '🏆 Level 1 • Wave 1/3',
+      text: '🏆 Level 1 • Wave 1/1',
       position: Vector2(topRowRightX, topRowCenterY),
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -468,7 +468,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                         SizedBox(height: padding * 0.3),
                         _buildStatRow(
                             'WAVE',
-                            '${game.waveManager.currentWave}/3',
+                            '${game.waveManager.currentWave}/${game.wavesNeededToNextLevel}',
                             const Color(0xFFff8844),
                             buttonFontSize * 0.9),
                         SizedBox(height: padding * 0.3),
@@ -625,7 +625,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     scoreText.text = '⭐Score: ${game.totalScore}';
     if (game.currentLevelType != LevelType.demon) {
       levelText.text =
-          '🏆Level ${game.waveManager.level} • Wave ${game.waveManager.currentWave}/3';
+          '🏆Level ${game.waveManager.level} • Wave ${game.waveManager.currentWave}/${game.wavesNeededToNextLevel}';
     } else {
       levelText.text = '🏆Level ${game.waveManager.level}';
     }

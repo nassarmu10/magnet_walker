@@ -34,11 +34,13 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late AnimationController _titleController;
   late AnimationController _staggerController;
+  late AnimationController _breathingController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<Offset> _titleSlideAnimation;
   late Animation<double> _titleFadeAnimation;
   late Animation<double> _buttonStaggerAnimation;
+  late Animation<double> _breathingAnimation;
 
   @override
   void initState() {
@@ -78,6 +80,10 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     );
     _staggerController = AnimationController(
       duration: const Duration(milliseconds: 2400),
+      vsync: this,
+    );
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
@@ -121,6 +127,14 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
       curve: Curves.easeOutCubic,
     ));
 
+    _breathingAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.08,
+    ).animate(CurvedAnimation(
+      parent: _breathingController,
+      curve: Curves.easeInOut,
+    ));
+
     // Start animations with delays
     Future.delayed(const Duration(milliseconds: 300), () {
       _titleController.forward();
@@ -132,6 +146,9 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
       _staggerController.forward();
     });
     _pulseController.repeat(reverse: true);
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      _breathingController.repeat(reverse: true);
+    });
   }
 
   @override
@@ -142,6 +159,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     _pulseController.dispose();
     _titleController.dispose();
     _staggerController.dispose();
+    _breathingController.dispose();
     super.dispose();
   }
 
@@ -561,80 +579,124 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   ),
                 ),
 
-                SizedBox(height: isSmallScreen ? 30 : 50),
+                SizedBox(height: isSmallScreen ? 20 : 30),
 
-                // Title: "MAGNET"
-                Text(
-                  'MAGNET',
-                  style: TextStyle(
-                    fontSize: screenSize.width * (isSmallScreen ? 0.12 : 0.135),
-                    fontWeight: FontWeight.w900,
-                    height: 0.85,
-                    foreground: Paint()
-                      ..shader = const LinearGradient(
-                        colors: [
-                          Color(0xFF00F5FF), // Neon cyan
-                          Color(0xFF0084FF), // Electric blue
-                          Color(0xFF7C3AED), // Purple accent
-                        ],
-                      ).createShader(const Rect.fromLTWH(0, 0, 400, 100)),
-                    letterSpacing: 5.0,
-                    shadows: [
-                      Shadow(
-                        offset: const Offset(0, 0),
-                        blurRadius: 40,
-                        color: const Color(0xFF00E5FF).withOpacity(0.8),
-                      ),
-                      const Shadow(
-                        offset: Offset(0, 3),
-                        blurRadius: 12,
-                        color: Colors.black54,
-                      ),
-                      const Shadow(
-                        offset: Offset(2, 6),
-                        blurRadius: 20,
-                        color: Colors.black26,
-                      ),
-                    ],
+                // Logo with animations
+                SlideTransition(
+                  position: _titleSlideAnimation,
+                  child: FadeTransition(
+                    opacity: _titleFadeAnimation,
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([_pulseAnimation, _breathingAnimation]),
+                      builder: (context, child) {
+                        final pulseScale = 1.0 + (_pulseAnimation.value * 0.05);
+                        final breathingScale = _breathingController.isAnimating ? _breathingAnimation.value : 1.0;
+                        final combinedScale = pulseScale * breathingScale;
+                        return Transform.scale(
+                          scale: combinedScale,
+                          child: Container(
+                            width: screenSize.width * (isSmallScreen ? 0.6 : 0.5),
+                            height: screenSize.width * (isSmallScreen ? 0.6 : 0.5) * 0.8,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                            //   boxShadow: [
+                            //     BoxShadow(
+                            //       color: const Color(0xFF00E5FF).withOpacity(0.4 * _pulseAnimation.value),
+                            //       blurRadius: 30 * _pulseAnimation.value,
+                            //       offset: const Offset(0, 10),
+                            //       spreadRadius: 5 * _pulseAnimation.value,
+                            //     ),
+                            //     // BoxShadow(
+                            //     //   color: const Color(0xFF7C3AED).withOpacity(0.3 * _pulseAnimation.value),
+                            //     //   blurRadius: 40 * _pulseAnimation.value,
+                            //     //   offset: const Offset(0, 15),
+                            //     //   spreadRadius: 3 * _pulseAnimation.value,
+                            //     // ),
+                            //   ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                'assets/images/MagnetLogo_no_bg.png',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
 
-                // Title: "Lord"
-                Text(
-                  'Lord',
-                  style: TextStyle(
-                    fontSize: screenSize.width * (isSmallScreen ? 0.12 : 0.135),
-                    fontWeight: FontWeight.w900,
-                    height: 0.85,
-                    foreground: Paint()
-                      ..shader = const LinearGradient(
-                        colors: [
-                          Color(0xFF00F5FF), // Neon cyan
-                          Color(0xFF0084FF), // Electric blue
-                          Color(0xFF7C3AED), // Purple accent
-                        ],
-                      ).createShader(const Rect.fromLTWH(0, 0, 400, 100)),
-                    letterSpacing: 5.0,
-                    shadows: [
-                      Shadow(
-                        offset: const Offset(0, 0),
-                        blurRadius: 40,
-                        color: const Color(0xFFFF4500).withOpacity(0.7),
-                      ),
-                      const Shadow(
-                        offset: Offset(0, 3),
-                        blurRadius: 12,
-                        color: Colors.black54,
-                      ),
-                      const Shadow(
-                        offset: Offset(2, 6),
-                        blurRadius: 20,
-                        color: Colors.black26,
-                      ),
-                    ],
+                // const SizedBox(height: 5),
+
+                // "Magnet Lord" text underneath with animations
+                SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.5),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: _titleController,
+                    curve: const Interval(0.3, 1.0, curve: Curves.elasticOut),
+                  )),
+                  child: FadeTransition(
+                    opacity: Tween<double>(
+                      begin: 0.0,
+                      end: 1.0,
+                    ).animate(CurvedAnimation(
+                      parent: _titleController,
+                      curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+                    )),
+                    child: AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        final shimmer = (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
+                        return ShaderMask(
+                          shaderCallback: (bounds) {
+                            return LinearGradient(
+                              colors: [
+                                const Color(0xFF00F5FF).withOpacity(0.8 + (0.2 * shimmer)),
+                                const Color(0xFF0084FF).withOpacity(0.9),
+                                const Color(0xFF7C3AED).withOpacity(0.8 + (0.2 * shimmer)),
+                              ],
+                              stops: [
+                                0.0,
+                                0.5 + (0.3 * shimmer),
+                                1.0,
+                              ],
+                            ).createShader(bounds);
+                          },
+                          child: Text(
+                            'Magnet Lord',
+                            style: TextStyle(
+                              fontSize: screenSize.width * (isSmallScreen ? 0.08 : 0.09),
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 3.0,
+                              shadows: [
+                                Shadow(
+                                  offset: const Offset(0, 0),
+                                  blurRadius: 20 + (10 * _pulseAnimation.value),
+                                  color: const Color(0xFF00E5FF).withOpacity(0.6),
+                                ),
+                                Shadow(
+                                  offset: const Offset(0, 0),
+                                  blurRadius: 30 + (15 * _pulseAnimation.value),
+                                  color: const Color(0xFF7C3AED).withOpacity(0.4),
+                                ),
+                                const Shadow(
+                                  offset: Offset(0, 2),
+                                  blurRadius: 8,
+                                  color: Colors.black54,
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
 
                 // Subtitle
@@ -668,7 +730,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   ),
                 ),
 
-                SizedBox(height: isSmallScreen ? 40 : 60),
+                SizedBox(height: isSmallScreen ? 20 : 30),
 
                 // Enhanced buttons with staggered animation
                 Expanded(

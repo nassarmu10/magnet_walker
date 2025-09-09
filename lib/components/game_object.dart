@@ -63,17 +63,17 @@ class GameObject extends CircleComponent
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
-      const baseSpeed = 15.0; // Increased from 5.0
-      final levelSpeedMultiplier = 1.0 + (level * 0.3); // 30% faster per level
+      const baseSpeed = 25.0; // Increased from 15.0 for faster early levels
+      final levelSpeedMultiplier = 1.0 + (level * 0.2); // Reduced from 0.3 to balance
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
       // Objects move toward player
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
-      final baseSpeed = 12.0; // was 8.0, increase for higher speed
-      final speedGrowth = 1.0 + (level * 0.12); // was 0.08, faster per level
+      final baseSpeed = 18.0; // Increased from 12.0 for faster movement
+      final speedGrowth = 1.0 + (level * 0.1); // Reduced from 0.12 to balance
       final waveGrowth =
-          1.0 + (game.waveManager.currentWave - 1) * 0.1; // was 0.07
+          1.0 + (game.waveManager.currentWave - 1) * 0.08; // Reduced slightly
       velocity = direction * baseSpeed * speedGrowth * waveGrowth;
     }
 
