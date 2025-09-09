@@ -10,7 +10,7 @@ class AdManager {
     // Replace with your banner ad unit ID
     return Platform.isAndroid
         ? 'ca-app-pub-3940256099942544/9214589741' // test 'ca-app-pub-3940256099942544/9214589741'
-        : 'ca-app-pub-4497634353967283/6255642575'; // test ca-app-pub-3940256099942544/6300978111
+        : 'ca-app-pub-3940256099942544/6300978111'; // prod ca-app-pub-4497634353967283/6092306954
   }
 
   static String get interstitialAdUnitId {
@@ -214,7 +214,8 @@ class AdManager {
   // Show Rewarded Ad with improved error handling and preloading
   static Future<void> showRewardedAd({
     required Function onRewarded,
-    Function? onAdFailedToShow,
+    required Function onFailed,
+    Function? onAdDismissed, // Add this parameter
   }) async {
     print('Attempting to show rewarded ad...');
     print('isRewardedAdReady: $isRewardedAdReady');
@@ -224,6 +225,31 @@ class AdManager {
     if (isRewardedAdReady && rewardedAd != null) {
       try {
         print('Showing rewarded ad...');
+        // Set up the full screen content callback BEFORE showing the ad
+        rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (RewardedAd ad) {
+            print('Rewarded ad dismissed');
+            onAdDismissed?.call(); // Call when ad is dismissed
+            ad.dispose();
+            rewardedAd = null;
+            isRewardedAdReady = false;
+            // Preload next ad
+            loadRewardedAd();
+          },
+          onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) {
+            print('Rewarded ad failed to show: $error');
+            ad.dispose();
+            rewardedAd = null;
+            isRewardedAdReady = false;
+            onFailed();
+            // Try to load a new ad
+            loadRewardedAd();
+          },
+          onAdShowedFullScreenContent: (RewardedAd ad) {
+            print('Rewarded ad showed full screen content');
+          },
+        );
+
         rewardedAd!.show(
           onUserEarnedReward: (ad, reward) {
             print('User earned reward: ${reward.amount} ${reward.type}');
@@ -232,29 +258,29 @@ class AdManager {
         );
       } catch (e) {
         print('Error showing rewarded ad: $e');
-        onAdFailedToShow?.call();
+        onFailed();
         // Try to load a new ad
         loadRewardedAd();
       }
     } else {
       print('Rewarded ad not ready. Loading new ad...');
-
       // Show user feedback immediately
-      onAdFailedToShow?.call();
-
+      onFailed();
       // Try to load and show ad if not already loading
       if (!isLoadingRewardedAd) {
         await loadRewardedAd();
-
         // Wait a bit and try again if ad is now ready
         await Future.delayed(const Duration(seconds: 2));
         if (isRewardedAdReady && rewardedAd != null) {
           print('Ad loaded successfully, showing now...');
           showRewardedAd(
-              onRewarded: onRewarded, onAdFailedToShow: onAdFailedToShow);
+            onRewarded: onRewarded,
+            onFailed: onFailed,
+            onAdDismissed: onAdDismissed, // Pass it through
+          );
         } else {
           print('Failed to load ad after retry');
-          onAdFailedToShow?.call();
+          onFailed();
         }
       }
     }
@@ -371,7 +397,7 @@ class AdManager {
   // Dispose Ads
   static void disposeAds() {
     try {
-      bannerAd.dispose();
+      bannerAd?.dispose();
     } catch (e) {
       print('Error disposing banner ad: $e');
     }

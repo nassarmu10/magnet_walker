@@ -1,4 +1,4 @@
-package com.example.magnet_walker
+package com.MTSquaredTechs.magnetwalker
 
 import io.flutter.embedding.android.FlutterActivity
 

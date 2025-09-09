@@ -36,9 +36,14 @@ class GameObject extends CircleComponent
       try {
         print('Loading rocket image for bomb...');
         // Randomly choose between rocket.png and rocket-2.png
-        final rocketImages = ['rocket.png', 'rocket-2.png'];
-        final chosen =
-            (math.Random().nextBool()) ? rocketImages[0] : rocketImages[1];
+        final rocketImages = [
+          'rocket.png',
+          'rocket-2.png',
+          'rocket-3.png',
+          'rocket-4.png',
+        ];
+        final random = math.Random();
+        final chosen = rocketImages[random.nextInt(rocketImages.length)];
         final bombSprite = Sprite(game.images.fromCache(chosen));
         print('Rocket sprite loaded successfully: $chosen');
         bombSpriteComponent = SpriteComponent(
@@ -58,18 +63,18 @@ class GameObject extends CircleComponent
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
-      // Base speed increases with level
-      final baseSpeed = 50.0;
-      final levelSpeedMultiplier = 1.0 + (level * 0.3); // 30% faster per level
+      const baseSpeed = 25.0; // Increased from 15.0 for faster early levels
+      final levelSpeedMultiplier = 1.0 + (level * 0.2); // Reduced from 0.3 to balance
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
       // Objects move toward player
-      final gameSize =
-          game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
-      final playerPos = game.player.position;
-      final direction = (playerPos - position)..normalize();
-      final speed = 80.0 + (level * 10.0); // Speed increases with level
-      velocity = direction * speed;
+      final playerPos = game.player?.position;
+      final direction = (playerPos! - position)..normalize();
+      final baseSpeed = 18.0; // Increased from 12.0 for faster movement
+      final speedGrowth = 1.0 + (level * 0.1); // Reduced from 0.12 to balance
+      final waveGrowth =
+          1.0 + (game.waveManager.currentWave - 1) * 0.08; // Reduced slightly
+      velocity = direction * baseSpeed * speedGrowth * waveGrowth;
     }
 
     if (type == ObjectType.coin) {
@@ -103,12 +108,26 @@ class GameObject extends CircleComponent
       bombSpriteComponent!.size =
           Vector2.all(radius * 4 * pulseScale); // Use 4x scaling
 
-      // Calculate angle to point toward player
-      final player = game.player;
-      final direction = (player.position - position);
-      final angle = math.atan2(direction.y, direction.x);
+      Vector2 direction;
 
-      // Rotate the sprite component to point toward player
+      if (levelType == LevelType.demon && isMagnetized) {
+        // Point toward demon when magnetized in demon level
+        final demon = game.demon;
+        if (demon != null) {
+          direction = (demon.position - position);
+        } else {
+          // Fallback to player if demon is null
+          final player = game.player;
+          direction = (player!.position - position);
+        }
+      } else {
+        // Default: point toward player
+        final player = game.player;
+        direction = (player!.position - position);
+      }
+
+      final angle = math.atan2(direction.y, direction.x);
+      // Rotate the sprite component to point toward target
       bombSpriteComponent!.angle = angle;
     }
 
@@ -116,21 +135,33 @@ class GameObject extends CircleComponent
 
     // Check collision with player based on level type
     final player = game.player;
-    if (position.distanceTo(player.position) < radius + player.radius) {
-      if (levelType == LevelType.gravity) {
-        // In gravity mode, all objects collide with player
+    if (position.distanceTo(player?.position as Vector2) <
+        radius + player!.radius) {
+      if (levelType == LevelType.gravity ||
+          levelType == LevelType.survival ||
+          levelType == LevelType.demon) {
         collected = true;
         game.collectObject(this);
-      } else if (levelType == LevelType.survival) {
-        // In survival mode, coins collide with player, bombs only if they hit player
-        if (type == ObjectType.coin) {
-          // Coins collide with player to give points
-          collected = true;
-          game.collectObject(this);
-        } else if (type == ObjectType.bomb) {
-          // Bombs only collide if they hit the player (game over)
-          collected = true;
-          game.collectObject(this);
+      }
+    }
+
+    if (levelType == LevelType.demon) {
+      final demon = game.demon;
+      if (demon != null) {
+        final distanceToDemon = position.distanceTo(demon.position);
+
+        if (distanceToDemon < (radius * 1.2 + demon.radius) && isMagnetized) {
+          // 1.2 to give a little leeway
+
+          if (type == ObjectType.bomb) {
+            demon.onHitByBomb();
+
+            // Mark bomb as destroyed
+            collected = true;
+            game.createParticles(demon.position, Colors.red);
+            game.gameObjects.remove(this);
+            removeFromParent();
+          }
         }
       }
     }
@@ -143,7 +174,8 @@ class GameObject extends CircleComponent
       if (position.y > gameSize.y + 50) {
         removeFromParent();
       }
-    } else if (levelType == LevelType.survival) {
+    } else if (levelType == LevelType.survival ||
+        levelType == LevelType.demon) {
       // Remove if too far from player or off screen
       final distanceToPlayer = position.distanceTo(player.position);
       if (distanceToPlayer > gameSize.x * 1.5 ||
@@ -151,6 +183,7 @@ class GameObject extends CircleComponent
           position.x > gameSize.x + 50 ||
           position.y < -50 ||
           position.y > gameSize.y + 50) {
+        game.gameObjects.remove(this);
         removeFromParent();
       }
     }
@@ -221,5 +254,12 @@ class GameObject extends CircleComponent
             canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
       }
     }
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    // Add to gameObjects here instead
+    (game).gameObjects.add(this);
   }
 }
