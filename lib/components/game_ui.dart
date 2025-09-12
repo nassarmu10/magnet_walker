@@ -125,7 +125,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         ),
       ],
       onPressed: () {
-        print('Pause button pressed!');
         showPauseDialog();
       },
       priority: 25,
@@ -353,32 +352,25 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void showPauseDialog() {
-    print('showPauseDialog called, isPaused: $isPaused'); // Debug log
-
     if (isPaused) {
-      print('Already paused, returning');
       return; // Prevent multiple dialogs
     }
 
     // Pause the game immediately
     isPaused = true;
     game.pauseGame();
-    print('Game paused successfully');
 
     // Use a post-frame callback to ensure the context is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = game.buildContext;
-      print('Context available: ${context != null}');
 
       if (context == null) {
-        print('Context is null, retrying...');
         // If context is not available, try again after a short delay
         Future.delayed(const Duration(milliseconds: 100), () {
           final retryContext = game.buildContext;
           if (retryContext != null) {
             _showPauseDialogWithContext(retryContext);
           } else {
-            print('Context still null after retry, resuming game');
             // If we still can't get context, resume the game
             resumeGame();
           }
@@ -391,8 +383,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void _showPauseDialogWithContext(BuildContext context) {
-    print('Showing pause dialog with context');
-
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
@@ -492,7 +482,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFF00ff88),
                       Icons.play_arrow,
                       () {
-                        print('Continue button pressed');
                         Navigator.of(dialogContext).pop();
                         resumeGame();
                       },
@@ -510,7 +499,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFFff4444),
                       Icons.home, // Changed icon to home
                       () {
-                        print('Exit to menu button pressed');
                         Navigator.of(dialogContext).pop();
                         exitToMenu();
                       },
@@ -539,7 +527,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     ).then((_) {
       // Ensure the game is resumed if dialog is dismissed unexpectedly
       if (isPaused) {
-        print('Dialog dismissed unexpectedly, resuming game');
         resumeGame();
       }
     });

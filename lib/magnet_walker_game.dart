@@ -79,6 +79,7 @@ class MagnetWalkerGame extends FlameGame
       return 3; // Later levels need 3 waves
     }
   }
+
   int wavesCompletedInLevel = 0; // Waves completed in current level
 
   // Spawning
@@ -167,7 +168,6 @@ class MagnetWalkerGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
-    print("OnLoad called ..............0000000000........");
     // Wait for the game to be fully initialized
     await Future.delayed(const Duration(milliseconds: 50));
 
@@ -340,7 +340,6 @@ class MagnetWalkerGame extends FlameGame
         'rocket-3.png',
         'rocket-4.png',
       ]);
-      print('Rocket images preloaded successfully');
     } catch (e) {
       print('Failed to preload rocket images: $e');
     }
@@ -392,7 +391,6 @@ class MagnetWalkerGame extends FlameGame
 
     try {
       await images.loadAll(skinImages);
-      print('skin images preloaded successfully');
     } catch (e) {
       print('Failed to preload skin images: $e');
     }
@@ -401,7 +399,6 @@ class MagnetWalkerGame extends FlameGame
   Future<void> _updatePlayerSkin() async {
     if (player != null) {
       final selectedSkin = skinManager.selectedSkin;
-      print('Applying skin: ${selectedSkin.imagePath}');
       await player?.updateSkin(selectedSkin.imagePath);
     }
   }
@@ -437,7 +434,6 @@ class MagnetWalkerGame extends FlameGame
     // Stop any existing spawn managers
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    print(currentLevelType);
     // Use the current level for level type
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
 
@@ -970,7 +966,6 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void destroyBomb(GameObject bomb) {
-    print('Destroying bomb');
     if (bomb.type == ObjectType.bomb && bomb.isMounted) {
       createParticles(bomb.position, Colors.red);
       bomb.removeFromParent();
@@ -1247,9 +1242,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Prepares the current wave (shows countdown, positions player, etc.)
   void prepareWave() {
-    print(
-        'prepareWave called - level: ${waveManager.level}, wave: ${waveManager.currentWave}');
-
     // Clear any existing objects
     clearAllObjects();
 
@@ -1289,7 +1281,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this when the countdown finishes to start the wave
   void onCountdownFinished() {
-    print('onCountdownFinished called');
     currentState = GameState.playing;
     waveMessage = null;
 
@@ -1302,7 +1293,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this when the player completes a wave
   void completeWave() {
-    print('completeWave called');
     wavesCompletedInLevel++;
 
     if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
@@ -1322,7 +1312,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this when the player fails a wave
   void failWave() {
-    print('failWave called');
     currentState = GameState.gameOver;
 
     bool hasLivesLeft = livesManager.tryConsumeLife();
@@ -1403,7 +1392,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this to restart the current wave (e.g., after failure)
   void restartWave() {
-    print('restartWave called');
     currentState = GameState.countdown;
     prepareWave();
   }
@@ -1510,7 +1498,6 @@ class MagnetWalkerGame extends FlameGame
     }
 
     endDemonLevel();
-    print('failDemonLevel called');
 
     currentState = GameState.gameOver;
     bool hasLivesLeft = livesManager.tryConsumeLife();

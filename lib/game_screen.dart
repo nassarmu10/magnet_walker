@@ -34,7 +34,7 @@ class _GameScreenState extends State<GameScreen> {
     game.setExitCallback(() async {
       // Stop game music completely
       FlameAudio.bgm.stop();
-      
+
       // Navigate back to menu - the main app will handle restarting menu music
       Navigator.pushReplacementNamed(context, '/');
     });
@@ -66,10 +66,8 @@ class _GameScreenState extends State<GameScreen> {
             setState(() {
               _isBannerAdLoaded = true;
             });
-            print('Banner Ad loaded successfully');
           },
           onAdFailedToLoad: (ad, error) {
-            print('Banner Ad failed to load: $error');
             ad.dispose();
             _bannerAd = null;
           },

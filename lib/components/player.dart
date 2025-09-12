@@ -21,8 +21,10 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Vector2 _lastPosition = Vector2.zero();
   double _timeSinceLastMovement = 0.0;
   bool _hasRecentMovement = false;
-  static const double _movementThreshold = 5.0; // Minimum distance to count as movement
-  static const double _movementTimeWindow = 1.0; // Time window to check for movement
+  static const double _movementThreshold =
+      5.0; // Minimum distance to count as movement
+  static const double _movementTimeWindow =
+      1.0; // Time window to check for movement
 
   Player({required super.position})
       : super(
@@ -50,8 +52,6 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   Future<void> _loadSkin(String skinPath) async {
     try {
-      print('Loading skin: $skinPath');
-
       // Dispose of the old sprite component properly
       if (playerSpriteComponent != null) {
         playerSpriteComponent!.removeFromParent();
@@ -82,11 +82,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       // Add the new sprite
       add(playerSpriteComponent!);
       _currentSkinPath = skinPath;
-
-      print(
-          'Successfully loaded skin: $skinPath, children count: ${children.length}');
     } catch (e) {
-      print('Failed to load skin $skinPath: $e');
       // Fallback to default skin if loading fails
       if (skinPath != 'player.png') {
         await _loadSkin('player.png');
@@ -116,9 +112,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
 
   @override
   void render(Canvas canvas) {
-    final currentLevelType = LevelTypeConfig.getLevelType(game.waveManager.level);
-    
-    // ✅ MODIFIED: Different magnetic field rendering for demon level
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
+
     if (currentLevelType == LevelType.demon) {
       // Show magnetic field only when player is moving
       if (_hasRecentMovement) {
@@ -126,30 +122,30 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
         final activeMagnetPaint = Paint()
           ..color = Colors.redAccent.withOpacity(0.3)
           ..style = PaintingStyle.fill;
-        
+
         canvas.drawCircle(Offset.zero, magnetRadius, activeMagnetPaint);
-        
+
         // Add pulsing border to show it's active
         final activeBorderPaint = Paint()
           ..color = Colors.redAccent.withOpacity(0.6)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
-        
+
         canvas.drawCircle(Offset.zero, magnetRadius, activeBorderPaint);
       } else {
         // Inactive magnetic field - dim and barely visible
         final inactiveMagnetPaint = Paint()
           ..color = Colors.grey.withOpacity(0.1)
           ..style = PaintingStyle.fill;
-        
+
         canvas.drawCircle(Offset.zero, magnetRadius, inactiveMagnetPaint);
-        
+
         // Dashed border to show it's inactive
         final inactiveBorderPaint = Paint()
           ..color = Colors.grey.withOpacity(0.3)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0;
-        
+
         canvas.drawCircle(Offset.zero, magnetRadius, inactiveBorderPaint);
       }
     } else {
@@ -178,10 +174,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       if (currentLevelType == LevelType.gravity) {
         // GRAVITY LEVELS: Limit player to upper half of screen
         final minY = gameSize.y * 0.5; // Middle of screen (can't go higher)
-        final maxY = gameSize.y - 20;  // Near bottom (with small margin)
-        
+        final maxY = gameSize.y - 20; // Near bottom (with small margin)
+
         position.y = (position.y + deltaY).clamp(minY, maxY);
-        
       } else if (currentLevelType == LevelType.demon) {
         // DEMON LEVELS: Keep existing demon collision avoidance
         if (game.currentState == GameState.playing) {
@@ -242,11 +237,11 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
                 1500 * (1 - distance / magnetRadius); // Strong repulsive force
             obj.isMagnetized = true;
           } else if (distance <= closeDistanceThreshold) {
-              // Bomb is very close to player - collision damage
-              // Don't apply magnetic force, let it hit the player
-              obj.isMagnetized = false;
-              return;
-            } else {
+            // Bomb is very close to player - collision damage
+            // Don't apply magnetic force, let it hit the player
+            obj.isMagnetized = false;
+            return;
+          } else {
             // // Bomb is very close to player - reduce force to allow collision
             // // Still push toward demon but with much weaker force
             // targetDirection = (demon.position - obj.position)..normalize();
@@ -302,11 +297,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   void update(double dt) {
     super.update(dt);
     // ADD: Track player movement for demon level
-    final currentLevelType = LevelTypeConfig.getLevelType(game.waveManager.level);
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
     if (currentLevelType == LevelType.demon) {
       // Check if player has moved significantly
       final distanceMoved = position.distanceTo(_lastPosition);
-      
+
       if (distanceMoved > _movementThreshold) {
         _timeSinceLastMovement = 0.0;
         _hasRecentMovement = true;

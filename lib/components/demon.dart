@@ -106,7 +106,6 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void shootBombAtPlayer() {
-    print("shooting bomb");
     final playerPos = game.player?.position;
     final direction = (playerPos! - position).normalized();
     final bomb = GameObject(

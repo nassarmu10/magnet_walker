@@ -45,8 +45,6 @@ class SurvivalSpawnManager {
   }
 
   void spawnObject() {
-    print('Spawning object called');
-    print(game.waveManager.currentWave.toString());
     final gameSize =
         game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
     final playerPos = game.player?.position;

@@ -34,7 +34,6 @@ class GameObject extends CircleComponent
     // Load rocket sprite for bombs
     if (type == ObjectType.bomb) {
       try {
-        print('Loading rocket image for bomb...');
         // Randomly choose between rocket.png and rocket-2.png
         final rocketImages = [
           'rocket.png',
@@ -45,26 +44,22 @@ class GameObject extends CircleComponent
         final random = math.Random();
         final chosen = rocketImages[random.nextInt(rocketImages.length)];
         final bombSprite = Sprite(game.images.fromCache(chosen));
-        print('Rocket sprite loaded successfully: $chosen');
         bombSpriteComponent = SpriteComponent(
           sprite: bombSprite,
           size: Vector2.all(radius * 4), // Make rocket 4x bigger (was 2x)
           anchor: Anchor.center, // Ensure it's centered
         );
-        print('Adding bomb sprite component');
         add(bombSpriteComponent!);
-        print('Bomb sprite component added successfully');
       } catch (e) {
         print('Could not load rocket image: $e');
-        print('Stack trace: ${StackTrace.current}');
-        // Fall back to default bomb rendering
       }
     }
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
       const baseSpeed = 25.0; // Increased from 15.0 for faster early levels
-      final levelSpeedMultiplier = 1.0 + (level * 0.2); // Reduced from 0.3 to balance
+      final levelSpeedMultiplier =
+          1.0 + (level * 0.2); // Reduced from 0.3 to balance
       velocity.y = baseSpeed * levelSpeedMultiplier;
     } else if (levelType == LevelType.survival) {
       // Objects move toward player
