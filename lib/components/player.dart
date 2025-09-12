@@ -35,9 +35,9 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   @override
   Future<void> onLoad() async {
     super.onLoad();
+    updateMagnetForLevel();
     // Set size for collision detection
     // size = Vector2.all(radius * 2);
-
     magnetFieldPaint = Paint()
       ..color = Colors.blueAccent.withOpacity(0.2)
       ..style = PaintingStyle.fill;
@@ -94,21 +94,6 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   Future<void> updateSkin(String skinPath) async {
     await _loadSkin(skinPath);
   }
-
-  // @override
-  // void render(Canvas canvas) {
-  //   // Draw magnetic field
-  //   canvas.drawCircle(
-  //     Offset.zero,
-  //     magnetRadius,
-  //     magnetFieldPaint,
-  //   );
-
-  //   // Draw glow behind the skin
-  //   canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
-
-  //   // The skin sprite is rendered by the SpriteComponent (added as a child)
-  // }
 
   @override
   void render(Canvas canvas) {
@@ -222,7 +207,16 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
       // Default behavior: pull toward player (for non-demon levels or non-bombs)
       targetDirection = (position - obj.position)..normalize();
       force = 600 * (1 - distance / magnetRadius);
+      // Enhanced force for gravity mode based on object speed
+      if (currentLevelType == LevelType.gravity) {
+        final objectSpeed = obj.velocity.length;
+        final speedMultiplier =
+            1.0 + (objectSpeed / 100.0); // Adjust 200.0 as needed
+        force *= speedMultiplier;
 
+        // Optional: Cap the maximum force to prevent over-correction
+        force = math.min(force, 3000.0);
+      }
       // Special handling for demon level bombs
       if (currentLevelType == LevelType.demon && isBomb) {
         final demon = game.demon;
@@ -264,9 +258,16 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     _hasRecentMovement = false;
   }
 
-  void upgradeMagnet(int level) {
+  void updateMagnetForLevel() {
     //magnetRadius = math.min(120.0, 80.0 + level * 3);
-    magnetRadius = 80.0 + level * 3;
+    final currentLevel = game.waveManager.level;
+    // Base radius of 80, grows by 5 pixels per level
+    double desiredRadius = 80.0 + (currentLevel * 3.0);
+    final gameSize = game.canvasSize;
+
+    // Optional: Cap the maximum radius to prevent it from getting too large
+    final maxRadius = gameSize.x / 2 - 10;
+    magnetRadius = math.min(desiredRadius, maxRadius);
   }
 
   void reset() {
@@ -279,7 +280,8 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     } else {
       position = Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     }
-    magnetRadius = 80.0;
+
+    updateMagnetForLevel();
 
     // Reset movement tracking
     resetMovementTracking();

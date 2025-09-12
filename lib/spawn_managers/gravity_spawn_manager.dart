@@ -102,7 +102,7 @@ class GravitySpawnManager {
 
     // Apply downward velocity with slight random angle
     final angle =
-        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 3;
+        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 10;
     final baseSpeed = 120.0; // Increased from 60.0 to make early levels faster
     obj.velocity =
         Vector2(math.cos(angle), math.sin(angle)) * baseSpeed * speedMultiplier;

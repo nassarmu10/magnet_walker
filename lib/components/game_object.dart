@@ -66,7 +66,7 @@ class GameObject extends CircleComponent
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
       final baseSpeed = 18.0; // Increased from 12.0 for faster movement
-      final speedGrowth = 1.0 + (level * 0.1); // Reduced from 0.12 to balance
+      final speedGrowth = 1.0 + (level * 0.15); // Reduced from 0.12 to balance
       final waveGrowth =
           1.0 + (game.waveManager.currentWave - 1) * 0.08; // Reduced slightly
       velocity = direction * baseSpeed * speedGrowth * waveGrowth;
