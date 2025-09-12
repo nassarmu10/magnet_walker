@@ -587,32 +587,24 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   child: FadeTransition(
                     opacity: _titleFadeAnimation,
                     child: AnimatedBuilder(
-                      animation: Listenable.merge([_pulseAnimation, _breathingAnimation]),
+                      animation: Listenable.merge(
+                          [_pulseAnimation, _breathingAnimation]),
                       builder: (context, child) {
                         final pulseScale = 1.0 + (_pulseAnimation.value * 0.05);
-                        final breathingScale = _breathingController.isAnimating ? _breathingAnimation.value : 1.0;
+                        final breathingScale = _breathingController.isAnimating
+                            ? _breathingAnimation.value
+                            : 1.0;
                         final combinedScale = pulseScale * breathingScale;
                         return Transform.scale(
                           scale: combinedScale,
                           child: Container(
-                            width: screenSize.width * (isSmallScreen ? 0.6 : 0.5),
-                            height: screenSize.width * (isSmallScreen ? 0.6 : 0.5) * 0.8,
+                            width:
+                                screenSize.width * (isSmallScreen ? 0.6 : 0.5),
+                            height: screenSize.width *
+                                (isSmallScreen ? 0.6 : 0.5) *
+                                0.8,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
-                            //   boxShadow: [
-                            //     BoxShadow(
-                            //       color: const Color(0xFF00E5FF).withOpacity(0.4 * _pulseAnimation.value),
-                            //       blurRadius: 30 * _pulseAnimation.value,
-                            //       offset: const Offset(0, 10),
-                            //       spreadRadius: 5 * _pulseAnimation.value,
-                            //     ),
-                            //     // BoxShadow(
-                            //     //   color: const Color(0xFF7C3AED).withOpacity(0.3 * _pulseAnimation.value),
-                            //     //   blurRadius: 40 * _pulseAnimation.value,
-                            //     //   offset: const Offset(0, 15),
-                            //     //   spreadRadius: 3 * _pulseAnimation.value,
-                            //     // ),
-                            //   ],
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
@@ -650,14 +642,17 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                     child: AnimatedBuilder(
                       animation: _pulseAnimation,
                       builder: (context, child) {
-                        final shimmer = (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
+                        final shimmer =
+                            (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
                         return ShaderMask(
                           shaderCallback: (bounds) {
                             return LinearGradient(
                               colors: [
-                                const Color(0xFF00F5FF).withOpacity(0.8 + (0.2 * shimmer)),
+                                const Color(0xFF00F5FF)
+                                    .withOpacity(0.8 + (0.2 * shimmer)),
                                 const Color(0xFF0084FF).withOpacity(0.9),
-                                const Color(0xFF7C3AED).withOpacity(0.8 + (0.2 * shimmer)),
+                                const Color(0xFF7C3AED)
+                                    .withOpacity(0.8 + (0.2 * shimmer)),
                               ],
                               stops: [
                                 0.0,
@@ -669,7 +664,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                           child: Text(
                             'Magnet Lord',
                             style: TextStyle(
-                              fontSize: screenSize.width * (isSmallScreen ? 0.08 : 0.09),
+                              fontSize: screenSize.width *
+                                  (isSmallScreen ? 0.08 : 0.09),
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: 3.0,
@@ -677,12 +673,14 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                 Shadow(
                                   offset: const Offset(0, 0),
                                   blurRadius: 20 + (10 * _pulseAnimation.value),
-                                  color: const Color(0xFF00E5FF).withOpacity(0.6),
+                                  color:
+                                      const Color(0xFF00E5FF).withOpacity(0.6),
                                 ),
                                 Shadow(
                                   offset: const Offset(0, 0),
                                   blurRadius: 30 + (15 * _pulseAnimation.value),
-                                  color: const Color(0xFF7C3AED).withOpacity(0.4),
+                                  color:
+                                      const Color(0xFF7C3AED).withOpacity(0.4),
                                 ),
                                 const Shadow(
                                   offset: Offset(0, 2),

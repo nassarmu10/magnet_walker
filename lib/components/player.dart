@@ -100,48 +100,64 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
 
-    if (currentLevelType == LevelType.demon) {
-      // Show magnetic field only when player is moving
-      if (_hasRecentMovement) {
-        // Active magnetic field - brighter and more visible
-        final activeMagnetPaint = Paint()
-          ..color = Colors.redAccent.withOpacity(0.3)
-          ..style = PaintingStyle.fill;
+    final time = game.currentTime(); // track game time
+    final pulse = 0.9 + 0.1 * math.sin(time * 3);
+    final rotation = time * 0.5; // rotation for field lines
 
-        canvas.drawCircle(Offset.zero, magnetRadius, activeMagnetPaint);
+    void drawMagneticField(Color baseColor, double radiusScale) {
+      final pulseRadius = magnetRadius * pulse * radiusScale;
 
-        // Add pulsing border to show it's active
-        final activeBorderPaint = Paint()
-          ..color = Colors.redAccent.withOpacity(0.6)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0;
+      // Gradient fill
+      final gradient = RadialGradient(
+        colors: [baseColor.withOpacity(0.5), baseColor.withOpacity(0.0)],
+      );
+      final rect = Rect.fromCircle(center: Offset.zero, radius: pulseRadius);
+      final shader = gradient.createShader(rect);
+      final fillPaint = Paint()
+        ..shader = shader
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset.zero, pulseRadius, fillPaint);
 
-        canvas.drawCircle(Offset.zero, magnetRadius, activeBorderPaint);
-      } else {
-        // Inactive magnetic field - dim and barely visible
-        final inactiveMagnetPaint = Paint()
-          ..color = Colors.grey.withOpacity(0.1)
-          ..style = PaintingStyle.fill;
+      // Curved magnetic lines
+      final linePaint = Paint()
+        ..color = baseColor.withOpacity(0.3)
+        ..strokeWidth = 1.0
+        ..style = PaintingStyle.stroke;
 
-        canvas.drawCircle(Offset.zero, magnetRadius, inactiveMagnetPaint);
+      const int linesCount = 12;
+      for (int i = 0; i < linesCount; i++) {
+        final angle = i * 2 * math.pi / linesCount + rotation;
+        final bend = 0.2 * math.sin(time * 2 + i); // small curve
+        final start = Offset(math.cos(angle), math.sin(angle)) * (radius + 4);
+        final control = start +
+            Offset(-start.dy, start.dx) * bend; // control point for curve
+        final end = Offset(math.cos(angle), math.sin(angle)) * pulseRadius;
 
-        // Dashed border to show it's inactive
-        final inactiveBorderPaint = Paint()
-          ..color = Colors.grey.withOpacity(0.3)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0;
-
-        canvas.drawCircle(Offset.zero, magnetRadius, inactiveBorderPaint);
+        final path = Path()..moveTo(start.dx, start.dy);
+        path.quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
+        canvas.drawPath(path, linePaint);
       }
-    } else {
-      // Normal magnetic field for other level types
-      canvas.drawCircle(Offset.zero, magnetRadius, magnetFieldPaint);
+
+      // Border
+      final borderPaint = Paint()
+        ..color = baseColor.withOpacity(0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      canvas.drawCircle(Offset.zero, pulseRadius, borderPaint);
     }
 
-    // Draw glow behind the skin (keep existing)
-    canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
+    if (currentLevelType == LevelType.demon) {
+      if (_hasRecentMovement) {
+        drawMagneticField(Colors.redAccent, 1.0);
+      } else {
+        drawMagneticField(Colors.grey, 0.7);
+      }
+    } else {
+      drawMagneticField(Colors.blueAccent, 1.0);
+    }
 
-    // The skin sprite is rendered by the SpriteComponent (added as a child)
+    // Player glow behind skin
+    canvas.drawCircle(Offset.zero, radius + 8, playerGlowPaint);
   }
 
   void moveBy(double deltaX, double deltaY) {
@@ -259,6 +275,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void updateMagnetForLevel() {
+    final currentLevelType =
+        LevelTypeConfig.getLevelType(game.waveManager.level);
+    if (currentLevelType == LevelType.demon) {
+      magnetRadius = 80;
+      return;
+    }
     //magnetRadius = math.min(120.0, 80.0 + level * 3);
     final currentLevel = game.waveManager.level;
     // Base radius of 80, grows by 5 pixels per level
@@ -266,7 +288,7 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final gameSize = game.canvasSize;
 
     // Optional: Cap the maximum radius to prevent it from getting too large
-    final maxRadius = gameSize.x / 2 - 10;
+    final maxRadius = gameSize.x / 2 - 15;
     magnetRadius = math.min(desiredRadius, maxRadius);
   }
 

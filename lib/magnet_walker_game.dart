@@ -1401,6 +1401,7 @@ class MagnetWalkerGame extends FlameGame
     waveManager.level++;
     waveManager.setTarget(); // Update target for new level
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
+    if (player != null) player?.updateMagnetForLevel();
     // Show interstitial every 5 levels after level 15
     if (waveManager.level >= 15 && waveManager.level % 5 == 0) {
       //pauseGame();
