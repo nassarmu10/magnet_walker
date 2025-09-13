@@ -10,28 +10,21 @@ class AdManager {
     // Replace with your banner ad unit ID
     return Platform.isAndroid
         ? 'ca-app-pub-3940256099942544/9214589741' // test 'ca-app-pub-3940256099942544/9214589741'
-        : 'ca-app-pub-3940256099942544/6300978111'; // prod ca-app-pub-4497634353967283/6092306954
+        : 'ca-app-pub-4497634353967283/6092306954'; // prod ca-app-pub-4497634353967283/6092306954
   }
 
   static String get interstitialAdUnitId {
     // Replace with your interstitial ad unit ID
     return Platform.isAndroid
         ? 'ca-app-pub-3940256099942544/1033173712' // test 'ca-app-pub-4497634353967283/2665119024'
-        : 'ca-app-pub-4497634353967283/6708004493'; // test ca-app-pub-3940256099942544/1033173712
+        : 'ca-app-pub-4497634353967283/5089097885'; // test ca-app-pub-3940256099942544/1033173712
   }
 
   static String get rewardedAdUnitId {
     // Replace with your rewarded ad unit ID
     return Platform.isAndroid
         ? 'ca-app-pub-3940256099942544/5224354917' // test 'ca-app-pub-3940256099942544/5224354917'
-        : 'ca-app-pub-3940256099942544/5224354917'; //  'ca-app-pub-4497634353967283/1357956265';
-  }
-
-  static String get rewardedInterstitialAdUnitId {
-    // Replace with your rewarded interstitial ad unit ID
-    return Platform.isAndroid
-        ? 'ca-app-pub-3940256099942544/5354046379' // test 'ca-app-pub-3940256099942544/5354046379'
-        : 'ca-app-pub-4497634353967283/3103827050'; // test ca-app-pub-3940256099942544/5354046379
+        : 'ca-app-pub-4497634353967283/1357956265'; //  'ca-app-pub-4497634353967283/1357956265';
   }
 
   static InterstitialAd? interstitialAd;
@@ -40,7 +33,6 @@ class AdManager {
 
   static bool isInterstitialAdReady = false;
   static bool isRewardedAdReady = false;
-  static bool isRewardedInterstitialAdReady = false;
   static bool isAdsInitialized = false;
   static bool isLoadingRewardedAd = false;
 
@@ -251,83 +243,6 @@ class AdManager {
     }
   }
 
-  static Future<void> loadRewardedInterstitialAd() async {
-    if (!isAdsInitialized) {
-      return;
-    }
-
-    try {
-      await RewardedInterstitialAd.load(
-        adUnitId: rewardedInterstitialAdUnitId,
-        request: const AdRequest(),
-        rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
-          onAdLoaded: (ad) {
-            rewardedInterstitialAd = ad;
-            isRewardedInterstitialAdReady = true;
-
-            rewardedInterstitialAd!.fullScreenContentCallback =
-                FullScreenContentCallback(
-              onAdDismissedFullScreenContent: (ad) {
-                isRewardedInterstitialAdReady = false;
-                ad.dispose();
-                loadRewardedInterstitialAd(); // Load next ad
-              },
-              onAdFailedToShowFullScreenContent: (ad, error) {
-                isRewardedInterstitialAdReady = false;
-                ad.dispose();
-                loadRewardedInterstitialAd(); // Try loading again
-              },
-            );
-          },
-          onAdFailedToLoad: (error) {
-            isRewardedInterstitialAdReady = false;
-            rewardedInterstitialAd = null;
-          },
-        ),
-      );
-    } catch (e) {
-      isRewardedInterstitialAdReady = false;
-      rewardedInterstitialAd = null;
-    }
-  }
-
-  static Future<void> showRewardedInterstitialAd({
-    required Function onRewarded,
-    Function? onAdDismissed,
-    Function? onAdFailedToShow,
-  }) async {
-    if (isRewardedInterstitialAdReady && rewardedInterstitialAd != null) {
-      try {
-        rewardedInterstitialAd!.show(
-          onUserEarnedReward: (ad, reward) {
-            onRewarded();
-          },
-        );
-
-        rewardedInterstitialAd!.fullScreenContentCallback =
-            FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) {
-            isRewardedInterstitialAdReady = false;
-            ad.dispose();
-            loadRewardedInterstitialAd(); // Load next ad
-            onAdDismissed?.call(); // Call the optional dismiss callback
-          },
-          onAdFailedToShowFullScreenContent: (ad, error) {
-            isRewardedInterstitialAdReady = false;
-            ad.dispose();
-            loadRewardedInterstitialAd(); // Try loading again
-            onAdFailedToShow?.call();
-          },
-        );
-      } catch (e) {
-        onAdFailedToShow?.call();
-      }
-    } else {
-      onAdFailedToShow?.call();
-      await loadRewardedInterstitialAd();
-    }
-  }
-
   // Check if rewarded ad is available
   static bool isRewardedAdAvailable() {
     bool available =
@@ -384,7 +299,6 @@ class AdManager {
 
     isInterstitialAdReady = false;
     isRewardedAdReady = false;
-    isRewardedInterstitialAdReady = false;
     isLoadingRewardedAd = false;
   }
 }
