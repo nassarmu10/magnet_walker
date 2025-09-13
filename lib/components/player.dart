@@ -104,56 +104,89 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final pulse = 0.9 + 0.1 * math.sin(time * 3);
     final rotation = time * 0.5; // rotation for field lines
 
-    void drawMagneticField(Color baseColor, double radiusScale) {
-      final pulseRadius = magnetRadius * pulse * radiusScale;
+    void drawLayeredMagneticField(Color baseColor, double radiusScale) {
+      // Define multiple layers with different properties
+      final layers = [
+        {'scale': 1.0, 'opacity': 0.3, 'speed': 1.0, 'blur': 8.0},
+        {'scale': 0.8, 'opacity': 0.4, 'speed': 1.3, 'blur': 6.0},
+        {'scale': 0.6, 'opacity': 0.5, 'speed': 1.7, 'blur': 4.0},
+        {'scale': 0.4, 'opacity': 0.6, 'speed': 2.2, 'blur': 2.0},
+      ];
 
-      // Gradient fill
-      final gradient = RadialGradient(
-        colors: [baseColor.withOpacity(0.5), baseColor.withOpacity(0.0)],
-      );
-      final rect = Rect.fromCircle(center: Offset.zero, radius: pulseRadius);
-      final shader = gradient.createShader(rect);
-      final fillPaint = Paint()
-        ..shader = shader
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset.zero, pulseRadius, fillPaint);
+      // Draw each layer with different timing and properties
+      for (int layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+        final layer = layers[layerIndex];
+        final layerPulse = 0.9 + 0.1 * math.sin(time * 3 * layer['speed']!);
+        final layerRadius = magnetRadius * layerPulse * radiusScale * layer['scale']!;
+        final layerOpacity = layer['opacity']!;
 
-      // Curved magnetic lines
-      final linePaint = Paint()
-        ..color = baseColor.withOpacity(0.3)
-        ..strokeWidth = 1.0
-        ..style = PaintingStyle.stroke;
+        // Gradient fill for this layer
+        final layerGradient = RadialGradient(
+          colors: [
+            baseColor.withOpacity(layerOpacity * 0.8),
+            baseColor.withOpacity(layerOpacity * 0.4),
+            baseColor.withOpacity(0.0)
+          ],
+          stops: [0.0, 0.6, 1.0],
+        );
+        final rect = Rect.fromCircle(center: Offset.zero, radius: layerRadius);
+        final shader = layerGradient.createShader(rect);
+        final fillPaint = Paint()
+          ..shader = shader
+          ..style = PaintingStyle.fill
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, layer['blur']!);
+        canvas.drawCircle(Offset.zero, layerRadius, fillPaint);
 
-      const int linesCount = 12;
-      for (int i = 0; i < linesCount; i++) {
-        final angle = i * 2 * math.pi / linesCount + rotation;
-        final bend = 0.2 * math.sin(time * 2 + i); // small curve
-        final start = Offset(math.cos(angle), math.sin(angle)) * (radius + 4);
-        final control = start +
-            Offset(-start.dy, start.dx) * bend; // control point for curve
-        final end = Offset(math.cos(angle), math.sin(angle)) * pulseRadius;
+        // Curved magnetic lines for this layer
+        final layerRotation = time * (0.5 + layerIndex * 0.2);
+        final linePaint = Paint()
+          ..color = baseColor.withOpacity(layerOpacity * 0.7)
+          ..strokeWidth = 1.5 - (layerIndex * 0.2)
+          ..style = PaintingStyle.stroke
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, layer['blur']! * 0.3);
 
-        final path = Path()..moveTo(start.dx, start.dy);
-        path.quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
-        canvas.drawPath(path, linePaint);
+        final linesCount = 12 + (layerIndex * 2); // More lines on inner layers
+        for (int i = 0; i < linesCount; i++) {
+          final angle = i * 2 * math.pi / linesCount + layerRotation;
+          final bend = (0.2 + layerIndex * 0.1) * math.sin(time * (2 + layerIndex) + i);
+          final start = Offset(math.cos(angle), math.sin(angle)) * (radius + 4);
+          final control = start + Offset(-start.dy, start.dx) * bend;
+          final end = Offset(math.cos(angle), math.sin(angle)) * layerRadius;
+
+          final path = Path()..moveTo(start.dx, start.dy);
+          path.quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
+          canvas.drawPath(path, linePaint);
+        }
+
+        // Layer border with different intensities
+        final borderPaint = Paint()
+          ..color = baseColor.withOpacity(layerOpacity * 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5 - (layerIndex * 0.3)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, layer['blur']! * 0.2);
+        canvas.drawCircle(Offset.zero, layerRadius, borderPaint);
+
+        // Add energy rings for inner layers
+        if (layerIndex >= 2) {
+          final ringPulse = 0.8 + 0.2 * math.sin(time * 4 + layerIndex);
+          final ringPaint = Paint()
+            ..color = Colors.white.withOpacity(layerOpacity * 0.4)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1);
+          canvas.drawCircle(Offset.zero, layerRadius * ringPulse, ringPaint);
+        }
       }
-
-      // Border
-      final borderPaint = Paint()
-        ..color = baseColor.withOpacity(0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0;
-      canvas.drawCircle(Offset.zero, pulseRadius, borderPaint);
     }
 
     if (currentLevelType == LevelType.demon) {
       if (_hasRecentMovement) {
-        drawMagneticField(Colors.redAccent, 1.0);
+        drawLayeredMagneticField(Colors.redAccent, 1.0);
       } else {
-        drawMagneticField(Colors.grey, 0.7);
+        drawLayeredMagneticField(Colors.grey, 0.7);
       }
     } else {
-      drawMagneticField(Colors.blueAccent, 1.0);
+      drawLayeredMagneticField(Colors.blueAccent, 1.0);
     }
 
     // Player glow behind skin
