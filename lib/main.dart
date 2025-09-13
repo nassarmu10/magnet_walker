@@ -35,7 +35,12 @@ class _MagnetWalkerAppState extends State<MagnetWalkerApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // Allow both portrait and landscape for tablets
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     _loadSettings();
     skinManager = SkinManager();
     skinManager.initialize();

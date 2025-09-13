@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../magnet_walker_game.dart';
 import '../level_types.dart';
+import '../utils/screen_utils.dart';
 import 'game_object.dart';
 
 class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
@@ -35,6 +36,12 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   @override
   Future<void> onLoad() async {
     super.onLoad();
+    
+    // Make player size responsive to screen size
+    final screenSize = game.canvasSize;
+    radius = ScreenUtils.responsive(15.0, screenSize);
+    magnetRadius = ScreenUtils.responsive(80.0, screenSize);
+    
     updateMagnetForLevel();
     // Set size for collision detection
     // size = Vector2.all(radius * 2);

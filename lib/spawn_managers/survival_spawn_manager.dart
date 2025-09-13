@@ -6,6 +6,7 @@ import 'dart:async' as async;
 import '../../magnet_walker_game.dart';
 import '../../components/game_object.dart';
 import '../../level_types.dart';
+import '../../utils/screen_utils.dart';
 
 class SurvivalSpawnManager {
   final MagnetWalkerGame game;
@@ -45,36 +46,38 @@ class SurvivalSpawnManager {
   }
 
   void spawnObject() {
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
     final playerPos = game.player?.position;
 
     // Choose spawn edge (0: top, 1: right, 2: bottom, 3: left)
     final edge = math.Random().nextInt(4);
     Vector2 spawnPosition;
 
+    // Use responsive margin for spawn offset
+    final margin = ScreenUtils.responsive(20.0, gameSize);
+    
     switch (edge) {
       case 0: // Top
         spawnPosition = Vector2(
           math.Random().nextDouble() * gameSize.x,
-          -20,
+          -margin,
         );
         break;
       case 1: // Right
         spawnPosition = Vector2(
-          gameSize.x + 20,
+          gameSize.x + margin,
           math.Random().nextDouble() * gameSize.y,
         );
         break;
       case 2: // Bottom
         spawnPosition = Vector2(
           math.Random().nextDouble() * gameSize.x,
-          gameSize.y + 20,
+          gameSize.y + margin,
         );
         break;
       case 3: // Left
         spawnPosition = Vector2(
-          -20,
+          -margin,
           math.Random().nextDouble() * gameSize.y,
         );
         break;

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../magnet_walker_game.dart';
 import '../managers/ad_manager.dart';
 import '../level_types.dart';
+import '../utils/screen_utils.dart';
 import 'dart:math' as math;
 import 'package:flame/input.dart';
 import '../skins/skin_store_screen.dart';
@@ -132,10 +133,11 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     add(pauseButton);
 
     // IMPROVED: Better header dimensions and positioning
-    final headerMarginX = gameSize.x * 0.025; // Slightly tighter margins
-    final headerMarginY = gameSize.y * 0.025;
-    final headerWidth = gameSize.x * 0.95;
-    final headerHeight = gameSize.y * 0.12; // Slightly more compact
+    // Responsive margins and dimensions
+    final headerMarginX = ScreenUtils.getMargin(gameSize);
+    final headerMarginY = ScreenUtils.getMargin(gameSize);
+    final headerWidth = gameSize.x - (headerMarginX * 2);
+    final headerHeight = ScreenUtils.getHeaderHeight(gameSize);
 
     // IMPROVED: Enhanced header background with better gradient
     headerBg = RoundedRectComponent(

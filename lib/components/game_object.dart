@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../magnet_walker_game.dart';
 import '../level_types.dart';
+import '../utils/screen_utils.dart';
 import 'dart:math' as math;
 
 enum ObjectType { coin, bomb }
@@ -31,6 +32,12 @@ class GameObject extends CircleComponent
 
   @override
   Future<void> onLoad() async {
+    // Make object size responsive to screen size
+    final screenSize = game.canvasSize;
+    radius = type == ObjectType.coin 
+        ? ScreenUtils.responsive(8.0, screenSize)
+        : ScreenUtils.responsive(12.0, screenSize);
+    
     // Load rocket sprite for bombs
     if (type == ObjectType.bomb) {
       try {
@@ -162,22 +169,23 @@ class GameObject extends CircleComponent
     }
 
     // Remove if off screen (different logic per level type)
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
     if (levelType == LevelType.gravity) {
-      // Remove if below screen
-      if (position.y > gameSize.y + 50) {
+      // Remove if below screen (with responsive margin)
+      final margin = ScreenUtils.responsive(50.0, gameSize);
+      if (position.y > gameSize.y + margin) {
         removeFromParent();
       }
     } else if (levelType == LevelType.survival ||
         levelType == LevelType.demon) {
-      // Remove if too far from player or off screen
+      // Remove if too far from player or off screen (with responsive margins)
+      final margin = ScreenUtils.responsive(50.0, gameSize);
       final distanceToPlayer = position.distanceTo(player.position);
       if (distanceToPlayer > gameSize.x * 1.5 ||
-          position.x < -50 ||
-          position.x > gameSize.x + 50 ||
-          position.y < -50 ||
-          position.y > gameSize.y + 50) {
+          position.x < -margin ||
+          position.x > gameSize.x + margin ||
+          position.y < -margin ||
+          position.y > gameSize.y + margin) {
         game.gameObjects.remove(this);
         removeFromParent();
       }
