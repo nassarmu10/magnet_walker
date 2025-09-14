@@ -58,7 +58,14 @@ class GravitySpawnManager {
       // Use responsive margins for spawn positioning
       final margin = ScreenUtils.responsive(40.0, gameSize);
       final x = math.Random().nextDouble() * (gameSize.x - margin * 2) + margin;
-      spawnPosition = Vector2(x, gameSize.y * 0.12 + gameSize.y * 0.055);
+      
+      // Adjust spawn Y position based on orientation
+      final isLandscape = ScreenUtils.isLandscape(gameSize);
+      final spawnY = isLandscape 
+          ? gameSize.y * 0.05 // Spawn closer to top in landscape
+          : gameSize.y * 0.12 + gameSize.y * 0.055; // Original portrait position
+      
+      spawnPosition = Vector2(x, spawnY);
       attempts++;
       if (attempts >= maxAttempts) break;
     } while (_isTooCloseToRecentSpawns(spawnPosition));

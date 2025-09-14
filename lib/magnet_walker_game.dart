@@ -231,17 +231,36 @@ class MagnetWalkerGame extends FlameGame
 
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
     final actualSize = camera.viewfinder.visibleGameSize ?? gameSize;
-    const double horizontalOffset = 10.0;
     gameSize = actualSize;
-    switch (currentLevelType) {
-      case LevelType.gravity:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
-      case LevelType.demon:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
-      case LevelType.survival:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
-      default:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+    
+    // Import screen utils for landscape-aware positioning
+    final isLandscape = gameSize.x > gameSize.y;
+    
+    if (isLandscape) {
+      // Landscape positioning - avoid UI areas
+      switch (currentLevelType) {
+        case LevelType.gravity:
+          return Vector2(gameSize.x / 2, gameSize.y * 0.75); // Higher up in landscape
+        case LevelType.demon:
+          return Vector2(gameSize.x / 2, gameSize.y * 0.75);
+        case LevelType.survival:
+          return Vector2(gameSize.x / 2, gameSize.y / 2);
+        default:
+          return Vector2(gameSize.x / 2, gameSize.y / 2);
+      }
+    } else {
+      // Portrait positioning (original)
+      const double horizontalOffset = 10.0;
+      switch (currentLevelType) {
+        case LevelType.gravity:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+        case LevelType.demon:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+        case LevelType.survival:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+        default:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+      }
     }
   }
 

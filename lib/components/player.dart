@@ -173,16 +173,19 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
+    final isLandscape = ScreenUtils.isLandscape(gameSize);
 
     if (currentLevelType == LevelType.gravity ||
         currentLevelType == LevelType.demon) {
-      position.x = (position.x + deltaX).clamp(20.0, gameSize.x - 20);
+      // Responsive margins based on screen orientation
+      final marginX = ScreenUtils.responsive(20.0, gameSize);
+      position.x = (position.x + deltaX).clamp(marginX, gameSize.x - marginX);
 
       // For demon levels, restrict upward movement to avoid collision area
       if (currentLevelType == LevelType.gravity) {
-        // GRAVITY LEVELS: Limit player to upper half of screen
-        final minY = gameSize.y * 0.5; // Middle of screen (can't go higher)
-        final maxY = gameSize.y - 20; // Near bottom (with small margin)
+        // GRAVITY LEVELS: Limit player to lower portion of screen
+        final minY = isLandscape ? gameSize.y * 0.3 : gameSize.y * 0.5; // Adjust for landscape
+        final maxY = gameSize.y - ScreenUtils.responsive(20.0, gameSize);
 
         position.y = (position.y + deltaY).clamp(minY, maxY);
       } else if (currentLevelType == LevelType.demon) {
@@ -209,8 +212,10 @@ class Player extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final gameSize = game.canvasSize;
     final currentLevelType =
         LevelTypeConfig.getLevelType(game.waveManager.level);
+    
     if (currentLevelType == LevelType.gravity) {
-      position.x = (position.x + deltaX).clamp(30.0, gameSize.x - 30);
+      final marginX = ScreenUtils.responsive(30.0, gameSize);
+      position.x = (position.x + deltaX).clamp(marginX, gameSize.x - marginX);
     } else if (currentLevelType == LevelType.survival) {
       // In survival mode, player stays stationary in center
       // No movement allowed
