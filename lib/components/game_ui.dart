@@ -93,7 +93,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 const Color(0xFF0f0f23).withOpacity(0.95),
               ],
               stops: const [0.0, 1.0],
-            ).createShader(Rect.fromLTWH(0, 0, pauseButtonSize, pauseButtonSize)),
+            ).createShader(
+                Rect.fromLTWH(0, 0, pauseButtonSize, pauseButtonSize)),
           position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
@@ -148,7 +149,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // IMPROVED: Enhanced header background with better gradient
     headerBg = RoundedRectComponent(
-      position: Vector2(headerMarginX, headerMarginY),
+      position: Vector2((gameSize.x - headerWidth) / 2, headerMarginY),
       size: Vector2(headerWidth, headerHeight),
       paint: Paint()
         ..shader = LinearGradient(
@@ -233,7 +234,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     final topRowRightX = headerMarginX + headerWidth - 28;
 
     // IMPROVED: Enhanced score text with responsive sizing
-    final fontSize = isLandscape ? ScreenUtils.responsive(12.0, gameSize) : ScreenUtils.responsive(14.0, gameSize);
+    final fontSize = isLandscape
+        ? ScreenUtils.responsive(12.0, gameSize)
+        : ScreenUtils.responsive(14.0, gameSize);
     scoreText = TextComponent(
       text: '⭐ Score: 0',
       position: Vector2(topRowLeftX, topRowCenterY),
@@ -302,7 +305,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         style: TextStyle(
           fontFamily: 'Roboto',
           color: const Color(0xFFff8844),
-          fontSize: isLandscape ? ScreenUtils.responsive(13.0, gameSize) : ScreenUtils.responsive(15.0, gameSize),
+          fontSize: isLandscape
+              ? ScreenUtils.responsive(13.0, gameSize)
+              : ScreenUtils.responsive(15.0, gameSize),
           fontWeight: FontWeight.w700,
           letterSpacing: 1.0 * scaleFactor,
           shadows: [
@@ -325,9 +330,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // IMPROVED: Better instructions positioning and styling with landscape adjustments
     final adHeight = ScreenUtils.responsive(55.0, gameSize);
-    final instructionsY = isLandscape ?
-      gameSize.y - ScreenUtils.responsive(25.0, gameSize) - adHeight :
-      gameSize.y - ScreenUtils.responsive(35.0, gameSize) - adHeight;
+    final instructionsY = isLandscape
+        ? gameSize.y - ScreenUtils.responsive(25.0, gameSize) - adHeight
+        : gameSize.y - ScreenUtils.responsive(35.0, gameSize) - adHeight;
 
     instructionsText = TextComponent(
       text: 'Collect ⭐ coins • Avoid 💣 bombs',
@@ -337,7 +342,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         style: TextStyle(
           fontFamily: 'Roboto',
           color: const Color(0xFF88aacc),
-          fontSize: isLandscape ? ScreenUtils.responsive(12.0, gameSize) : ScreenUtils.responsive(14.0, gameSize),
+          fontSize: isLandscape
+              ? ScreenUtils.responsive(12.0, gameSize)
+              : ScreenUtils.responsive(14.0, gameSize),
           fontWeight: FontWeight.w600,
           letterSpacing: 0.8 * scaleFactor,
           shadows: [
@@ -355,7 +362,14 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         ),
       ),
     );
-    add(instructionsText);
+
+    if (game.waveManager.level < 5) {
+      add(instructionsText);
+    }
+    if (game.waveManager.level < 20 &&
+        game.currentLevelType == LevelType.demon) {
+      add(instructionsText);
+    }
 
     isInitialized = true;
   }
@@ -403,12 +417,17 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       builder: (BuildContext dialogContext) {
         final screenSize = MediaQuery.of(dialogContext).size;
         final isLandscape = screenSize.width > screenSize.height;
-        final dialogWidth = isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.8;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.8;
         final padding = dialogWidth * 0.06;
-        final titleFontSize = isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
-        final buttonFontSize = isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
-        final buttonPaddingV = isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
-        final buttonPaddingH = isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+        final titleFontSize =
+            isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+        final buttonFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+        final buttonPaddingV =
+            isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+        final buttonPaddingH =
+            isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
 
         return WillPopScope(
           onWillPop: () async =>
@@ -675,7 +694,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
       // Modern wave message design with responsive sizing
       final message = game.waveMessage!;
-      final messageFontSize = isLandscape ? ScreenUtils.responsive(24.0, gameSize) : ScreenUtils.responsive(32.0, gameSize);
+      final messageFontSize = isLandscape
+          ? ScreenUtils.responsive(24.0, gameSize)
+          : ScreenUtils.responsive(32.0, gameSize);
       final messageTextStyle = TextStyle(
         fontFamily: 'Roboto',
         color: const Color(0xFF00ff88),
@@ -708,7 +729,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       final rectHeight = textPainter.height + padding * 0.8;
 
       // Adjust message position for landscape
-      final messageYOffset = isLandscape ? -25 * scaleFactor : -50 * scaleFactor;
+      final messageYOffset =
+          isLandscape ? -25 * scaleFactor : -50 * scaleFactor;
       final messageBg = RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: Offset(gameSize.x / 2, gameSize.y / 2 + messageYOffset),
@@ -830,14 +852,21 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         builder: (BuildContext context) {
           final screenSize = MediaQuery.of(context).size;
           final isLandscape = screenSize.width > screenSize.height;
-          final dialogWidth = isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
+          final dialogWidth =
+              isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
-          final statFontSize = isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
-          final bodyFontSize = isLandscape ? dialogWidth * 0.04 : dialogWidth * 0.05;
-          final buttonFontSize = isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
-          final buttonPaddingV = isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
-          final buttonPaddingH = isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final titleFontSize =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final statFontSize =
+              isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
+          final bodyFontSize =
+              isLandscape ? dialogWidth * 0.04 : dialogWidth * 0.05;
+          final buttonFontSize =
+              isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+          final buttonPaddingV =
+              isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+          final buttonPaddingH =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -864,8 +893,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 ],
               ),
             ),
-            content: Container(
-              width: dialogWidth,
+            content: SingleChildScrollView(
+              //width: dialogWidth,
               padding: EdgeInsets.all(padding),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -891,7 +920,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
                   // Explanation section with different text based on level type
                   Container(
-                    padding: EdgeInsets.all(dialogWidth * 0.045),
+                    padding: EdgeInsets.all(dialogWidth * 0.025),
                     decoration: BoxDecoration(
                       color: const Color(0xFF44aaff).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(dialogWidth * 0.04),
@@ -907,6 +936,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
+                      softWrap: true,
                     ),
                   ),
                 ],
@@ -965,13 +995,19 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         builder: (BuildContext context) {
           final screenSize = MediaQuery.of(context).size;
           final isLandscape = screenSize.width > screenSize.height;
-          final dialogWidth = isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
+          final dialogWidth =
+              isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
-          final statFontSize = isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
-          final buttonFontSize = isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
-          final buttonPaddingV = isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
-          final buttonPaddingH = isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final titleFontSize =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final statFontSize =
+              isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
+          final buttonFontSize =
+              isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+          final buttonPaddingV =
+              isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+          final buttonPaddingH =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -1182,7 +1218,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       builder: (context) {
         final screenSize = MediaQuery.of(context).size;
         final isLandscape = screenSize.width > screenSize.height;
-        final dialogWidth = isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1289,7 +1326,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       builder: (context) {
         final screenSize = MediaQuery.of(context).size;
         final isLandscape = screenSize.width > screenSize.height;
-        final dialogWidth = isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

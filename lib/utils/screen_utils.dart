@@ -4,32 +4,43 @@ class ScreenUtils {
   // Base design dimensions (phone in portrait)
   static const double baseWidth = 400.0;
   static const double baseHeight = 800.0;
-  
+
   // Calculate responsive scale factor
   static double getScaleFactor(Vector2 screenSize) {
-    final widthScale = screenSize.x / baseWidth;
-    final heightScale = screenSize.y / baseHeight;
-    
+    final isLandscapeScreen = screenSize.x > screenSize.y;
+
+    double widthScale, heightScale;
+
+    if (isLandscapeScreen) {
+      // In landscape, compare against swapped base dimensions
+      widthScale = screenSize.x / baseHeight; // Use baseHeight for width
+      heightScale = screenSize.y / baseWidth; // Use baseWidth for height
+    } else {
+      // In portrait, use normal base dimensions
+      widthScale = screenSize.x / baseWidth;
+      heightScale = screenSize.y / baseHeight;
+    }
+
     // Use the smaller scale to ensure everything fits
     return (widthScale < heightScale) ? widthScale : heightScale;
   }
-  
+
   // Get responsive size
   static double responsive(double size, Vector2 screenSize) {
     return size * getScaleFactor(screenSize);
   }
-  
+
   // Check if device is in landscape mode
   static bool isLandscape(Vector2 screenSize) {
     return screenSize.x > screenSize.y;
   }
-  
+
   // Check if screen is tablet-sized
   static bool isTablet(Vector2 screenSize) {
     final diagonal = screenSize.length;
     return diagonal > 1000; // Rough tablet detection
   }
-  
+
   // Get safe margins for different screen sizes
   static double getMargin(Vector2 screenSize) {
     if (isTablet(screenSize)) {
@@ -38,7 +49,7 @@ class ScreenUtils {
       return responsive(10.0, screenSize);
     }
   }
-  
+
   // Get header height based on screen size
   static double getHeaderHeight(Vector2 screenSize) {
     if (isLandscape(screenSize)) {
@@ -47,7 +58,7 @@ class ScreenUtils {
       return screenSize.y * 0.12;
     }
   }
-  
+
   // Get UI margins optimized for landscape
   static double getUIMargin(Vector2 screenSize) {
     if (isLandscape(screenSize)) {
@@ -56,7 +67,7 @@ class ScreenUtils {
       return responsive(10.0, screenSize);
     }
   }
-  
+
   // Get player safe zone for landscape
   static Vector2 getPlayerSafeZone(Vector2 screenSize) {
     if (isLandscape(screenSize)) {
@@ -72,7 +83,7 @@ class ScreenUtils {
       );
     }
   }
-  
+
   // Check if we need compact UI for landscape
   static bool needsCompactUI(Vector2 screenSize) {
     return isLandscape(screenSize) && screenSize.y < 600;
@@ -84,12 +95,16 @@ class ScreenUtils {
       // Reserve space for header and bottom UI in landscape
       return Vector2(
         screenSize.x - (getUIMargin(screenSize) * 2),
-        screenSize.y - getHeaderHeight(screenSize) - responsive(80.0, screenSize),
+        screenSize.y -
+            getHeaderHeight(screenSize) -
+            responsive(80.0, screenSize),
       );
     } else {
       return Vector2(
         screenSize.x - (getUIMargin(screenSize) * 2),
-        screenSize.y - getHeaderHeight(screenSize) - responsive(100.0, screenSize),
+        screenSize.y -
+            getHeaderHeight(screenSize) -
+            responsive(100.0, screenSize),
       );
     }
   }

@@ -232,15 +232,16 @@ class MagnetWalkerGame extends FlameGame
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
     final actualSize = camera.viewfinder.visibleGameSize ?? gameSize;
     gameSize = actualSize;
-    
+
     // Import screen utils for landscape-aware positioning
     final isLandscape = gameSize.x > gameSize.y;
-    
+
     if (isLandscape) {
       // Landscape positioning - avoid UI areas
       switch (currentLevelType) {
         case LevelType.gravity:
-          return Vector2(gameSize.x / 2, gameSize.y * 0.75); // Higher up in landscape
+          return Vector2(
+              gameSize.x / 2, gameSize.y * 0.75); // Higher up in landscape
         case LevelType.demon:
           return Vector2(gameSize.x / 2, gameSize.y * 0.75);
         case LevelType.survival:
@@ -430,7 +431,7 @@ class MagnetWalkerGame extends FlameGame
   // Update player position based on current level type
   void _updatePlayerPositionForLevelType() {
     final gameSize = canvasSize;
-    const double horizontalOffset = 10.0;
+    double horizontalOffset = player!.radius / 2;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
@@ -443,7 +444,7 @@ class MagnetWalkerGame extends FlameGame
           Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     } else if (currentLevelType == LevelType.demon) {
       initialPosition =
-          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 4);
     }
     // Animate player to new position
     player?.animateToPosition(initialPosition, 2.7);
@@ -1640,6 +1641,19 @@ class MagnetWalkerGame extends FlameGame
     sfxEnabled = prefs.getBool('sfx_enabled') ?? true;
     if (musicEnabled) {
       playMusic('game_music.mp3');
+    }
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+
+    // The screen size has changed - update all responsive elements
+    if (player != null) {
+      player?.animateToPosition(_getPlayerInitialPosition(size), 2.7);
+    }
+    if (demon != null) {
+      demon?.updateResponsiveSizes(size);
     }
   }
 }

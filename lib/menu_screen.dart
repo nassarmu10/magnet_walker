@@ -339,8 +339,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   scale: isPrimary ? _pulseAnimation.value : 1.0,
                   child: Container(
                     width: isLandscape
-                      ? screenSize.width * 0.35
-                      : screenSize.width * 0.85,
+                        ? screenSize.width * 0.35
+                        : screenSize.width * 0.85,
                     height: isLandscape ? 50 : 60,
                     margin: EdgeInsets.symmetric(vertical: isLandscape ? 6 : 8),
                     child: Material(
@@ -447,71 +447,82 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
           ),
           child: SafeArea(
             child: isLandscape
-              ? Row(
-                  children: [
-                    // Left side - Logo and title
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Lives display at top in landscape
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: _buildLivesDisplay(),
-                          ),
-                          // Logo
-                          _buildLogoSection(isLandscape, isSmallScreen, screenSize),
-                          // Title
-                          _buildTitleSection(isLandscape, isSmallScreen, screenSize),
-                        ],
-                      ),
-                    ),
-                    // Right side - Buttons
-                    Expanded(
-                      flex: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
+                ? Row(
+                    children: [
+                      // Left side - Logo and title
+                      Expanded(
+                        flex: 1,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: _buildButtons(),
+                          children: [
+                            // Lives display at top in landscape
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: _buildLivesDisplay(),
+                            ),
+                            // Logo
+                            _buildLogoSection(
+                                isLandscape, isSmallScreen, screenSize),
+                            // Title
+                            _buildTitleSection(
+                                isLandscape, isSmallScreen, screenSize),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                )
-              : Column(
-              children: [
-                // Enhanced status bar with better spacing
-                if (!isLandscape) Padding(
-                  padding:
-                      EdgeInsets.fromLTRB(24, isSmallScreen ? 12 : 20, 24, 0),
-                  child: _buildLivesDisplay(),
-                ),
+                      // Right side - Buttons
+                      Expanded(
+                        flex: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: _buildButtons(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // Enhanced status bar with better spacing
+                      if (!isLandscape)
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                              24, isSmallScreen ? 12 : 20, 24, 0),
+                          child: _buildLivesDisplay(),
+                        ),
 
-                if (!isLandscape) SizedBox(height: isSmallScreen ? 20 : 30),
+                      if (!isLandscape)
+                        SizedBox(height: isSmallScreen ? 20 : 30),
 
-                // Logo and title section
-                if (!isLandscape) _buildLogoSection(isLandscape, isSmallScreen, screenSize),
-                if (!isLandscape) _buildTitleSection(isLandscape, isSmallScreen, screenSize),
+                      // Logo and title section
+                      if (!isLandscape)
+                        _buildLogoSection(
+                            isLandscape, isSmallScreen, screenSize),
+                      if (!isLandscape)
+                        _buildTitleSection(
+                            isLandscape, isSmallScreen, screenSize),
 
-                if (!isLandscape) SizedBox(height: isSmallScreen ? 20 : 30),
+                      if (!isLandscape)
+                        SizedBox(height: isSmallScreen ? 20 : 30),
 
-                // Enhanced buttons with staggered animation
-                if (!isLandscape) Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: _buildButtons(),
-                    ),
+                      // Enhanced buttons with staggered animation
+                      if (!isLandscape)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: _buildButtons(),
+                            ),
+                          ),
+                        ),
+
+                      // Bottom spacing
+                      if (!isLandscape)
+                        SizedBox(height: isSmallScreen ? 20 : 40),
+                    ],
                   ),
-                ),
-
-                // Bottom spacing
-                if (!isLandscape) SizedBox(height: isSmallScreen ? 20 : 40),
-              ],
-            ),
           ),
         ),
       ),
@@ -693,8 +704,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
             borderRadius: 24,
             opacity: 0.12,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -704,13 +714,11 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE53E3E)
-                              .withOpacity(0.25),
+                          color: const Color(0xFFE53E3E).withOpacity(0.25),
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFE53E3E)
-                                  .withOpacity(0.3),
+                              color: const Color(0xFFE53E3E).withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -733,8 +741,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  if (_lives < _maxLives &&
-                      _timeUntilNextLife.isNotEmpty)
+                  if (_lives < _maxLives && _timeUntilNextLife.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
@@ -769,14 +776,12 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color:
-                        const Color(0xFF3B82F6).withOpacity(0.5),
+                    color: const Color(0xFF3B82F6).withOpacity(0.5),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B82F6)
-                          .withOpacity(0.3),
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -812,14 +817,14 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildLogoSection(bool isLandscape, bool isSmallScreen, Size screenSize) {
+  Widget _buildLogoSection(
+      bool isLandscape, bool isSmallScreen, Size screenSize) {
     return SlideTransition(
       position: _titleSlideAnimation,
       child: FadeTransition(
         opacity: _titleFadeAnimation,
         child: AnimatedBuilder(
-          animation: Listenable.merge(
-              [_pulseAnimation, _breathingAnimation]),
+          animation: Listenable.merge([_pulseAnimation, _breathingAnimation]),
           builder: (context, child) {
             final pulseScale = 1.0 + (_pulseAnimation.value * 0.05);
             final breathingScale = _breathingController.isAnimating
@@ -830,11 +835,11 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
               scale: combinedScale,
               child: Container(
                 width: isLandscape
-                  ? screenSize.width * 0.25
-                  : screenSize.width * (isSmallScreen ? 0.6 : 0.5),
+                    ? screenSize.width * 0.25
+                    : screenSize.width * (isSmallScreen ? 0.6 : 0.5),
                 height: isLandscape
-                  ? screenSize.width * 0.25 * 0.8
-                  : screenSize.width * (isSmallScreen ? 0.6 : 0.5) * 0.8,
+                    ? screenSize.width * 0.25 * 0.8
+                    : screenSize.width * (isSmallScreen ? 0.6 : 0.5) * 0.8,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -853,7 +858,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTitleSection(bool isLandscape, bool isSmallScreen, Size screenSize) {
+  Widget _buildTitleSection(
+      bool isLandscape, bool isSmallScreen, Size screenSize) {
     return Column(
       children: [
         // "Magnet Lord" text underneath with animations
@@ -876,8 +882,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
             child: AnimatedBuilder(
               animation: _pulseAnimation,
               builder: (context, child) {
-                final shimmer =
-                    (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
+                final shimmer = (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
                 return ShaderMask(
                   shaderCallback: (bounds) {
                     return LinearGradient(
@@ -899,8 +904,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                     'Magnet Lord',
                     style: TextStyle(
                       fontSize: isLandscape
-                        ? screenSize.width * 0.04
-                        : screenSize.width * (isSmallScreen ? 0.08 : 0.09),
+                          ? screenSize.width * 0.04
+                          : screenSize.width * (isSmallScreen ? 0.08 : 0.09),
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                       letterSpacing: 3.0,
@@ -908,14 +913,12 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                         Shadow(
                           offset: const Offset(0, 0),
                           blurRadius: 20 + (10 * _pulseAnimation.value),
-                          color:
-                              const Color(0xFF00E5FF).withOpacity(0.6),
+                          color: const Color(0xFF00E5FF).withOpacity(0.6),
                         ),
                         Shadow(
                           offset: const Offset(0, 0),
                           blurRadius: 30 + (15 * _pulseAnimation.value),
-                          color:
-                              const Color(0xFF7C3AED).withOpacity(0.4),
+                          color: const Color(0xFF7C3AED).withOpacity(0.4),
                         ),
                         const Shadow(
                           offset: Offset(0, 2),
@@ -936,8 +939,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
 
         // Subtitle
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.4),
             borderRadius: BorderRadius.circular(20),
@@ -973,12 +975,9 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
       _buildAnimatedButton(
         text: _lives > 0 ? 'PLAY GAME' : 'NO LIVES LEFT',
         onPressed: _lives > 0 ? widget.onPlay : null,
-        backgroundColor: _lives > 0
-            ? const Color(0xFF059669)
-            : Colors.grey.shade600,
-        icon: _lives > 0
-            ? Icons.play_arrow_rounded
-            : Icons.block_rounded,
+        backgroundColor:
+            _lives > 0 ? const Color(0xFF059669) : Colors.grey.shade600,
+        icon: _lives > 0 ? Icons.play_arrow_rounded : Icons.block_rounded,
         isPrimary: _lives > 0,
         animationDelay: 0,
       ),

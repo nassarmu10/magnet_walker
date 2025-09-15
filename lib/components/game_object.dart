@@ -34,10 +34,10 @@ class GameObject extends CircleComponent
   Future<void> onLoad() async {
     // Make object size responsive to screen size
     final screenSize = game.canvasSize;
-    radius = type == ObjectType.coin 
-        ? ScreenUtils.responsive(8.0, screenSize)
-        : ScreenUtils.responsive(12.0, screenSize);
-    
+    radius = type == ObjectType.coin
+        ? math.min(ScreenUtils.responsive(8.0, screenSize), 12)
+        : math.min(ScreenUtils.responsive(12.0, screenSize), 16);
+
     // Load rocket sprite for bombs
     if (type == ObjectType.bomb) {
       try {
@@ -53,7 +53,7 @@ class GameObject extends CircleComponent
         final bombSprite = Sprite(game.images.fromCache(chosen));
         bombSpriteComponent = SpriteComponent(
           sprite: bombSprite,
-          size: Vector2.all(radius * 4), // Make rocket 4x bigger (was 2x)
+          size: Vector2.all(radius), // Made responsive
           anchor: Anchor.center, // Ensure it's centered
         );
         add(bombSpriteComponent!);
@@ -64,7 +64,8 @@ class GameObject extends CircleComponent
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
-      const baseSpeed = 25.0; // Increased from 15.0 for faster early levels
+      final baseSpeed =
+          ScreenUtils.responsive(25.0, screenSize); // Made responsive
       final levelSpeedMultiplier =
           1.0 + (level * 0.2); // Reduced from 0.3 to balance
       velocity.y = baseSpeed * levelSpeedMultiplier;
@@ -72,7 +73,8 @@ class GameObject extends CircleComponent
       // Objects move toward player
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
-      final baseSpeed = 18.0; // Increased from 12.0 for faster movement
+      final baseSpeed =
+          ScreenUtils.responsive(18.0, screenSize); // Made responsive
       final speedGrowth = 1.0 + (level * 0.15); // Reduced from 0.12 to balance
       final waveGrowth =
           1.0 + (game.waveManager.currentWave - 1) * 0.08; // Reduced slightly
@@ -83,18 +85,23 @@ class GameObject extends CircleComponent
       objectPaint = Paint()..color = Colors.amber;
       glowPaint = Paint()
         ..color = Colors.amber.withOpacity(0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal,
+            ScreenUtils.responsive(5, screenSize)); // Made responsive
     } else {
       objectPaint = Paint()..color = Colors.red;
       glowPaint = Paint()
         ..color = Colors.red.withOpacity(0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal,
+            ScreenUtils.responsive(5, screenSize)); // Made responsive
     }
   }
 
   @override
   void update(double dt) {
     if (collected) return;
+
+    final screenSize =
+        game.canvasSize; // Get screen size for responsive calculations
 
     // Update pulse time for survival mode
     if (levelType == LevelType.survival) {
@@ -107,8 +114,8 @@ class GameObject extends CircleComponent
       if (levelType == LevelType.survival) {
         pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
       }
-      bombSpriteComponent!.size =
-          Vector2.all(radius * 4 * pulseScale); // Use 4x scaling
+      bombSpriteComponent!.size = Vector2.all(ScreenUtils.responsive(
+          radius * 4 * pulseScale, screenSize)); // Made responsive
 
       Vector2 direction;
 
@@ -198,6 +205,9 @@ class GameObject extends CircleComponent
   void render(Canvas canvas) {
     if (collected) return;
 
+    final screenSize =
+        game.canvasSize; // Get screen size for responsive calculations
+
     // Calculate pulse effect for survival mode
     double pulseScale = 1.0;
     if (levelType == LevelType.survival) {
@@ -209,16 +219,19 @@ class GameObject extends CircleComponent
       final pulseGlowPaint = Paint()
         ..color = (type == ObjectType.coin ? Colors.amber : Colors.red)
             .withOpacity(0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal,
+            ScreenUtils.responsive(5, screenSize)); // Made responsive
 
       // Adjust glow size based on object type
       double glowRadius;
       if (type == ObjectType.bomb && bombSpriteComponent != null) {
         // For rockets, make glow slightly larger than the sprite
-        glowRadius = radius * pulseScale + 8;
+        glowRadius = ScreenUtils.responsive(
+            radius * pulseScale + 8, screenSize); // Made responsive
       } else {
         // For coins and fallback bombs, use original size
-        glowRadius = radius * pulseScale + 5;
+        glowRadius = ScreenUtils.responsive(
+            radius * pulseScale + 5, screenSize); // Made responsive
       }
 
       canvas.drawCircle(Offset.zero, glowRadius, pulseGlowPaint);
@@ -235,18 +248,20 @@ class GameObject extends CircleComponent
       final borderPaint = Paint()
         ..color = type == ObjectType.coin ? Colors.orange : Colors.red
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+        ..strokeWidth =
+            ScreenUtils.responsive(2, screenSize); // Made responsive
 
       canvas.drawCircle(Offset.zero, scaledRadius, borderPaint);
 
       // Draw symbol only for fallback bomb rendering
       if (type == ObjectType.bomb && bombSpriteComponent == null) {
         final textPainter = TextPainter(
-          text: const TextSpan(
+          text: TextSpan(
             text: '!',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize:
+                  ScreenUtils.responsive(12, screenSize), // Made responsive
               fontWeight: FontWeight.bold,
             ),
           ),
