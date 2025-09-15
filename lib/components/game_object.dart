@@ -64,8 +64,7 @@ class GameObject extends CircleComponent
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
-      final baseSpeed =
-          ScreenUtils.responsive(25.0, screenSize); // Made responsive
+      final baseSpeed = 25.0; // Made responsive
       final levelSpeedMultiplier =
           1.0 + (level * 0.2); // Reduced from 0.3 to balance
       velocity.y = baseSpeed * levelSpeedMultiplier;
@@ -115,7 +114,7 @@ class GameObject extends CircleComponent
         pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
       }
       bombSpriteComponent!.size = Vector2.all(ScreenUtils.responsive(
-          radius * 4 * pulseScale, screenSize)); // Made responsive
+          radius * 3.8 * pulseScale, screenSize)); // Made responsive
 
       Vector2 direction;
 

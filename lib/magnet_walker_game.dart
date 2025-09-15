@@ -6,6 +6,7 @@ import 'package:magnet_walker/components/demon.dart';
 import 'package:magnet_walker/components/portal.dart';
 import 'package:magnet_walker/skins/skin_model.dart';
 import 'package:magnet_walker/skins/skin_store_screen.dart';
+import 'package:magnet_walker/utils/screen_utils.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1483,11 +1484,13 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startDemonLeve() {
+    final y_pos = ScreenUtils.responsive(250.0, canvasSize);
+
     // Check if we have saved demon health (from watching ad to continue)
     if (waveManager.hasSavedDemonHealth()) {
       // Restore demon with saved health
       if (demon == null) {
-        demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+        demon = Demon(position: Vector2(canvasSize.x / 2, y_pos));
         add(demon as Component);
       }
       demon?.restoreHealth(
@@ -1499,7 +1502,7 @@ class MagnetWalkerGame extends FlameGame
     } else {
       // Start fresh demon
       if (demon == null) {
-        demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+        demon = Demon(position: Vector2(canvasSize.x / 2, y_pos));
         add(demon as Component);
       }
       demon?.isAlive = true;
