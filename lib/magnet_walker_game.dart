@@ -360,6 +360,12 @@ class MagnetWalkerGame extends FlameGame
         'rocket-2.png',
         'rocket-3.png',
         'rocket-4.png',
+        'missile1.png',
+        'missile2.png',
+        'missile3.png',
+        'missile4.png',
+        'missile5.png',
+        'missile6.png',
       ]);
     } catch (e) {
       print('Failed to preload rocket images: $e');

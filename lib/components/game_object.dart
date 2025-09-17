@@ -41,19 +41,54 @@ class GameObject extends CircleComponent
     // Load rocket sprite for bombs
     if (type == ObjectType.bomb) {
       try {
-        // Randomly choose between rocket.png and rocket-2.png
+        // Randomly choose between available missile/rocket images
         final rocketImages = [
           'rocket.png',
           'rocket-2.png',
           'rocket-3.png',
           'rocket-4.png',
+          'missile1.png',
+          'missile2.png',
+          'missile3.png',
+          'missile4.png',
+          'missile5.png',
+          'missile6.png',
         ];
         final random = math.Random();
         final chosen = rocketImages[random.nextInt(rocketImages.length)];
         final bombSprite = Sprite(game.images.fromCache(chosen));
+
+        // Calculate size while preserving aspect ratio
+        final image = game.images.fromCache(chosen);
+        final aspectRatio = image.width / image.height;
+        Vector2 spriteSize;
+
+        // Different sizing for missiles vs rockets
+        final isMissile = chosen.contains('missile');
+
+        if (isMissile) {
+          // Missiles: use much smaller size and preserve natural proportions
+          final missileScale = radius * 1.2; // Smaller overall scale
+          if (aspectRatio > 1.0) {
+            // Wide missile - limit width to prevent thickness
+            spriteSize = Vector2(missileScale * 1.2, missileScale * 0.8);
+          } else {
+            // Tall missile - keep it thin
+            spriteSize = Vector2(missileScale * 0.6, missileScale * 1.4);
+          }
+        } else {
+          // Rockets: keep original sizing
+          final rocketScale = radius * 2;
+          if (aspectRatio > 1.0) {
+            spriteSize = Vector2(rocketScale * aspectRatio, rocketScale);
+          } else {
+            spriteSize = Vector2(rocketScale, rocketScale / aspectRatio);
+          }
+        }
+
         bombSpriteComponent = SpriteComponent(
           sprite: bombSprite,
-          size: Vector2.all(radius), // Made responsive
+          size: spriteSize, // Preserve aspect ratio
           anchor: Anchor.center, // Ensure it's centered
         );
         add(bombSpriteComponent!);

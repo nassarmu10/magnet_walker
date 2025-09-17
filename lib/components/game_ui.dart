@@ -71,11 +71,13 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     final isLandscape = ScreenUtils.isLandscape(gameSize);
     final scaleFactor = ScreenUtils.getScaleFactor(gameSize);
 
-    // IMPROVED: Enhanced pause button with responsive positioning
+    // IMPROVED: Enhanced pause button with responsive positioning (moved up to avoid ad bar)
     final pauseButtonSize = ScreenUtils.responsive(45.0, gameSize);
     final pauseMargin = ScreenUtils.responsive(15.0, gameSize);
+    final adBarHeight = ScreenUtils.responsive(55.0, gameSize); // Height of ad bar
+    final extraMargin = ScreenUtils.responsive(10.0, gameSize); // Extra spacing
     pauseButton = ButtonComponent(
-      position: Vector2(gameSize.x - pauseMargin, gameSize.y - pauseMargin),
+      position: Vector2(gameSize.x - pauseMargin, gameSize.y - pauseMargin - adBarHeight - extraMargin),
       size: Vector2(pauseButtonSize, pauseButtonSize),
       anchor: Anchor.bottomRight,
       button: RectangleComponent(
