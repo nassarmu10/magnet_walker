@@ -20,6 +20,7 @@ class GameObject extends CircleComponent
   late Paint objectPaint;
   late Paint glowPaint;
   SpriteComponent? bombSpriteComponent; // For rocket image
+  String? bombImageName; // Track which image is being used
 
   GameObject({
     required super.position,
@@ -56,6 +57,7 @@ class GameObject extends CircleComponent
         ];
         final random = math.Random();
         final chosen = rocketImages[random.nextInt(rocketImages.length)];
+        bombImageName = chosen; // Save the image name for later reference
         final bombSprite = Sprite(game.images.fromCache(chosen));
 
         // Calculate size while preserving aspect ratio
@@ -67,14 +69,16 @@ class GameObject extends CircleComponent
         final isMissile = chosen.contains('missile');
 
         if (isMissile) {
-          // Missiles: use much smaller size and preserve natural proportions
-          final missileScale = radius * 1.2; // Smaller overall scale
+          // Missiles: make them larger and thicker for better visibility
+          final missileLength = radius * 4.2; // Much larger length
+          final missileWidth = radius * 1.4;  // Thicker width
+
           if (aspectRatio > 1.0) {
-            // Wide missile - limit width to prevent thickness
-            spriteSize = Vector2(missileScale * 1.2, missileScale * 0.8);
+            // Wide missile (horizontal) - long and thin
+            spriteSize = Vector2(missileLength, missileWidth);
           } else {
-            // Tall missile - keep it thin
-            spriteSize = Vector2(missileScale * 0.6, missileScale * 1.4);
+            // Tall missile (vertical) - long and thin
+            spriteSize = Vector2(missileWidth, missileLength);
           }
         } else {
           // Rockets: keep original sizing
@@ -148,8 +152,28 @@ class GameObject extends CircleComponent
       if (levelType == LevelType.survival) {
         pulseScale = 1.0 + 0.1 * math.sin(pulseTime); // 10% size variation
       }
-      bombSpriteComponent!.size = Vector2.all(ScreenUtils.responsive(
-          radius * 3.8 * pulseScale, screenSize)); // Made responsive
+      // Apply responsive sizing while preserving missile proportions
+      final isMissile = bombImageName?.contains('missile') ?? false;
+
+      if (isMissile) {
+        // Missiles: larger and thicker for better visibility
+        final missileLength = ScreenUtils.responsive(radius * 4.2 * pulseScale, screenSize);
+        final missileWidth = ScreenUtils.responsive(radius * 1.4 * pulseScale, screenSize);
+
+        // Determine orientation from current size (which was set in onLoad)
+        final currentSize = bombSpriteComponent!.size;
+        if (currentSize.x > currentSize.y) {
+          // Horizontal missile
+          bombSpriteComponent!.size = Vector2(missileLength, missileWidth);
+        } else {
+          // Vertical missile
+          bombSpriteComponent!.size = Vector2(missileWidth, missileLength);
+        }
+      } else {
+        // Rockets: use original square sizing
+        bombSpriteComponent!.size = Vector2.all(ScreenUtils.responsive(
+            radius * 3.8 * pulseScale, screenSize)); // Made responsive
+      }
 
       Vector2 direction;
 
