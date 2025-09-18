@@ -9,21 +9,21 @@ class AdManager {
   static String get bannerAdUnitId {
     // Replace with your banner ad unit ID
     return Platform.isAndroid
-        ? 'ca-app-pub-3940256099942544/9214589741' // test 'ca-app-pub-3940256099942544/9214589741'
+        ? 'ca-app-pub-4497634353967283/1784471212' // test 'ca-app-pub-3940256099942544/9214589741'
         : 'ca-app-pub-4497634353967283/6092306954'; // prod ca-app-pub-4497634353967283/6092306954
   }
 
   static String get interstitialAdUnitId {
     // Replace with your interstitial ad unit ID
     return Platform.isAndroid
-        ? 'ca-app-pub-3940256099942544/1033173712' // test 'ca-app-pub-4497634353967283/2665119024'
+        ? 'ca-app-pub-4497634353967283/8708972212' // test 'ca-app-pub-4497634353967283/2665119024'
         : 'ca-app-pub-4497634353967283/5089097885'; // test ca-app-pub-3940256099942544/1033173712
   }
 
   static String get rewardedAdUnitId {
     // Replace with your rewarded ad unit ID
     return Platform.isAndroid
-        ? 'ca-app-pub-3940256099942544/5224354917' // test 'ca-app-pub-3940256099942544/5224354917'
+        ? 'ca-app-pub-4497634353967283/5284678621' // test 'ca-app-pub-3940256099942544/5224354917'
         : 'ca-app-pub-4497634353967283/1357956265'; //  'ca-app-pub-4497634353967283/1357956265';
   }
 
