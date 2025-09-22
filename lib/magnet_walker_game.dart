@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -167,6 +169,20 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
+  Future<void> _show_instructions() async {
+    // Show instructions popup for first level of each type
+    if (waveManager.level == 1 ||
+        waveManager.level == 2 ||
+        waveManager.level == 12) {
+      await gameUI?.showInstructionsDialog(
+        level: waveManager.level,
+        onContinue: () {
+          // This callback can be empty since we're using await
+        },
+      );
+    }
+  }
+
   @override
   Future<void> onLoad() async {
     // Wait for the game to be fully initialized
@@ -180,6 +196,7 @@ class MagnetWalkerGame extends FlameGame
 
     //Start level
     await _startLevel();
+    await _show_instructions();
   }
 
   /// Initialize or restart a level - can be called multiple times
@@ -1161,6 +1178,14 @@ class MagnetWalkerGame extends FlameGame
     super.onRemove();
   }
 
+  void setPaused(bool paused) {
+    if (paused) {
+      pauseEngine();
+    } else {
+      resumeEngine();
+    }
+  }
+
   // Save current level and total score to SharedPreferences
   Future<void> saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1426,6 +1451,7 @@ class MagnetWalkerGame extends FlameGame
 // Call this to advance to the next level
   async.Future<void> nextLevel() async {
     waveManager.level++;
+    await _show_instructions();
     waveManager.setTarget(); // Update target for new level
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     if (player != null) player?.updateMagnetForLevel();

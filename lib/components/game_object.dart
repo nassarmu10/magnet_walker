@@ -71,7 +71,7 @@ class GameObject extends CircleComponent
         if (isMissile) {
           // Missiles: make them larger and thicker for better visibility
           final missileLength = radius * 4.2; // Much larger length
-          final missileWidth = radius * 1.4;  // Thicker width
+          final missileWidth = radius * 1.4; // Thicker width
 
           if (aspectRatio > 1.0) {
             // Wide missile (horizontal) - long and thin
@@ -103,7 +103,10 @@ class GameObject extends CircleComponent
 
     // Set velocity based on level type
     if (levelType == LevelType.gravity) {
-      final baseSpeed = 25.0; // Made responsive
+      double baseSpeed = 25.0; // Made responsive
+      if (level < 10) {
+        baseSpeed = 50.0;
+      }
       final levelSpeedMultiplier =
           1.0 + (level * 0.2); // Reduced from 0.3 to balance
       velocity.y = baseSpeed * levelSpeedMultiplier;
@@ -111,8 +114,12 @@ class GameObject extends CircleComponent
       // Objects move toward player
       final playerPos = game.player?.position;
       final direction = (playerPos! - position)..normalize();
+      double rootSpeed = 25.0; // Made responsive
+      if (level < 10) {
+        rootSpeed = 50.0;
+      }
       final baseSpeed =
-          ScreenUtils.responsive(18.0, screenSize); // Made responsive
+          ScreenUtils.responsive(rootSpeed, screenSize); // Made responsive
       final speedGrowth = 1.0 + (level * 0.15); // Reduced from 0.12 to balance
       final waveGrowth =
           1.0 + (game.waveManager.currentWave - 1) * 0.08; // Reduced slightly
@@ -157,8 +164,10 @@ class GameObject extends CircleComponent
 
       if (isMissile) {
         // Missiles: larger and thicker for better visibility
-        final missileLength = ScreenUtils.responsive(radius * 4.2 * pulseScale, screenSize);
-        final missileWidth = ScreenUtils.responsive(radius * 1.4 * pulseScale, screenSize);
+        final missileLength =
+            ScreenUtils.responsive(radius * 4.2 * pulseScale, screenSize);
+        final missileWidth =
+            ScreenUtils.responsive(radius * 1.4 * pulseScale, screenSize);
 
         // Determine orientation from current size (which was set in onLoad)
         final currentSize = bombSpriteComponent!.size;

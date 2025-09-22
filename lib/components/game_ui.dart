@@ -41,7 +41,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent levelTypeText;
   // late TextComponent playTimeText;
   late TextComponent targetScoreText;
-  late TextComponent instructionsText;
   bool gameOverVisible = false;
   bool isInitialized = false;
 
@@ -74,10 +73,12 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // IMPROVED: Enhanced pause button with responsive positioning (moved up to avoid ad bar)
     final pauseButtonSize = ScreenUtils.responsive(45.0, gameSize);
     final pauseMargin = ScreenUtils.responsive(15.0, gameSize);
-    final adBarHeight = ScreenUtils.responsive(55.0, gameSize); // Height of ad bar
+    final adBarHeight =
+        ScreenUtils.responsive(55.0, gameSize); // Height of ad bar
     final extraMargin = ScreenUtils.responsive(10.0, gameSize); // Extra spacing
     pauseButton = ButtonComponent(
-      position: Vector2(gameSize.x - pauseMargin, gameSize.y - pauseMargin - adBarHeight - extraMargin),
+      position: Vector2(gameSize.x - pauseMargin,
+          gameSize.y - pauseMargin - adBarHeight - extraMargin),
       size: Vector2(pauseButtonSize, pauseButtonSize),
       anchor: Anchor.bottomRight,
       button: RectangleComponent(
@@ -329,49 +330,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       anchor: Anchor.center,
     );
     add(targetScoreText);
-
-    // IMPROVED: Better instructions positioning and styling with landscape adjustments
-    final adHeight = ScreenUtils.responsive(55.0, gameSize);
-    final instructionsY = isLandscape
-        ? gameSize.y - ScreenUtils.responsive(25.0, gameSize) - adHeight
-        : gameSize.y - ScreenUtils.responsive(35.0, gameSize) - adHeight;
-
-    instructionsText = TextComponent(
-      text: 'Collect ⭐ coins • Avoid 💣 bombs',
-      position: Vector2(gameSize.x / 2, instructionsY),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: TextStyle(
-          fontFamily: 'Roboto',
-          color: const Color(0xFF88aacc),
-          fontSize: isLandscape
-              ? ScreenUtils.responsive(12.0, gameSize)
-              : ScreenUtils.responsive(14.0, gameSize),
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.8 * scaleFactor,
-          shadows: [
-            Shadow(
-              offset: const Offset(0, 0),
-              blurRadius: 6 * scaleFactor,
-              color: const Color(0xFF44aaff),
-            ),
-            Shadow(
-              offset: Offset(1 * scaleFactor, 1 * scaleFactor),
-              blurRadius: 3 * scaleFactor,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (game.waveManager.level < 5) {
-      add(instructionsText);
-    }
-    if (game.waveManager.level < 20 &&
-        game.currentLevelType == LevelType.demon) {
-      add(instructionsText);
-    }
 
     isInitialized = true;
   }
@@ -654,17 +612,16 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     }
     // Update target score display
     if (game.currentLevelType != LevelType.demon) {
+      String levelMode = game.currentLevelType == LevelType.survival
+          ? "Survival Mode"
+          : game.currentLevelType == LevelType.gravity
+              ? "Gravity Mode"
+              : "";
       targetScoreText.text =
-          '🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
+          '$levelMode 🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
     } else {
       targetScoreText.text = "⚔️ Boss Battle";
     }
-
-    // Update instructions based on level type
-    final currentLevelType =
-        LevelTypeConfig.getLevelType(game.waveManager.level);
-    final instructions = LevelTypeConfig.getLevelInstructions(currentLevelType);
-    instructionsText.text = instructions;
 
     // Update container colors with pulsing effect
     if (!isPaused) {
@@ -1303,6 +1260,121 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                   },
                   child: Text(
                     'Watch Ad for 1 Life',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> showInstructionsDialog({
+    required int level,
+    required VoidCallback onContinue,
+  }) async {
+    final context = game.buildContext;
+    if (context == null) {
+      // If context is not available yet, schedule to show later
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (game.buildContext != null) {
+          showInstructionsDialog(level: level, onContinue: onContinue);
+        }
+      });
+      return;
+    }
+    game.setPaused(true);
+    String title;
+    String content;
+    String emoji;
+
+    if (level == 1) {
+      title = "Welcome to Magnet Lord!";
+      emoji = "🎮";
+      content =
+          "• Steer to dodge rockets\n• Collect coins\n• Survive as long as you can\n• Good luck, Captain!";
+    } else if (level == 2) {
+      title = "Survival Mode Unlocked!";
+      emoji = "⚡";
+      content =
+          "• Ship can't move\n• Tap to destroy rockets\n• Collect coins\n• Outlast the storm!";
+    } else if (level == 12) {
+      title = "Demon Mode Unlocked!";
+      emoji = "🔥";
+      content =
+          "• Demon's rockets are deadly\n• Move to flip magnetic force\n• Hurl rockets back\n• Strike the Demon to win!";
+    } else {
+      onContinue();
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          backgroundColor: const Color(0xFF1a1a2e),
+          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$emoji $title',
+                style: TextStyle(
+                  fontSize: dialogWidth * 0.08,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: const [
+                    Shadow(
+                      offset: Offset(0, 0),
+                      blurRadius: 8,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                content,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: dialogWidth * 0.055,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.greenAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    game.setPaused(false);
+                    onContinue();
+                  },
+                  child: Text(
+                    'Got it!',
                     style: TextStyle(
                       fontSize: dialogWidth * 0.06,
                       fontWeight: FontWeight.bold,
