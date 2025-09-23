@@ -98,6 +98,12 @@ class MagnetWalkerGame extends FlameGame
 
   bool noLivesDialogVisible = false;
 
+  // Flag to track when game is intentionally paused for UI (popups, dialogs, etc.)
+  bool isGameIntentionallyPaused = false;
+
+  // Flag to track if user is navigating to skin store (to prevent auto-resume)
+  bool isNavigatingToSkinStore = false;
+
   // Method to set the exit callback
   void setExitCallback(VoidCallback callback) {
     onExitToMenu = callback;
@@ -508,6 +514,7 @@ class MagnetWalkerGame extends FlameGame
 
   void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
     // IMPORTANT: Pause the game when showing skin notification
+    isGameIntentionallyPaused = true;
     pauseGame();
 
     // Show notification after a short delay to ensure game is properly paused
@@ -811,9 +818,10 @@ class MagnetWalkerGame extends FlameGame
                         ),
                         child: ElevatedButton.icon(
                           onPressed: () {
+                            isNavigatingToSkinStore = true;
                             Navigator.of(context).pop();
                             _openSkinStore();
-                            // Don't resume game yet - let skin store handle it
+                            // Keep game paused - don't resume until returning from skin store
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -861,6 +869,7 @@ class MagnetWalkerGame extends FlameGame
                           onPressed: () {
                             Navigator.of(context).pop();
                             // Resume the game
+                            isGameIntentionallyPaused = false;
                             resumeGame();
                           },
                           style: ElevatedButton.styleFrom(
@@ -910,8 +919,9 @@ class MagnetWalkerGame extends FlameGame
           );
         },
       ).then((_) {
-        // Ensure game is resumed if dialog is closed unexpectedly
-        if (currentState == GameState.paused) {
+        // Only resume if user didn't navigate to skin store
+        if (currentState == GameState.paused && !isNavigatingToSkinStore) {
+          isGameIntentionallyPaused = false;
           resumeGame();
         }
       });
@@ -937,9 +947,10 @@ class MagnetWalkerGame extends FlameGame
     )
         .then((_) {
       // Resume game when returning from skin store
-      if (currentState == GameState.paused) {
-        resumeGame();
-      }
+      // Clear both flags and resume the game
+      isNavigatingToSkinStore = false;
+      isGameIntentionallyPaused = false;
+      resumeGame();
     });
   }
 
@@ -1196,6 +1207,7 @@ class MagnetWalkerGame extends FlameGame
   // Load saved level and total score from SharedPreferences
   Future<void> loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
+    // final savedLevel = 1;
     final savedLevel = prefs.getInt('saved_level');
     final savedTotalScore = prefs.getInt('saved_total_score');
     if (savedLevel != null) {
@@ -1260,9 +1272,13 @@ class MagnetWalkerGame extends FlameGame
   void resumeGame() {
     currentState = GameState.playing;
 
-    // Resume spawning only if wave is active
+    // Resume spawning without restarting the wave (maintain current game state)
     if (currentState == GameState.playing) {
-      restartWave();
+      startSpawning();
+      // Resume demon if it was active
+      if (currentLevelType == LevelType.demon && demon != null) {
+        demon?.isAlive = true;
+      }
     }
     restartGameMusic();
   }
@@ -1283,11 +1299,20 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to resume the game from app lifecycle (without restarting music)
   void resumeGameFromAppLifecycle() {
+    // Don't resume if the game is intentionally paused for UI (popups, dialogs, etc.)
+    if (isGameIntentionallyPaused) {
+      return;
+    }
+
     currentState = GameState.playing;
 
-    // Resume spawning only if wave is active
+    // Resume spawning without restarting the wave (maintain current game state)
     if (currentState == GameState.playing) {
-      restartWave();
+      startSpawning();
+      // Resume demon if it was active
+      if (currentLevelType == LevelType.demon && demon != null) {
+        demon?.isAlive = true;
+      }
     }
     // Music is handled separately in didChangeAppLifecycleState
   }

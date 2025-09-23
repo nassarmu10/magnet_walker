@@ -35,6 +35,7 @@ class AdManager {
   static bool isRewardedAdReady = false;
   static bool isAdsInitialized = false;
   static bool isLoadingRewardedAd = false;
+  static DateTime? _lastInterstitialShown;
 
   // Initialize AdMob
   static Future<void> initialize() async {
@@ -111,11 +112,53 @@ class AdManager {
     }
   }
 
-  // Show Interstitial Ad
-  static void showInterstitialAd() {
+  // Show Interstitial Ad with improved compliance
+  static void showInterstitialAd({Function? onAdClosed}) {
+    // Google Play compliance: Don't show interstitials too frequently
+    if (_lastInterstitialShown != null) {
+      final timeSinceLastAd = DateTime.now().difference(_lastInterstitialShown!);
+      if (timeSinceLastAd.inMinutes < 1) {
+        print('Interstitial ad blocked: Too soon since last ad');
+        onAdClosed?.call();
+        return;
+      }
+    }
+
     if (isInterstitialAdReady && interstitialAd != null) {
-      interstitialAd!.show();
+      // Set up proper callbacks for Google Play compliance
+      interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdShowedFullScreenContent: (ad) {
+          // Ad is showing - track when it was shown for compliance
+          _lastInterstitialShown = DateTime.now();
+          print('Interstitial ad showed');
+        },
+        onAdDismissedFullScreenContent: (ad) {
+          print('Interstitial ad dismissed');
+          isInterstitialAdReady = false;
+          ad.dispose();
+          interstitialAd = null;
+          onAdClosed?.call(); // Callback when ad is closed
+          loadInterstitialAd(); // Load next ad
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          print('Interstitial ad failed to show: $error');
+          isInterstitialAdReady = false;
+          ad.dispose();
+          interstitialAd = null;
+          onAdClosed?.call(); // Callback even on failure
+          loadInterstitialAd(); // Try loading again
+        },
+      );
+
+      try {
+        interstitialAd!.show();
+      } catch (e) {
+        print('Error showing interstitial ad: $e');
+        onAdClosed?.call();
+      }
     } else {
+      print('Interstitial ad not ready');
+      onAdClosed?.call();
       loadInterstitialAd();
     }
   }
