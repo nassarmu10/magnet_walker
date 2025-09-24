@@ -5,6 +5,7 @@ import 'dart:async' as async;
 import '../../magnet_walker_game.dart';
 import '../../components/game_object.dart';
 import '../../level_types.dart';
+import '../../utils/screen_utils.dart';
 
 class GravitySpawnManager {
   final MagnetWalkerGame game;
@@ -47,16 +48,24 @@ class GravitySpawnManager {
   }
 
   void spawnObject() {
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
 
     // Choose x position
     Vector2 spawnPosition;
     int attempts = 0;
     final maxAttempts = 10;
     do {
-      final x = math.Random().nextDouble() * (gameSize.x - 80) + 40;
-      spawnPosition = Vector2(x, gameSize.y * 0.12 + gameSize.y * 0.055);
+      // Use responsive margins for spawn positioning
+      final margin = ScreenUtils.responsive(40.0, gameSize);
+      final x = math.Random().nextDouble() * (gameSize.x - margin * 2) + margin;
+      
+      // Adjust spawn Y position based on orientation
+      final isLandscape = ScreenUtils.isLandscape(gameSize);
+      final spawnY = isLandscape 
+          ? gameSize.y * 0.05 // Spawn closer to top in landscape
+          : gameSize.y * 0.12 + gameSize.y * 0.055; // Original portrait position
+      
+      spawnPosition = Vector2(x, spawnY);
       attempts++;
       if (attempts >= maxAttempts) break;
     } while (_isTooCloseToRecentSpawns(spawnPosition));
@@ -102,7 +111,7 @@ class GravitySpawnManager {
 
     // Apply downward velocity with slight random angle
     final angle =
-        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 3;
+        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 10;
     final baseSpeed = 120.0; // Increased from 60.0 to make early levels faster
     obj.velocity =
         Vector2(math.cos(angle), math.sin(angle)) * baseSpeed * speedMultiplier;

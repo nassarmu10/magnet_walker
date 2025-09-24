@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -6,6 +8,7 @@ import 'package:magnet_walker/components/demon.dart';
 import 'package:magnet_walker/components/portal.dart';
 import 'package:magnet_walker/skins/skin_model.dart';
 import 'package:magnet_walker/skins/skin_store_screen.dart';
+import 'package:magnet_walker/utils/screen_utils.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,6 +82,7 @@ class MagnetWalkerGame extends FlameGame
       return 3; // Later levels need 3 waves
     }
   }
+
   int wavesCompletedInLevel = 0; // Waves completed in current level
 
   // Spawning
@@ -93,6 +97,12 @@ class MagnetWalkerGame extends FlameGame
   late SkinManager skinManager;
 
   bool noLivesDialogVisible = false;
+
+  // Flag to track when game is intentionally paused for UI (popups, dialogs, etc.)
+  bool isGameIntentionallyPaused = false;
+
+  // Flag to track if user is navigating to skin store (to prevent auto-resume)
+  bool isNavigatingToSkinStore = false;
 
   // Method to set the exit callback
   void setExitCallback(VoidCallback callback) {
@@ -144,8 +154,11 @@ class MagnetWalkerGame extends FlameGame
       case AppLifecycleState.hidden:
         // App went to background - pause music and game
         FlameAudio.bgm.pause();
-        pauseGameForAppLifecycle();
-        pauseEngine();
+        // Only pause engine if game is not already manually paused
+        if (currentState != GameState.paused) {
+          pauseGameForAppLifecycle();
+          pauseEngine();
+        }
         break;
 
       case AppLifecycleState.resumed:
@@ -153,8 +166,11 @@ class MagnetWalkerGame extends FlameGame
         if (musicEnabled) {
           FlameAudio.bgm.resume();
         }
-        resumeGameFromAppLifecycle();
-        resumeEngine();
+        // Only resume if game was not manually paused
+        if (currentState != GameState.paused) {
+          resumeGameFromAppLifecycle();
+          resumeEngine();
+        }
         break;
 
       case AppLifecycleState.inactive:
@@ -165,9 +181,22 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
+  Future<void> _show_instructions() async {
+    // Show instructions popup for first level of each type
+    if (waveManager.level == 1 ||
+        waveManager.level == 2 ||
+        waveManager.level == 12) {
+      await gameUI?.showInstructionsDialog(
+        level: waveManager.level,
+        onContinue: () {
+          // This callback can be empty since we're using await
+        },
+      );
+    }
+  }
+
   @override
   Future<void> onLoad() async {
-    print("OnLoad called ..............0000000000........");
     // Wait for the game to be fully initialized
     await Future.delayed(const Duration(milliseconds: 50));
 
@@ -179,6 +208,7 @@ class MagnetWalkerGame extends FlameGame
 
     //Start level
     await _startLevel();
+    await _show_instructions();
   }
 
   /// Initialize or restart a level - can be called multiple times
@@ -231,17 +261,37 @@ class MagnetWalkerGame extends FlameGame
 
   Vector2 _getPlayerInitialPosition(Vector2 gameSize) {
     final actualSize = camera.viewfinder.visibleGameSize ?? gameSize;
-    const double horizontalOffset = 10.0;
     gameSize = actualSize;
-    switch (currentLevelType) {
-      case LevelType.gravity:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
-      case LevelType.demon:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
-      case LevelType.survival:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
-      default:
-        return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+
+    // Import screen utils for landscape-aware positioning
+    final isLandscape = gameSize.x > gameSize.y;
+
+    if (isLandscape) {
+      // Landscape positioning - avoid UI areas
+      switch (currentLevelType) {
+        case LevelType.gravity:
+          return Vector2(
+              gameSize.x / 2, gameSize.y * 0.75); // Higher up in landscape
+        case LevelType.demon:
+          return Vector2(gameSize.x / 2, gameSize.y * 0.75);
+        case LevelType.survival:
+          return Vector2(gameSize.x / 2, gameSize.y / 2);
+        default:
+          return Vector2(gameSize.x / 2, gameSize.y / 2);
+      }
+    } else {
+      // Portrait positioning (original)
+      const double horizontalOffset = 10.0;
+      switch (currentLevelType) {
+        case LevelType.gravity:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+        case LevelType.demon:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+        case LevelType.survival:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+        default:
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
+      }
     }
   }
 
@@ -339,8 +389,13 @@ class MagnetWalkerGame extends FlameGame
         'rocket-2.png',
         'rocket-3.png',
         'rocket-4.png',
+        'missile1.png',
+        'missile2.png',
+        'missile3.png',
+        'missile4.png',
+        'missile5.png',
+        'missile6.png',
       ]);
-      print('Rocket images preloaded successfully');
     } catch (e) {
       print('Failed to preload rocket images: $e');
     }
@@ -392,7 +447,6 @@ class MagnetWalkerGame extends FlameGame
 
     try {
       await images.loadAll(skinImages);
-      print('skin images preloaded successfully');
     } catch (e) {
       print('Failed to preload skin images: $e');
     }
@@ -401,7 +455,6 @@ class MagnetWalkerGame extends FlameGame
   Future<void> _updatePlayerSkin() async {
     if (player != null) {
       final selectedSkin = skinManager.selectedSkin;
-      print('Applying skin: ${selectedSkin.imagePath}');
       await player?.updateSkin(selectedSkin.imagePath);
     }
   }
@@ -414,7 +467,7 @@ class MagnetWalkerGame extends FlameGame
   // Update player position based on current level type
   void _updatePlayerPositionForLevelType() {
     final gameSize = canvasSize;
-    const double horizontalOffset = 10.0;
+    double horizontalOffset = player!.radius / 2;
     final currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
     Vector2 initialPosition = Vector2(gameSize.x / 2, gameSize.y / 2);
 
@@ -427,7 +480,7 @@ class MagnetWalkerGame extends FlameGame
           Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
     } else if (currentLevelType == LevelType.demon) {
       initialPosition =
-          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+          Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 4);
     }
     // Animate player to new position
     player?.animateToPosition(initialPosition, 2.7);
@@ -437,7 +490,6 @@ class MagnetWalkerGame extends FlameGame
     // Stop any existing spawn managers
     gravitySpawnManager.stop();
     survivalSpawnManager.stop();
-    print(currentLevelType);
     // Use the current level for level type
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
 
@@ -468,6 +520,7 @@ class MagnetWalkerGame extends FlameGame
 
   void _showNewSkinsAvailableNotification(List<Skin> newSkins) {
     // IMPORTANT: Pause the game when showing skin notification
+    isGameIntentionallyPaused = true;
     pauseGame();
 
     // Show notification after a short delay to ensure game is properly paused
@@ -771,9 +824,10 @@ class MagnetWalkerGame extends FlameGame
                         ),
                         child: ElevatedButton.icon(
                           onPressed: () {
+                            isNavigatingToSkinStore = true;
                             Navigator.of(context).pop();
                             _openSkinStore();
-                            // Don't resume game yet - let skin store handle it
+                            // Keep game paused - don't resume until returning from skin store
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -821,6 +875,7 @@ class MagnetWalkerGame extends FlameGame
                           onPressed: () {
                             Navigator.of(context).pop();
                             // Resume the game
+                            isGameIntentionallyPaused = false;
                             resumeGame();
                           },
                           style: ElevatedButton.styleFrom(
@@ -870,8 +925,9 @@ class MagnetWalkerGame extends FlameGame
           );
         },
       ).then((_) {
-        // Ensure game is resumed if dialog is closed unexpectedly
-        if (currentState == GameState.paused) {
+        // Only resume if user didn't navigate to skin store
+        if (currentState == GameState.paused && !isNavigatingToSkinStore) {
+          isGameIntentionallyPaused = false;
           resumeGame();
         }
       });
@@ -897,9 +953,10 @@ class MagnetWalkerGame extends FlameGame
     )
         .then((_) {
       // Resume game when returning from skin store
-      if (currentState == GameState.paused) {
-        resumeGame();
-      }
+      // Clear both flags and resume the game
+      isNavigatingToSkinStore = false;
+      isGameIntentionallyPaused = false;
+      resumeGame();
     });
   }
 
@@ -970,7 +1027,6 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void destroyBomb(GameObject bomb) {
-    print('Destroying bomb');
     if (bomb.type == ObjectType.bomb && bomb.isMounted) {
       createParticles(bomb.position, Colors.red);
       bomb.removeFromParent();
@@ -1139,6 +1195,14 @@ class MagnetWalkerGame extends FlameGame
     super.onRemove();
   }
 
+  void setPaused(bool paused) {
+    if (paused) {
+      pauseEngine();
+    } else {
+      resumeEngine();
+    }
+  }
+
   // Save current level and total score to SharedPreferences
   Future<void> saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1149,6 +1213,7 @@ class MagnetWalkerGame extends FlameGame
   // Load saved level and total score from SharedPreferences
   Future<void> loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
+    // final savedLevel = 1;
     final savedLevel = prefs.getInt('saved_level');
     final savedTotalScore = prefs.getInt('saved_total_score');
     if (savedLevel != null) {
@@ -1205,17 +1270,24 @@ class MagnetWalkerGame extends FlameGame
     if (currentLevelType == LevelType.demon)
       demon?.isAlive = false; // TODO handle pause demon level
 
-    // The game objects will remain in their current positions
-    // because the update loop will be skipped
+    // Pause the entire engine to prevent any updates
+    pauseEngine();
   }
 
   // Method to resume the game
   void resumeGame() {
     currentState = GameState.playing;
 
-    // Resume spawning only if wave is active
+    // Resume the engine first
+    resumeEngine();
+
+    // Resume spawning without restarting the wave (maintain current game state)
     if (currentState == GameState.playing) {
-      restartWave();
+      startSpawning();
+      // Resume demon if it was active
+      if (currentLevelType == LevelType.demon && demon != null) {
+        demon?.isAlive = true;
+      }
     }
     restartGameMusic();
   }
@@ -1236,20 +1308,26 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to resume the game from app lifecycle (without restarting music)
   void resumeGameFromAppLifecycle() {
+    // Don't resume if the game is intentionally paused for UI (popups, dialogs, etc.)
+    if (isGameIntentionallyPaused) {
+      return;
+    }
+
     currentState = GameState.playing;
 
-    // Resume spawning only if wave is active
+    // Resume spawning without restarting the wave (maintain current game state)
     if (currentState == GameState.playing) {
-      restartWave();
+      startSpawning();
+      // Resume demon if it was active
+      if (currentLevelType == LevelType.demon && demon != null) {
+        demon?.isAlive = true;
+      }
     }
-    // Music is handled separately in didChangeAppLifecycleState
+    // Music and engine resume are handled separately in didChangeAppLifecycleState
   }
 
 // Prepares the current wave (shows countdown, positions player, etc.)
   void prepareWave() {
-    print(
-        'prepareWave called - level: ${waveManager.level}, wave: ${waveManager.currentWave}');
-
     // Clear any existing objects
     clearAllObjects();
 
@@ -1289,7 +1367,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this when the countdown finishes to start the wave
   void onCountdownFinished() {
-    print('onCountdownFinished called');
     currentState = GameState.playing;
     waveMessage = null;
 
@@ -1302,7 +1379,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this when the player completes a wave
   void completeWave() {
-    print('completeWave called');
     wavesCompletedInLevel++;
 
     if (wavesCompletedInLevel >= wavesNeededToNextLevel) {
@@ -1322,7 +1398,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this when the player fails a wave
   void failWave() {
-    print('failWave called');
     currentState = GameState.gameOver;
 
     bool hasLivesLeft = livesManager.tryConsumeLife();
@@ -1403,7 +1478,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Call this to restart the current wave (e.g., after failure)
   void restartWave() {
-    print('restartWave called');
     currentState = GameState.countdown;
     prepareWave();
   }
@@ -1411,8 +1485,10 @@ class MagnetWalkerGame extends FlameGame
 // Call this to advance to the next level
   async.Future<void> nextLevel() async {
     waveManager.level++;
+    await _show_instructions();
     waveManager.setTarget(); // Update target for new level
     currentLevelType = LevelTypeConfig.getLevelType(waveManager.level);
+    if (player != null) player?.updateMagnetForLevel();
     // Show interstitial every 5 levels after level 15
     if (waveManager.level >= 15 && waveManager.level % 5 == 0) {
       //pauseGame();
@@ -1474,11 +1550,13 @@ class MagnetWalkerGame extends FlameGame
   }
 
   void startDemonLeve() {
+    final y_pos = ScreenUtils.responsive(250.0, canvasSize);
+
     // Check if we have saved demon health (from watching ad to continue)
     if (waveManager.hasSavedDemonHealth()) {
       // Restore demon with saved health
       if (demon == null) {
-        demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+        demon = Demon(position: Vector2(canvasSize.x / 2, y_pos));
         add(demon as Component);
       }
       demon?.restoreHealth(
@@ -1490,7 +1568,7 @@ class MagnetWalkerGame extends FlameGame
     } else {
       // Start fresh demon
       if (demon == null) {
-        demon = Demon(position: Vector2(canvasSize.x / 2, 200));
+        demon = Demon(position: Vector2(canvasSize.x / 2, y_pos));
         add(demon as Component);
       }
       demon?.isAlive = true;
@@ -1510,7 +1588,6 @@ class MagnetWalkerGame extends FlameGame
     }
 
     endDemonLevel();
-    print('failDemonLevel called');
 
     currentState = GameState.gameOver;
     bool hasLivesLeft = livesManager.tryConsumeLife();
@@ -1633,6 +1710,19 @@ class MagnetWalkerGame extends FlameGame
     sfxEnabled = prefs.getBool('sfx_enabled') ?? true;
     if (musicEnabled) {
       playMusic('game_music.mp3');
+    }
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+
+    // The screen size has changed - update all responsive elements
+    if (player != null) {
+      player?.animateToPosition(_getPlayerInitialPosition(size), 2.7);
+    }
+    if (demon != null) {
+      demon?.updateResponsiveSizes(size);
     }
   }
 }

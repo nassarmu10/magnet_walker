@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../magnet_walker_game.dart';
 import '../managers/ad_manager.dart';
 import '../level_types.dart';
+import '../utils/screen_utils.dart';
 import 'dart:math' as math;
 import 'package:flame/input.dart';
 import '../skins/skin_store_screen.dart';
@@ -40,7 +41,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent levelTypeText;
   // late TextComponent playTimeText;
   late TextComponent targetScoreText;
-  late TextComponent instructionsText;
   bool gameOverVisible = false;
   bool isInitialized = false;
 
@@ -67,20 +67,28 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     if (isInitialized) return;
 
     final gameSize = game.canvasSize;
+    final isLandscape = ScreenUtils.isLandscape(gameSize);
+    final scaleFactor = ScreenUtils.getScaleFactor(gameSize);
 
-    // IMPROVED: Enhanced pause button with better visual feedback
+    // IMPROVED: Enhanced pause button with responsive positioning (moved up to avoid ad bar)
+    final pauseButtonSize = ScreenUtils.responsive(45.0, gameSize);
+    final pauseMargin = ScreenUtils.responsive(15.0, gameSize);
+    final adBarHeight =
+        ScreenUtils.responsive(55.0, gameSize); // Height of ad bar
+    final extraMargin = ScreenUtils.responsive(10.0, gameSize); // Extra spacing
     pauseButton = ButtonComponent(
-      position: Vector2(gameSize.x - 20, gameSize.y - 45), // Better positioning
-      size: Vector2(55, 55),
+      position: Vector2(gameSize.x - pauseMargin,
+          gameSize.y - pauseMargin - adBarHeight - extraMargin),
+      size: Vector2(pauseButtonSize, pauseButtonSize),
       anchor: Anchor.bottomRight,
       button: RectangleComponent(
-        size: Vector2(55, 55),
+        size: Vector2(pauseButtonSize, pauseButtonSize),
         paint: Paint()..color = Colors.transparent,
       ),
       children: [
         // Enhanced background with subtle animation potential
         CircleComponent(
-          radius: 27.5,
+          radius: pauseButtonSize / 2,
           paint: Paint()
             ..shader = RadialGradient(
               colors: [
@@ -88,44 +96,44 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 const Color(0xFF0f0f23).withOpacity(0.95),
               ],
               stops: const [0.0, 1.0],
-            ).createShader(const Rect.fromLTWH(0, 0, 55, 55)),
-          position: Vector2(27.5, 27.5),
+            ).createShader(
+                Rect.fromLTWH(0, 0, pauseButtonSize, pauseButtonSize)),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
         // Glowing border effect
         CircleComponent(
-          radius: 27.5,
+          radius: pauseButtonSize / 2,
           paint: Paint()
             ..color = const Color(0xFF00ff88).withOpacity(0.6)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5,
-          position: Vector2(27.5, 27.5),
+            ..strokeWidth = 2.5 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
         // Inner glow
         CircleComponent(
-          radius: 24,
+          radius: pauseButtonSize / 2 - 3 * scaleFactor,
           paint: Paint()
             ..color = const Color(0xFF00ff88).withOpacity(0.15)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1,
-          position: Vector2(27.5, 27.5),
+            ..strokeWidth = 1 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
-        // Enhanced pause icon
+        // Enhanced pause icon - responsive sizing
         RectangleComponent(
-          position: Vector2(19, 18.5),
-          size: Vector2(6, 18),
+          position: Vector2(pauseButtonSize * 0.35, pauseButtonSize * 0.33),
+          size: Vector2(pauseButtonSize * 0.12, pauseButtonSize * 0.35),
           paint: Paint()..color = Colors.white.withOpacity(0.95),
         ),
         RectangleComponent(
-          position: Vector2(30, 18.5),
-          size: Vector2(6, 18),
+          position: Vector2(pauseButtonSize * 0.55, pauseButtonSize * 0.33),
+          size: Vector2(pauseButtonSize * 0.12, pauseButtonSize * 0.35),
           paint: Paint()..color = Colors.white.withOpacity(0.95),
         ),
       ],
       onPressed: () {
-        print('Pause button pressed!');
         showPauseDialog();
       },
       priority: 25,
@@ -133,14 +141,18 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     add(pauseButton);
 
     // IMPROVED: Better header dimensions and positioning
-    final headerMarginX = gameSize.x * 0.025; // Slightly tighter margins
-    final headerMarginY = gameSize.y * 0.025;
-    final headerWidth = gameSize.x * 0.95;
-    final headerHeight = gameSize.y * 0.12; // Slightly more compact
+    // Responsive margins and dimensions
+    final headerMarginX = ScreenUtils.getUIMargin(gameSize);
+    final headerMarginY = ScreenUtils.getUIMargin(gameSize);
+    final headerWidth = gameSize.x - (headerMarginX * 2);
+    final headerHeight = ScreenUtils.getHeaderHeight(gameSize);
+
+    // Check if we're in landscape mode for layout adjustments
+    final needsCompact = ScreenUtils.needsCompactUI(gameSize);
 
     // IMPROVED: Enhanced header background with better gradient
     headerBg = RoundedRectComponent(
-      position: Vector2(headerMarginX, headerMarginY),
+      position: Vector2((gameSize.x - headerWidth) / 2, headerMarginY),
       size: Vector2(headerWidth, headerHeight),
       paint: Paint()
         ..shader = LinearGradient(
@@ -224,26 +236,29 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     final topRowLeftX = headerMarginX + 28;
     final topRowRightX = headerMarginX + headerWidth - 28;
 
-    // IMPROVED: Enhanced score text with icon-like prefix
+    // IMPROVED: Enhanced score text with responsive sizing
+    final fontSize = isLandscape
+        ? ScreenUtils.responsive(12.0, gameSize)
+        : ScreenUtils.responsive(14.0, gameSize);
     scoreText = TextComponent(
       text: '⭐ Score: 0',
       position: Vector2(topRowLeftX, topRowCenterY),
       textRenderer: TextPaint(
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Roboto',
-          color: Color(0xFF00ff88),
-          fontSize: 14,
+          color: const Color(0xFF00ff88),
+          fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
+          letterSpacing: 0.8 * scaleFactor,
           shadows: [
             Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 12,
-              color: Color(0xFF00ff88),
+              offset: const Offset(0, 0),
+              blurRadius: 12 * scaleFactor,
+              color: const Color(0xFF00ff88),
             ),
             Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 6,
+              offset: Offset(2 * scaleFactor, 2 * scaleFactor),
+              blurRadius: 6 * scaleFactor,
               color: Colors.black87,
             ),
           ],
@@ -253,26 +268,26 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
     add(scoreText);
 
-    // IMPROVED: Enhanced level text with better formatting
+    // IMPROVED: Enhanced level text with responsive sizing
     levelText = TextComponent(
       text: '🏆 Level 1 • Wave 1/1',
       position: Vector2(topRowRightX, topRowCenterY),
       textRenderer: TextPaint(
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Roboto',
-          color: Color(0xFF8844ff),
-          fontSize: 14,
+          color: const Color(0xFF8844ff),
+          fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
+          letterSpacing: 0.8 * scaleFactor,
           shadows: [
             Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 12,
-              color: Color(0xFF8844ff),
+              offset: const Offset(0, 0),
+              blurRadius: 12 * scaleFactor,
+              color: const Color(0xFF8844ff),
             ),
             Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 6,
+              offset: Offset(2 * scaleFactor, 2 * scaleFactor),
+              blurRadius: 6 * scaleFactor,
               color: Colors.black87,
             ),
           ],
@@ -290,21 +305,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       text: '🎯 Target: 13',
       position: Vector2(bottomRowCenterX, bottomRowCenterY),
       textRenderer: TextPaint(
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Roboto',
-          color: Color(0xFFff8844),
-          fontSize: 15,
+          color: const Color(0xFFff8844),
+          fontSize: isLandscape
+              ? ScreenUtils.responsive(13.0, gameSize)
+              : ScreenUtils.responsive(15.0, gameSize),
           fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
+          letterSpacing: 1.0 * scaleFactor,
           shadows: [
             Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 10,
-              color: Color(0xFFff8844),
+              offset: const Offset(0, 0),
+              blurRadius: 10 * scaleFactor,
+              color: const Color(0xFFff8844),
             ),
             Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 5,
+              offset: Offset(2 * scaleFactor, 2 * scaleFactor),
+              blurRadius: 5 * scaleFactor,
               color: Colors.black87,
             ),
           ],
@@ -313,36 +330,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       anchor: Anchor.center,
     );
     add(targetScoreText);
-
-    // IMPROVED: Better instructions positioning and styling
-    final adHeight = 55.0;
-    instructionsText = TextComponent(
-      text: 'Collect ⭐ coins • Avoid 💣 bombs',
-      position: Vector2(gameSize.x / 2, gameSize.y - 35 - adHeight),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFF88aacc),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.8,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 6,
-              color: Color(0xFF44aaff),
-            ),
-            Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 3,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-    );
-    add(instructionsText);
 
     isInitialized = true;
   }
@@ -353,32 +340,25 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void showPauseDialog() {
-    print('showPauseDialog called, isPaused: $isPaused'); // Debug log
-
     if (isPaused) {
-      print('Already paused, returning');
       return; // Prevent multiple dialogs
     }
 
     // Pause the game immediately
     isPaused = true;
     game.pauseGame();
-    print('Game paused successfully');
 
     // Use a post-frame callback to ensure the context is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = game.buildContext;
-      print('Context available: ${context != null}');
 
       if (context == null) {
-        print('Context is null, retrying...');
         // If context is not available, try again after a short delay
         Future.delayed(const Duration(milliseconds: 100), () {
           final retryContext = game.buildContext;
           if (retryContext != null) {
             _showPauseDialogWithContext(retryContext);
           } else {
-            print('Context still null after retry, resuming game');
             // If we still can't get context, resume the game
             resumeGame();
           }
@@ -391,19 +371,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void _showPauseDialogWithContext(BuildContext context) {
-    print('Showing pause dialog with context');
-
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (BuildContext dialogContext) {
-        final screenWidth = MediaQuery.of(dialogContext).size.width;
-        final dialogWidth = screenWidth * 0.8;
+        final screenSize = MediaQuery.of(dialogContext).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.8;
         final padding = dialogWidth * 0.06;
-        final titleFontSize = dialogWidth * 0.08;
-        final buttonFontSize = dialogWidth * 0.055;
-        final buttonPaddingV = dialogWidth * 0.045;
-        final buttonPaddingH = dialogWidth * 0.08;
+        final titleFontSize =
+            isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+        final buttonFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+        final buttonPaddingV =
+            isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+        final buttonPaddingH =
+            isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
 
         return WillPopScope(
           onWillPop: () async =>
@@ -492,7 +476,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFF00ff88),
                       Icons.play_arrow,
                       () {
-                        print('Continue button pressed');
                         Navigator.of(dialogContext).pop();
                         resumeGame();
                       },
@@ -510,7 +493,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFFff4444),
                       Icons.home, // Changed icon to home
                       () {
-                        print('Exit to menu button pressed');
                         Navigator.of(dialogContext).pop();
                         exitToMenu();
                       },
@@ -539,7 +521,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     ).then((_) {
       // Ensure the game is resumed if dialog is dismissed unexpectedly
       if (isPaused) {
-        print('Dialog dismissed unexpectedly, resuming game');
         resumeGame();
       }
     });
@@ -631,17 +612,16 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     }
     // Update target score display
     if (game.currentLevelType != LevelType.demon) {
+      String levelMode = game.currentLevelType == LevelType.survival
+          ? "Survival Mode"
+          : game.currentLevelType == LevelType.gravity
+              ? "Gravity Mode"
+              : "";
       targetScoreText.text =
-          '🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
+          '$levelMode 🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
     } else {
       targetScoreText.text = "⚔️ Boss Battle";
     }
-
-    // Update instructions based on level type
-    final currentLevelType =
-        LevelTypeConfig.getLevelType(game.waveManager.level);
-    final instructions = LevelTypeConfig.getLevelInstructions(currentLevelType);
-    instructionsText.text = instructions;
 
     // Update container colors with pulsing effect
     if (!isPaused) {
@@ -668,24 +648,29 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     // Show wave message/countdown overlay with modern styling
     if (game.waveMessage != null && game.waveMessage!.isNotEmpty) {
       final gameSize = game.canvasSize;
+      final isLandscape = ScreenUtils.isLandscape(gameSize);
+      final scaleFactor = ScreenUtils.getScaleFactor(gameSize);
 
-      // Modern wave message design
+      // Modern wave message design with responsive sizing
       final message = game.waveMessage!;
-      final messageTextStyle = const TextStyle(
+      final messageFontSize = isLandscape
+          ? ScreenUtils.responsive(24.0, gameSize)
+          : ScreenUtils.responsive(32.0, gameSize);
+      final messageTextStyle = TextStyle(
         fontFamily: 'Roboto',
-        color: Color(0xFF00ff88),
-        fontSize: 32,
+        color: const Color(0xFF00ff88),
+        fontSize: messageFontSize,
         fontWeight: FontWeight.bold,
-        letterSpacing: 2.0,
+        letterSpacing: 2.0 * scaleFactor,
         shadows: [
           Shadow(
-            offset: Offset(0, 0),
-            blurRadius: 12,
-            color: Color(0xFF00ff88),
+            offset: const Offset(0, 0),
+            blurRadius: 12 * scaleFactor,
+            color: const Color(0xFF00ff88),
           ),
           Shadow(
-            offset: Offset(2, 2),
-            blurRadius: 8,
+            offset: Offset(2 * scaleFactor, 2 * scaleFactor),
+            blurRadius: 8 * scaleFactor,
             color: Colors.black87,
           ),
         ],
@@ -702,9 +687,12 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       final rectWidth = textPainter.width + padding;
       final rectHeight = textPainter.height + padding * 0.8;
 
+      // Adjust message position for landscape
+      final messageYOffset =
+          isLandscape ? -25 * scaleFactor : -50 * scaleFactor;
       final messageBg = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(gameSize.x / 2, gameSize.y / 2 - 50),
+          center: Offset(gameSize.x / 2, gameSize.y / 2 + messageYOffset),
           width: rectWidth,
           height: rectHeight,
         ),
@@ -742,7 +730,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       // Wave message text
       final offset = Offset(
         (gameSize.x - textPainter.width) / 2,
-        (gameSize.y - textPainter.height) / 2 - 50,
+        (gameSize.y - textPainter.height) / 2 + messageYOffset,
       );
       textPainter.paint(canvas, offset);
     }
@@ -821,15 +809,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final dialogWidth = screenWidth * 0.85;
+          final screenSize = MediaQuery.of(context).size;
+          final isLandscape = screenSize.width > screenSize.height;
+          final dialogWidth =
+              isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = dialogWidth * 0.08;
-          final statFontSize = dialogWidth * 0.06;
-          final bodyFontSize = dialogWidth * 0.05;
-          final buttonFontSize = dialogWidth * 0.055;
-          final buttonPaddingV = dialogWidth * 0.045;
-          final buttonPaddingH = dialogWidth * 0.08;
+          final titleFontSize =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final statFontSize =
+              isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
+          final bodyFontSize =
+              isLandscape ? dialogWidth * 0.04 : dialogWidth * 0.05;
+          final buttonFontSize =
+              isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+          final buttonPaddingV =
+              isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+          final buttonPaddingH =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -856,8 +852,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 ],
               ),
             ),
-            content: Container(
-              width: dialogWidth,
+            content: SingleChildScrollView(
+              //width: dialogWidth,
               padding: EdgeInsets.all(padding),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -883,7 +879,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
                   // Explanation section with different text based on level type
                   Container(
-                    padding: EdgeInsets.all(dialogWidth * 0.045),
+                    padding: EdgeInsets.all(dialogWidth * 0.025),
                     decoration: BoxDecoration(
                       color: const Color(0xFF44aaff).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(dialogWidth * 0.04),
@@ -899,6 +895,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
+                      softWrap: true,
                     ),
                   ),
                 ],
@@ -955,14 +952,21 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final dialogWidth = screenWidth * 0.85;
+          final screenSize = MediaQuery.of(context).size;
+          final isLandscape = screenSize.width > screenSize.height;
+          final dialogWidth =
+              isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = dialogWidth * 0.08;
-          final statFontSize = dialogWidth * 0.06;
-          final buttonFontSize = dialogWidth * 0.055;
-          final buttonPaddingV = dialogWidth * 0.045;
-          final buttonPaddingH = dialogWidth * 0.08;
+          final titleFontSize =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final statFontSize =
+              isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
+          final buttonFontSize =
+              isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+          final buttonPaddingV =
+              isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+          final buttonPaddingH =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -1171,7 +1175,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     showDialog(
       context: context,
       builder: (context) {
-        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1268,6 +1275,121 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
   }
 
+  Future<void> showInstructionsDialog({
+    required int level,
+    required VoidCallback onContinue,
+  }) async {
+    final context = game.buildContext;
+    if (context == null) {
+      // If context is not available yet, schedule to show later
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (game.buildContext != null) {
+          showInstructionsDialog(level: level, onContinue: onContinue);
+        }
+      });
+      return;
+    }
+    game.setPaused(true);
+    String title;
+    String content;
+    String emoji;
+
+    if (level == 1) {
+      title = "Welcome to Magnet Lord!";
+      emoji = "🎮";
+      content =
+          "• Steer to dodge rockets\n• Collect coins\n• Survive as long as you can\n• Good luck, Captain!";
+    } else if (level == 2) {
+      title = "Survival Mode Unlocked!";
+      emoji = "⚡";
+      content =
+          "• Ship can't move\n• Tap to destroy rockets\n• Collect coins\n• Outlast the storm!";
+    } else if (level == 12) {
+      title = "Demon Mode Unlocked!";
+      emoji = "🔥";
+      content =
+          "• Demon's rockets are deadly\n• Move to flip magnetic force\n• Hurl rockets back\n• Strike the Demon to win!";
+    } else {
+      onContinue();
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          backgroundColor: const Color(0xFF1a1a2e),
+          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$emoji $title',
+                style: TextStyle(
+                  fontSize: dialogWidth * 0.08,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: const [
+                    Shadow(
+                      offset: Offset(0, 0),
+                      blurRadius: 8,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                content,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: dialogWidth * 0.055,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.greenAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    game.setPaused(false);
+                    onContinue();
+                  },
+                  child: Text(
+                    'Got it!',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void showNoLivesDialog({VoidCallback? onDialogClosed}) {
     final context = game.buildContext;
     if (context == null) return;
@@ -1276,7 +1398,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

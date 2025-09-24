@@ -325,6 +325,9 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
               .clamp(0.0, 1.0),
         );
 
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+
         return Transform.translate(
           offset: Offset(0, 30 * (1 - delayedProgress)),
           child: Opacity(
@@ -335,9 +338,11 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                 return Transform.scale(
                   scale: isPrimary ? _pulseAnimation.value : 1.0,
                   child: Container(
-                    width: MediaQuery.of(context).size.width * 0.85,
-                    height: 60,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    width: isLandscape
+                        ? screenSize.width * 0.35
+                        : screenSize.width * 0.85,
+                    height: isLandscape ? 50 : 60,
+                    margin: EdgeInsets.symmetric(vertical: isLandscape ? 6 : 8),
                     child: Material(
                       elevation: onPressed != null ? (isPrimary ? 12 : 8) : 0,
                       shadowColor: backgroundColor.withOpacity(0.4),
@@ -365,7 +370,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                               label: Text(
                                 text,
                                 style: TextStyle(
-                                  fontSize: 17,
+                                  fontSize: isLandscape ? 14 : 17,
                                   fontWeight: FontWeight.w700,
                                   color: backgroundColor,
                                   letterSpacing: 0.8,
@@ -394,7 +399,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                               label: Text(
                                 text,
                                 style: TextStyle(
-                                  fontSize: 17,
+                                  fontSize: isLandscape ? 14 : 17,
                                   fontWeight: FontWeight.w700,
                                   color: textColor,
                                   letterSpacing: 0.8,
@@ -416,6 +421,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.height < 700;
+    final isLandscape = screenSize.width > screenSize.height;
 
     return Scaffold(
       body: Container(
@@ -440,341 +446,83 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
             ),
           ),
           child: SafeArea(
-            child: Column(
-              children: [
-                // Enhanced status bar with better spacing
-                Padding(
-                  padding:
-                      EdgeInsets.fromLTRB(24, isSmallScreen ? 12 : 20, 24, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+            child: isLandscape
+                ? Row(
                     children: [
-                      // Left placeholder (you can add coins, score, etc.)
-                      const SizedBox(width: 40),
+                      // Left side - Logo and title
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Lives display at top in landscape
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: _buildLivesDisplay(),
+                            ),
+                            // Logo
+                            _buildLogoSection(
+                                isLandscape, isSmallScreen, screenSize),
+                            // Title
+                            _buildTitleSection(
+                                isLandscape, isSmallScreen, screenSize),
+                          ],
+                        ),
+                      ),
+                      // Right side - Buttons
+                      Expanded(
+                        flex: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: _buildButtons(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // Enhanced status bar with better spacing
+                      if (!isLandscape)
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                              24, isSmallScreen ? 12 : 20, 24, 0),
+                          child: _buildLivesDisplay(),
+                        ),
 
-                      // Center Lives
-                      FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: _buildGlassContainer(
-                          borderRadius: 24,
-                          opacity: 0.12,
+                      if (!isLandscape)
+                        SizedBox(height: isSmallScreen ? 20 : 30),
+
+                      // Logo and title section
+                      if (!isLandscape)
+                        _buildLogoSection(
+                            isLandscape, isSmallScreen, screenSize),
+                      if (!isLandscape)
+                        _buildTitleSection(
+                            isLandscape, isSmallScreen, screenSize),
+
+                      if (!isLandscape)
+                        SizedBox(height: isSmallScreen ? 20 : 30),
+
+                      // Enhanced buttons with staggered animation
+                      if (!isLandscape)
+                        Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE53E3E)
-                                            .withOpacity(0.25),
-                                        borderRadius: BorderRadius.circular(8),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFFE53E3E)
-                                                .withOpacity(0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(
-                                        Icons.favorite,
-                                        color: Color(0xFFE53E3E),
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      '$_lives/$_maxLives',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (_lives < _maxLives &&
-                                    _timeUntilNextLife.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      _timeUntilNextLife,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFFF59E0B),
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: _buildButtons(),
                             ),
                           ),
                         ),
-                      ),
 
-                      // Right Side Button (+ or Sound)
-                      if (_lives < _maxLives)
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: GestureDetector(
-                            onTap: _showGetLivesDialog,
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFF3B82F6).withOpacity(0.35),
-                                    const Color(0xFF1E3A8A).withOpacity(0.35),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color:
-                                      const Color(0xFF3B82F6).withOpacity(0.5),
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF3B82F6)
-                                        .withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.add_circle_outline,
-                                color: Color(0xFF3B82F6),
-                                size: 26,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: GestureDetector(
-                            onTap: _toggleSound,
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: Icon(
-                                (_soundEnabled
-                                    ? Icons.volume_up_rounded
-                                    : Icons.volume_off_rounded),
-                                key: ValueKey<bool>(_soundEnabled),
-                                color: Colors.white.withOpacity(0.85),
-                                size: 26,
-                              ),
-                            ),
-                          ),
-                        ),
+                      // Bottom spacing
+                      if (!isLandscape)
+                        SizedBox(height: isSmallScreen ? 20 : 40),
                     ],
                   ),
-                ),
-
-                SizedBox(height: isSmallScreen ? 20 : 30),
-
-                // Logo with animations
-                SlideTransition(
-                  position: _titleSlideAnimation,
-                  child: FadeTransition(
-                    opacity: _titleFadeAnimation,
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([_pulseAnimation, _breathingAnimation]),
-                      builder: (context, child) {
-                        final pulseScale = 1.0 + (_pulseAnimation.value * 0.05);
-                        final breathingScale = _breathingController.isAnimating ? _breathingAnimation.value : 1.0;
-                        final combinedScale = pulseScale * breathingScale;
-                        return Transform.scale(
-                          scale: combinedScale,
-                          child: Container(
-                            width: screenSize.width * (isSmallScreen ? 0.6 : 0.5),
-                            height: screenSize.width * (isSmallScreen ? 0.6 : 0.5) * 0.8,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                            //   boxShadow: [
-                            //     BoxShadow(
-                            //       color: const Color(0xFF00E5FF).withOpacity(0.4 * _pulseAnimation.value),
-                            //       blurRadius: 30 * _pulseAnimation.value,
-                            //       offset: const Offset(0, 10),
-                            //       spreadRadius: 5 * _pulseAnimation.value,
-                            //     ),
-                            //     // BoxShadow(
-                            //     //   color: const Color(0xFF7C3AED).withOpacity(0.3 * _pulseAnimation.value),
-                            //     //   blurRadius: 40 * _pulseAnimation.value,
-                            //     //   offset: const Offset(0, 15),
-                            //     //   spreadRadius: 3 * _pulseAnimation.value,
-                            //     // ),
-                            //   ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Image.asset(
-                                'assets/images/MagnetLogo_no_bg.png',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // const SizedBox(height: 5),
-
-                // "Magnet Lord" text underneath with animations
-                SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.5),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: _titleController,
-                    curve: const Interval(0.3, 1.0, curve: Curves.elasticOut),
-                  )),
-                  child: FadeTransition(
-                    opacity: Tween<double>(
-                      begin: 0.0,
-                      end: 1.0,
-                    ).animate(CurvedAnimation(
-                      parent: _titleController,
-                      curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-                    )),
-                    child: AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        final shimmer = (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
-                        return ShaderMask(
-                          shaderCallback: (bounds) {
-                            return LinearGradient(
-                              colors: [
-                                const Color(0xFF00F5FF).withOpacity(0.8 + (0.2 * shimmer)),
-                                const Color(0xFF0084FF).withOpacity(0.9),
-                                const Color(0xFF7C3AED).withOpacity(0.8 + (0.2 * shimmer)),
-                              ],
-                              stops: [
-                                0.0,
-                                0.5 + (0.3 * shimmer),
-                                1.0,
-                              ],
-                            ).createShader(bounds);
-                          },
-                          child: Text(
-                            'Magnet Lord',
-                            style: TextStyle(
-                              fontSize: screenSize.width * (isSmallScreen ? 0.08 : 0.09),
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 3.0,
-                              shadows: [
-                                Shadow(
-                                  offset: const Offset(0, 0),
-                                  blurRadius: 20 + (10 * _pulseAnimation.value),
-                                  color: const Color(0xFF00E5FF).withOpacity(0.6),
-                                ),
-                                Shadow(
-                                  offset: const Offset(0, 0),
-                                  blurRadius: 30 + (15 * _pulseAnimation.value),
-                                  color: const Color(0xFF7C3AED).withOpacity(0.4),
-                                ),
-                                const Shadow(
-                                  offset: Offset(0, 2),
-                                  blurRadius: 8,
-                                  color: Colors.black54,
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Subtitle
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.25),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blueAccent.withOpacity(0.5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    'RULE THE MAGNETIC FIELD 🧲',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 14, // smaller than before
-                      color: Colors.white.withOpacity(0.85),
-                      fontWeight: FontWeight.w400, // lighter than title
-                      letterSpacing: 1.0, // reduced spacing
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                SizedBox(height: isSmallScreen ? 20 : 30),
-
-                // Enhanced buttons with staggered animation
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildAnimatedButton(
-                          text: _lives > 0 ? 'PLAY GAME' : 'NO LIVES LEFT',
-                          onPressed: _lives > 0 ? widget.onPlay : null,
-                          backgroundColor: _lives > 0
-                              ? const Color(0xFF059669)
-                              : Colors.grey.shade600,
-                          icon: _lives > 0
-                              ? Icons.play_arrow_rounded
-                              : Icons.block_rounded,
-                          isPrimary: _lives > 0,
-                          animationDelay: 0,
-                        ),
-                        _buildAnimatedButton(
-                          text: 'CHARACTER SKINS',
-                          onPressed: widget.onSkins,
-                          backgroundColor: const Color(0xFF7C3AED),
-                          icon: Icons.palette_outlined,
-                          animationDelay: 1,
-                        ),
-                        _buildAnimatedButton(
-                          text: 'SETTINGS',
-                          onPressed: widget.onSettings,
-                          backgroundColor: const Color(0xFF475569),
-                          icon: Icons.settings_outlined,
-                          isOutlined: true,
-                          animationDelay: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Bottom spacing
-                SizedBox(height: isSmallScreen ? 20 : 40),
-              ],
-            ),
           ),
         ),
       ),
@@ -939,6 +687,316 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Widget _buildLivesDisplay() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Left placeholder (you can add coins, score, etc.)
+        const SizedBox(width: 40),
+
+        // Center Lives
+        FadeTransition(
+          opacity: _fadeAnimation,
+          child: _buildGlassContainer(
+            borderRadius: 24,
+            opacity: 0.12,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE53E3E).withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFE53E3E).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.favorite,
+                          color: Color(0xFFE53E3E),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '$_lives/$_maxLives',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_lives < _maxLives && _timeUntilNextLife.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        _timeUntilNextLife,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFF59E0B),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Right Side Button (+ or Sound)
+        if (_lives < _maxLives)
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: GestureDetector(
+              onTap: _showGetLivesDialog,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF3B82F6).withOpacity(0.35),
+                      const Color(0xFF1E3A8A).withOpacity(0.35),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF3B82F6).withOpacity(0.5),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.add_circle_outline,
+                  color: Color(0xFF3B82F6),
+                  size: 26,
+                ),
+              ),
+            ),
+          )
+        else
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: GestureDetector(
+              onTap: _toggleSound,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Icon(
+                  (_soundEnabled
+                      ? Icons.volume_up_rounded
+                      : Icons.volume_off_rounded),
+                  key: ValueKey<bool>(_soundEnabled),
+                  color: Colors.white.withOpacity(0.85),
+                  size: 26,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLogoSection(
+      bool isLandscape, bool isSmallScreen, Size screenSize) {
+    return SlideTransition(
+      position: _titleSlideAnimation,
+      child: FadeTransition(
+        opacity: _titleFadeAnimation,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_pulseAnimation, _breathingAnimation]),
+          builder: (context, child) {
+            final pulseScale = 1.0 + (_pulseAnimation.value * 0.05);
+            final breathingScale = _breathingController.isAnimating
+                ? _breathingAnimation.value
+                : 1.0;
+            final combinedScale = pulseScale * breathingScale;
+            return Transform.scale(
+              scale: combinedScale,
+              child: Container(
+                width: isLandscape
+                    ? screenSize.width * 0.25
+                    : screenSize.width * (isSmallScreen ? 0.6 : 0.5),
+                height: isLandscape
+                    ? screenSize.width * 0.25 * 0.8
+                    : screenSize.width * (isSmallScreen ? 0.6 : 0.5) * 0.8,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/MagnetLogo_no_bg.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitleSection(
+      bool isLandscape, bool isSmallScreen, Size screenSize) {
+    return Column(
+      children: [
+        // "Magnet Lord" text underneath with animations
+        SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.5),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: _titleController,
+            curve: const Interval(0.3, 1.0, curve: Curves.elasticOut),
+          )),
+          child: FadeTransition(
+            opacity: Tween<double>(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(
+              parent: _titleController,
+              curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+            )),
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                final shimmer = (_pulseAnimation.value * 2.0).clamp(0.0, 1.0);
+                return ShaderMask(
+                  shaderCallback: (bounds) {
+                    return LinearGradient(
+                      colors: [
+                        const Color(0xFF00F5FF)
+                            .withOpacity(0.8 + (0.2 * shimmer)),
+                        const Color(0xFF0084FF).withOpacity(0.9),
+                        const Color(0xFF7C3AED)
+                            .withOpacity(0.8 + (0.2 * shimmer)),
+                      ],
+                      stops: [
+                        0.0,
+                        0.5 + (0.3 * shimmer),
+                        1.0,
+                      ],
+                    ).createShader(bounds);
+                  },
+                  child: Text(
+                    'Magnet Lord',
+                    style: TextStyle(
+                      fontSize: isLandscape
+                          ? screenSize.width * 0.04
+                          : screenSize.width * (isSmallScreen ? 0.08 : 0.09),
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 3.0,
+                      shadows: [
+                        Shadow(
+                          offset: const Offset(0, 0),
+                          blurRadius: 20 + (10 * _pulseAnimation.value),
+                          color: const Color(0xFF00E5FF).withOpacity(0.6),
+                        ),
+                        Shadow(
+                          offset: const Offset(0, 0),
+                          blurRadius: 30 + (15 * _pulseAnimation.value),
+                          color: const Color(0xFF7C3AED).withOpacity(0.4),
+                        ),
+                        const Shadow(
+                          offset: Offset(0, 2),
+                          blurRadius: 8,
+                          color: Colors.black54,
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Subtitle
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.25),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blueAccent.withOpacity(0.5),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Text(
+            'RULE THE MAGNETIC FIELD 🧲',
+            style: TextStyle(
+              fontSize: isLandscape ? 10 : (isSmallScreen ? 12 : 14),
+              color: Colors.white.withOpacity(0.85),
+              fontWeight: FontWeight.w400,
+              letterSpacing: 1.0,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildButtons() {
+    return [
+      _buildAnimatedButton(
+        text: _lives > 0 ? 'PLAY GAME' : 'NO LIVES LEFT',
+        onPressed: _lives > 0 ? widget.onPlay : null,
+        backgroundColor:
+            _lives > 0 ? const Color(0xFF059669) : Colors.grey.shade600,
+        icon: _lives > 0 ? Icons.play_arrow_rounded : Icons.block_rounded,
+        isPrimary: _lives > 0,
+        animationDelay: 0,
+      ),
+      _buildAnimatedButton(
+        text: 'CHARACTER SKINS',
+        onPressed: widget.onSkins,
+        backgroundColor: const Color(0xFF7C3AED),
+        icon: Icons.palette_outlined,
+        animationDelay: 1,
+      ),
+      _buildAnimatedButton(
+        text: 'SETTINGS',
+        onPressed: widget.onSettings,
+        backgroundColor: const Color(0xFF475569),
+        icon: Icons.settings_outlined,
+        isOutlined: true,
+        animationDelay: 2,
+      ),
+    ];
   }
 
   void _watchAdForLife() {

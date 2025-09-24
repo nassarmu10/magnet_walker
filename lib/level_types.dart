@@ -9,7 +9,7 @@ class LevelTypeConfig {
     if (level <= 10) {
       // Early levels: mostly Gravity & Survival, no Demon
       return (level % 2 == 1) ? LevelType.gravity : LevelType.survival;
-    } else if (level <= 20) {
+    } else if (level < 20) {
       // Introduce Demon occasionally: 1 Demon every 4 levels
       final mod = level % 4;
       if (mod == 0) return LevelType.demon;
@@ -35,17 +35,6 @@ class LevelTypeConfig {
         return 'Survival Mode';
       case LevelType.demon:
         return 'Demon Mode';
-    }
-  }
-
-  static String getLevelInstructions(LevelType type) {
-    switch (type) {
-      case LevelType.gravity:
-        return 'Collect coins • Avoid bombs';
-      case LevelType.survival:
-        return 'Click bombs to destroy • Collect coins • Survive!';
-      case LevelType.demon:
-        return 'Keep moving to reflect rockets • Hit the demon!';
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:magnet_walker/level_types.dart';
 import 'dart:math' as math;
 import '../magnet_walker_game.dart';
+import '../utils/screen_utils.dart';
 import 'game_object.dart';
 
 class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
@@ -18,11 +19,16 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   double hitEffectTimer = 0.0;
   static const double hitEffectDuration = 0.2;
 
-  // Movement
+  // Movement - base values that will be made responsive
   Vector2 patrolOrigin = Vector2.zero();
   double patrolRadius = 60.0;
   double patrolSpeed = 40.0; // pixels per second
   double patrolAngle = 0.0;
+
+  // Base design values for responsive scaling
+  static const double baseRadius = 35.0;
+  static const double basePatrolRadius = 60.0;
+  static const double basePatrolSpeed = 40.0;
 
   Demon({required Vector2 position, double radius = 30})
       : super(
@@ -36,6 +42,13 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+
+    // Make demon size responsive to screen size
+    final screenSize = game.canvasSize;
+    radius = ScreenUtils.responsive(baseRadius, screenSize);
+    patrolRadius = ScreenUtils.responsive(basePatrolRadius, screenSize);
+    patrolSpeed = ScreenUtils.responsive(basePatrolSpeed, screenSize);
+
     // Load and add the demon sprite as a child
     String demonImage = 'demon.png';
     if (game.waveManager.level > 10 && game.waveManager.level < 20) {
@@ -46,7 +59,7 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     final sprite = await game.loadSprite(demonImage);
     demonSprite = SpriteComponent(
       sprite: sprite,
-      size: Vector2.all(radius * 2),
+      size: Vector2.all(radius * 3), // Made responsive
       anchor: Anchor.center,
       priority: 1,
     );
@@ -84,13 +97,18 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
     // Don't call super.render(canvas) to avoid drawing the white circle
     // Draw health bar above demon
     if (isAlive) {
+      final screenSize =
+          game.canvasSize; // Get screen size for responsive calculations
       final barWidth = radius * 2;
-      final barHeight = 6.0;
+      final barHeight =
+          ScreenUtils.responsive(6.0, screenSize); // Made responsive
       final healthPercent = health / maxHealth;
+      final barOffset =
+          ScreenUtils.responsive(18.0, screenSize); // Made responsive
       final barBgRect =
-          Rect.fromLTWH(-radius, -radius - 18, barWidth, barHeight);
+          Rect.fromLTWH(-radius, -radius - barOffset, barWidth, barHeight);
       final barRect = Rect.fromLTWH(
-          -radius, -radius - 18, barWidth * healthPercent, barHeight);
+          -radius, -radius - barOffset, barWidth * healthPercent, barHeight);
       canvas.drawRect(barBgRect,
           BasicPalette.black.paint()..color = Colors.black.withOpacity(0.5));
       canvas.drawRect(
@@ -106,16 +124,18 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   }
 
   void shootBombAtPlayer() {
-    print("shooting bomb");
     final playerPos = game.player?.position;
     final direction = (playerPos! - position).normalized();
+    final screenSize = game.canvasSize;
     final bomb = GameObject(
       position: position.clone(),
       type: ObjectType.bomb,
       level: game.waveManager.level,
       levelType: LevelType.demon,
     );
-    bomb.velocity = direction * 200; // Adjust speed as needed
+    // Make bomb speed responsive
+    final baseSpeed = 200.0;
+    bomb.velocity = direction * ScreenUtils.responsive(baseSpeed, screenSize);
     game.add(bomb);
   }
 
@@ -149,5 +169,21 @@ class Demon extends CircleComponent with HasGameRef<MagnetWalkerGame> {
   // NEW: Method to get current health percentage
   double getHealthPercentage() {
     return health / maxHealth;
+  }
+
+  // NEW: Method to handle screen size changes (orientation changes)
+  void updateResponsiveSizes(Vector2 screenSize) {
+    // Update radius
+    radius = ScreenUtils.responsive(baseRadius, screenSize);
+
+    // Update patrol radius and speed
+    patrolRadius = ScreenUtils.responsive(basePatrolRadius, screenSize);
+    patrolSpeed = ScreenUtils.responsive(basePatrolSpeed, screenSize);
+
+    // Update sprite size if it exists
+    if (demonSprite != null) {
+      demonSprite!.size =
+          Vector2.all(ScreenUtils.responsive(radius * 2, screenSize));
+    }
   }
 }
