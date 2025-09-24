@@ -207,9 +207,9 @@ class MagnetWalkerGame extends FlameGame
             'background-2.jpg'), // Closest layer // Farthest layer
       ],
       baseVelocity: Vector2(0, -20), // Scrolls upwards
-      repeat: ImageRepeat.repeatY,
-      fill: LayerFill.height, // <— fills the entire canvas, width & height
-      // Fills the height of the viewport
+      repeat: ImageRepeat
+          .repeat, // Repeat both horizontally and vertically for tablets
+      fill: LayerFill.width, // Fill the width to cover tablets properly
     );
     add(
       ParallaxComponent(
@@ -265,11 +265,14 @@ class MagnetWalkerGame extends FlameGame
       final headerMarginX = gameSize.x * 0.025;
       final headerMarginY = gameSize.y * 0.025;
       final headerWidth = gameSize.x * 0.95;
-      final headerHeight = gameSize.y * 0.12;
-      final portalSize = 60.0;
+      final portalSize = 60.0 * ScreenUtils.getScaleFactor(gameSize);
       spawnPortal = SciFiPortal(
-        position: Vector2(headerMarginX + headerWidth / 2,
-            headerMarginY + headerHeight + portalSize),
+        position: Vector2(
+            headerMarginX + headerWidth / 2,
+            headerMarginY +
+                80 +
+                ScreenUtils.getPreciseTopMargin(gameSize) +
+                portalSize),
         size: portalSize,
       );
 
@@ -1373,11 +1376,14 @@ class MagnetWalkerGame extends FlameGame
       final headerMarginX = canvasSize.x * 0.025;
       final headerMarginY = canvasSize.y * 0.025;
       final headerWidth = canvasSize.x * 0.95;
-      final headerHeight = canvasSize.y * 0.12;
-      final portalSize = 60.0;
+      final portalSize = 60.0 * ScreenUtils.getScaleFactor(canvasSize);
       spawnPortal = SciFiPortal(
-        position: Vector2(headerMarginX + headerWidth / 2,
-            headerMarginY + headerHeight + portalSize),
+        position: Vector2(
+            headerMarginX + headerWidth / 2,
+            headerMarginY +
+                80 +
+                ScreenUtils.getPreciseTopMargin(canvasSize) +
+                portalSize),
         size: portalSize,
       );
 

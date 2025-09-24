@@ -86,72 +86,19 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar:
-          true, // Game can render under the AppBar background
-      appBar: AppBar(
-        backgroundColor: Colors.transparent, // So image shows
-        elevation: 0,
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(
-                  'assets/images/background-2.jpg'), // your image path
-              fit: BoxFit.cover, // fills the AppBar area
-            ),
-          ),
-        ),
-        title: Text(
-          'MAGNET LORD',
-          style: TextStyle(
-            fontFamily: 'Roboto', // More professional font
-            fontWeight: FontWeight.w800, // Bolder weight
-            color: Colors.white,
-            letterSpacing: 4.5, // Increased spacing for premium feel
-            fontSize: 24, // Larger, more impactful size
-            height: 1.2, // Better line height
-            shadows: [
-              // Primary electric blue glow
-              const Shadow(
-                offset: Offset.zero,
-                color: Color(0xFF00E5FF),
-                blurRadius: 15, // Wider, more diffuse glow
-              ),
-              // Secondary purple glow for depth
-              const Shadow(
-                offset: Offset.zero,
-                color: Color(0xFF7C3AED),
-                blurRadius: 12,
-              ),
-              // Tertiary cyan accent
-              const Shadow(
-                offset: Offset.zero,
-                color: Color(0xFF00FFFF),
-                blurRadius: 8,
-              ),
-              // Strong drop shadow for depth
-              Shadow(
-                offset: const Offset(0, 3),
-                blurRadius: 12,
-                color: const Color(0xFF000000).withValues(alpha: 0.8),
-              ),
-              // Subtle inner shadow effect
-              Shadow(
-                offset: Offset(0, 1),
-                blurRadius: 4,
-                color: Color(0xFF000000)..withValues(alpha: 0.6),
-              ),
-            ],
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-
+      // extendBodyBehindAppBar: true, // Game renders behind AppBar
+      // appBar: AppBar(
+      //   backgroundColor: Colors.transparent, // Completely transparent
+      //   elevation: 0, // No shadow
+      //   toolbarHeight: 0, // No height - just for safe area
+      //   automaticallyImplyLeading: false, // No back button
+      // ),
       body: Stack(
         children: [
-          // Full-screen game (background will cover entire display)
+          // Full-screen game with top safe area only
           SafeArea(
-            bottom: false, // so game goes under banner
+            top: false,
+            bottom: false, // Game goes under banner
             child: GameWidget(game: game),
           ),
           // Banner ad overlaid at bottom

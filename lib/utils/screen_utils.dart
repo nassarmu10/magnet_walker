@@ -68,6 +68,26 @@ class ScreenUtils {
     }
   }
 
+  // Get precise top margin that adapts to different device types
+  static double getPreciseTopMargin(Vector2 screenSize) {
+    if (isLandscape(screenSize)) {
+      return screenSize.y * 0.08; // 8% of screen height for landscape
+    } else {
+      // Detect if device likely has a notch based on screen dimensions
+      final aspectRatio = screenSize.x / screenSize.y;
+      final hasNotch = aspectRatio >
+          0.45; // Modern phones with notches have higher aspect ratios
+
+      if (hasNotch) {
+        // For devices with notches (iPhone X+, modern Android)
+        return screenSize.y * 0.08; // 8% of screen height
+      } else {
+        // For older devices without notches
+        return screenSize.y * 0.06; // 6% of screen height
+      }
+    }
+  }
+
   // Get player safe zone for landscape
   static Vector2 getPlayerSafeZone(Vector2 screenSize) {
     if (isLandscape(screenSize)) {

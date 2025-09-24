@@ -7,7 +7,6 @@ import '../level_types.dart';
 import '../utils/screen_utils.dart';
 import 'dart:math' as math;
 import 'package:flame/input.dart';
-import '../skins/skin_store_screen.dart';
 
 // Custom rounded rectangle component for modern UI
 class RoundedRectComponent extends Component {
@@ -162,7 +161,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     // === Header ===
     final headerMarginX = ScreenUtils.getUIMargin(gameSize);
-    final headerMarginY = ScreenUtils.getUIMargin(gameSize);
+    final headerMarginY =
+        ScreenUtils.getPreciseTopMargin(gameSize); // Use precise top margin
     final headerWidth = gameSize.x - (headerMarginX * 2);
     final headerHeight = ScreenUtils.getHeaderHeight(gameSize);
 
@@ -607,9 +607,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     if (!isInitialized) return;
 
-    // Add subtle geometric patterns to header
-    _renderModernDecorations(canvas);
-
     // Add border glow effects
     _renderGlowEffects(canvas);
 
@@ -702,28 +699,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       );
       textPainter.paint(canvas, offset);
     }
-  }
-
-  void _renderModernDecorations(Canvas canvas) {
-    final gameSize = game.canvasSize;
-
-    // Subtle corner decorations
-    final decorPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    // Top-left corner decoration
-    final topLeft = Offset(gameSize.x * 0.03 + 8, gameSize.y * 0.02 + 8);
-    canvas.drawLine(topLeft, Offset(topLeft.dx + 15, topLeft.dy), decorPaint);
-    canvas.drawLine(topLeft, Offset(topLeft.dx, topLeft.dy + 15), decorPaint);
-
-    // Top-right corner decoration
-    final topRight = Offset(gameSize.x * 0.97 - 8, gameSize.y * 0.02 + 8);
-    canvas.drawLine(
-        topRight, Offset(topRight.dx - 15, topRight.dy), decorPaint);
-    canvas.drawLine(
-        topRight, Offset(topRight.dx, topRight.dy + 15), decorPaint);
   }
 
   void _renderGlowEffects(Canvas canvas) {
