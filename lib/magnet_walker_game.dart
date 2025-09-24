@@ -104,6 +104,9 @@ class MagnetWalkerGame extends FlameGame
   // Flag to track if user is navigating to skin store (to prevent auto-resume)
   bool isNavigatingToSkinStore = false;
 
+  // Track the game state before pausing so we can restore it properly
+  GameState? stateBeforePause;
+
   // Method to set the exit callback
   void setExitCallback(VoidCallback callback) {
     onExitToMenu = callback;
@@ -1272,6 +1275,8 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to pause the game (freezes all game logic)
   void pauseGame() {
+    // Save the current state before pausing
+    stateBeforePause = currentState;
     currentState = GameState.paused;
     stopGameMusic();
 
@@ -1287,12 +1292,14 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to resume the game
   void resumeGame() {
-    currentState = GameState.playing;
+    // Restore the previous state, or default to playing if no previous state
+    currentState = stateBeforePause ?? GameState.playing;
+    stateBeforePause = null; // Clear the saved state
 
     // Resume the engine first
     resumeEngine();
 
-    // Resume spawning without restarting the wave (maintain current game state)
+    // Resume spawning only if we're in playing state, not countdown
     if (currentState == GameState.playing) {
       startSpawning();
       // Resume demon if it was active
@@ -1300,11 +1307,17 @@ class MagnetWalkerGame extends FlameGame
         demon?.isAlive = true;
       }
     }
+    // Note: If state is countdown, the countdown will continue naturally in update()
+
     restartGameMusic();
   }
 
   // Method to pause the game for app lifecycle (without stopping music)
   void pauseGameForAppLifecycle() {
+    // Save the current state before pausing (if not already saved)
+    if (stateBeforePause == null) {
+      stateBeforePause = currentState;
+    }
     currentState = GameState.paused;
 
     // Stop all spawning
@@ -1324,9 +1337,11 @@ class MagnetWalkerGame extends FlameGame
       return;
     }
 
-    currentState = GameState.playing;
+    // Restore the previous state, or default to playing if no previous state
+    currentState = stateBeforePause ?? GameState.playing;
+    stateBeforePause = null; // Clear the saved state
 
-    // Resume spawning without restarting the wave (maintain current game state)
+    // Resume spawning only if we're in playing state, not countdown
     if (currentState == GameState.playing) {
       startSpawning();
       // Resume demon if it was active
