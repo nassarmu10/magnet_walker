@@ -154,8 +154,11 @@ class MagnetWalkerGame extends FlameGame
       case AppLifecycleState.hidden:
         // App went to background - pause music and game
         FlameAudio.bgm.pause();
-        pauseGameForAppLifecycle();
-        pauseEngine();
+        // Only pause engine if game is not already manually paused
+        if (currentState != GameState.paused) {
+          pauseGameForAppLifecycle();
+          pauseEngine();
+        }
         break;
 
       case AppLifecycleState.resumed:
@@ -163,8 +166,11 @@ class MagnetWalkerGame extends FlameGame
         if (musicEnabled) {
           FlameAudio.bgm.resume();
         }
-        resumeGameFromAppLifecycle();
-        resumeEngine();
+        // Only resume if game was not manually paused
+        if (currentState != GameState.paused) {
+          resumeGameFromAppLifecycle();
+          resumeEngine();
+        }
         break;
 
       case AppLifecycleState.inactive:
@@ -1275,13 +1281,16 @@ class MagnetWalkerGame extends FlameGame
     if (currentLevelType == LevelType.demon)
       demon?.isAlive = false; // TODO handle pause demon level
 
-    // The game objects will remain in their current positions
-    // because the update loop will be skipped
+    // Pause the entire engine to prevent any updates
+    pauseEngine();
   }
 
   // Method to resume the game
   void resumeGame() {
     currentState = GameState.playing;
+
+    // Resume the engine first
+    resumeEngine();
 
     // Resume spawning without restarting the wave (maintain current game state)
     if (currentState == GameState.playing) {

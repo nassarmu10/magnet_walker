@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:magnet_walker/components/app_bar.dart';
 import 'magnet_walker_game.dart';
 import 'managers/ad_manager.dart';
 
