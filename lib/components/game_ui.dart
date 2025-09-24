@@ -171,9 +171,15 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       size: Vector2(headerWidth, headerHeight),
       paint: Paint()
         ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [bgTop.withOpacity(0.95), bgBottom.withOpacity(0.92)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            const Color(0xFF000011).withOpacity(0.95), // Deep cyber dark
+            const Color(0xFF001133).withOpacity(0.93), // Dark cyber blue
+            const Color(0xFF002255).withOpacity(0.95), // Cyber blue
+            const Color(0xFF001144).withOpacity(0.93), // Dark cyber accent
+          ],
+          stops: const [0.0, 0.3, 0.7, 1.0],
         ).createShader(Rect.fromLTWH(
             headerMarginX, headerMarginY, headerWidth, headerHeight)),
       radius: 20,
@@ -185,13 +191,28 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       position: Vector2(headerMarginX, headerMarginY),
       size: Vector2(headerWidth, headerHeight),
       paint: Paint()
-        ..color = cyan.withOpacity(0.4)
+        ..color = const Color(0xFF00ffff).withOpacity(0.8) // Bright cyan neon
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0,
+        ..strokeWidth = 2.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
       radius: 20,
       priority: -1,
     );
     add(headerBorder);
+
+    // Add outer neon glow effect for cyberpunk style
+    final headerOuterGlow = RoundedRectComponent(
+      position: Vector2(headerMarginX - 1, headerMarginY - 1),
+      size: Vector2(headerWidth + 2, headerHeight + 2),
+      paint: Paint()
+        ..color = const Color(0xFF0088ff).withOpacity(0.4) // Blue outer glow
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0),
+      radius: 21,
+      priority: -3,
+    );
+    add(headerOuterGlow);
 
     // === Rows inside header ===
     final topRowHeight = headerHeight * 0.48;
