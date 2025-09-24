@@ -86,26 +86,67 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          // Game area with SafeArea
-          Expanded(
-            child: SafeArea(
-              bottom: false,
-              minimum: const EdgeInsets.only(
-                  bottom: 8.0), // Optional: add some bottom margin
-              child: GameWidget(game: game),
+      extendBodyBehindAppBar:
+          true, // Game can render under the AppBar background
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF0F1419), // Very dark blue-black
+                Color(0xFF1E293B), // Dark slate
+                Color(0xFF0F172A), // Almost black
+              ],
+              stops: [0.0, 0.5, 1.0],
             ),
           ),
-          // Banner ad area
+        ),
+        title: const Text(
+          'Magnet Lord',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: 3.0,
+            fontSize: 20,
+            shadows: [
+              Shadow(
+                  offset: Offset(0, 0),
+                  color: Color(0xFF00E5FF),
+                  blurRadius: 2),
+              Shadow(
+                  offset: Offset(0, 0),
+                  color: Color(0xFF7C3AED),
+                  blurRadius: 2),
+              Shadow(
+                  offset: Offset(0, 2), blurRadius: 8, color: Colors.black54),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+
+      body: Stack(
+        children: [
+          // Full-screen game (background will cover entire display)
+          SafeArea(
+            bottom: false, // so game goes under banner
+            child: GameWidget(game: game),
+          ),
+          // Banner ad overlaid at bottom
           if (_isBannerAdLoaded && _bannerAd != null)
-            Container(
-              width: _bannerAd!.size.width.toDouble(),
-              height: _bannerAd!.size.height.toDouble(),
-              padding: const EdgeInsets.only(
-                  bottom: 4.0), // Optional: add some padding
-              alignment: Alignment.center,
-              child: AdWidget(ad: _bannerAd!),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: _bannerAd!.size.width.toDouble(),
+                height: _bannerAd!.size.height.toDouble(),
+                margin: const EdgeInsets.only(bottom: 4.0),
+                child: AdWidget(ad: _bannerAd!),
+              ),
             ),
         ],
       ),

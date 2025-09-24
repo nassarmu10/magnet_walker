@@ -9,6 +9,8 @@ import 'package:magnet_walker/components/portal.dart';
 import 'package:magnet_walker/skins/skin_model.dart';
 import 'package:magnet_walker/skins/skin_store_screen.dart';
 import 'package:magnet_walker/utils/screen_utils.dart';
+import 'package:flame/parallax.dart';
+
 import 'dart:math' as math;
 import 'dart:async' as async;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +20,6 @@ import 'package:flutter/services.dart';
 import 'components/player.dart';
 import 'components/game_object.dart';
 import 'components/game_particle.dart';
-import 'components/background.dart';
 import 'components/game_ui.dart';
 import 'level_types.dart';
 import 'spawn_managers/gravity_spawn_manager.dart';
@@ -48,7 +49,6 @@ class MagnetWalkerGame extends FlameGame
   Player? player;
   Demon? demon;
   GameUI? gameUI;
-  late Background background;
   SciFiPortal? spawnPortal;
 
   // Level type management
@@ -192,6 +192,21 @@ class MagnetWalkerGame extends FlameGame
   @override
   Future<void> onLoad() async {
     // Wait for the game to be fully initialized
+    final parallaxBackground = await loadParallax(
+      [
+        ParallaxImageData(
+            'background-2.jpg'), // Closest layer // Farthest layer
+      ],
+      baseVelocity: Vector2(0, -20), // Scrolls upwards
+      repeat: ImageRepeat.repeatY,
+      fill: LayerFill.height, // <— fills the entire canvas, width & height
+      // Fills the height of the viewport
+    );
+    add(
+      ParallaxComponent(
+        parallax: parallaxBackground, // <-- wrap it here
+      ),
+    );
     await Future.delayed(const Duration(milliseconds: 50));
 
     // One-time initialization that should only happen once
@@ -400,10 +415,6 @@ class MagnetWalkerGame extends FlameGame
     // Initialize spawn managers
     gravitySpawnManager = GravitySpawnManager(this);
     survivalSpawnManager = SurvivalSpawnManager(this);
-
-    // Add background first
-    background = Background();
-    add(background);
 
     // Initialize wave manager first
     waveManager = WaveManager();
