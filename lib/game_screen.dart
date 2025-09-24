@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:magnet_walker/components/app_bar.dart';
 import 'magnet_walker_game.dart';
 import 'managers/ad_manager.dart';
 
@@ -89,41 +90,58 @@ class _GameScreenState extends State<GameScreen> {
       extendBodyBehindAppBar:
           true, // Game can render under the AppBar background
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.transparent, // So image shows
         elevation: 0,
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF0F1419), // Very dark blue-black
-                Color(0xFF1E293B), // Dark slate
-                Color(0xFF0F172A), // Almost black
-              ],
-              stops: [0.0, 0.5, 1.0],
+            image: DecorationImage(
+              image: AssetImage(
+                  'assets/images/background-2.jpg'), // your image path
+              fit: BoxFit.cover, // fills the AppBar area
             ),
           ),
         ),
-        title: const Text(
-          'Magnet Lord',
+        title: Text(
+          'MAGNET LORD',
           style: TextStyle(
-            fontWeight: FontWeight.w700,
+            fontFamily: 'Roboto', // More professional font
+            fontWeight: FontWeight.w800, // Bolder weight
             color: Colors.white,
-            letterSpacing: 3.0,
-            fontSize: 20,
+            letterSpacing: 4.5, // Increased spacing for premium feel
+            fontSize: 24, // Larger, more impactful size
+            height: 1.2, // Better line height
             shadows: [
+              // Primary electric blue glow
+              const Shadow(
+                offset: Offset.zero,
+                color: Color(0xFF00E5FF),
+                blurRadius: 15, // Wider, more diffuse glow
+              ),
+              // Secondary purple glow for depth
+              const Shadow(
+                offset: Offset.zero,
+                color: Color(0xFF7C3AED),
+                blurRadius: 12,
+              ),
+              // Tertiary cyan accent
+              const Shadow(
+                offset: Offset.zero,
+                color: Color(0xFF00FFFF),
+                blurRadius: 8,
+              ),
+              // Strong drop shadow for depth
               Shadow(
-                  offset: Offset(0, 0),
-                  color: Color(0xFF00E5FF),
-                  blurRadius: 2),
+                offset: const Offset(0, 3),
+                blurRadius: 12,
+                color: const Color(0xFF000000).withValues(alpha: 0.8),
+              ),
+              // Subtle inner shadow effect
               Shadow(
-                  offset: Offset(0, 0),
-                  color: Color(0xFF7C3AED),
-                  blurRadius: 2),
-              Shadow(
-                  offset: Offset(0, 2), blurRadius: 8, color: Colors.black54),
+                offset: Offset(0, 1),
+                blurRadius: 4,
+                color: Color(0xFF000000)..withValues(alpha: 0.6),
+              ),
             ],
           ),
           textAlign: TextAlign.center,
