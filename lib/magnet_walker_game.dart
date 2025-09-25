@@ -946,7 +946,9 @@ class MagnetWalkerGame extends FlameGame
         },
       ).then((_) {
         // Only resume if user didn't navigate to skin store and level progression wasn't handled manually
-        if (currentState == GameState.paused && !isNavigatingToSkinStore && !levelProgressionHandled) {
+        if (currentState == GameState.paused &&
+            !isNavigatingToSkinStore &&
+            !levelProgressionHandled) {
           isGameIntentionallyPaused = false;
           resumeGame();
         }
@@ -984,23 +986,17 @@ class MagnetWalkerGame extends FlameGame
 
   // Helper method to continue level progression after skin popup/store
   void _continueToNextLevel() {
-    print('DEBUG: _continueToNextLevel() called');
     levelProgressionHandled = true;
 
     // Resume the engine first (it was paused when showing skin popup)
-    print('DEBUG: Resuming engine');
     resumeEngine();
 
     // Prepare the next wave/level (same logic as when no skins are unlocked)
-    print('DEBUG: Setting state to countdown and calling prepareWave');
     currentState = GameState.countdown;
     prepareWave();
 
     // Restart game music
-    print('DEBUG: Restarting game music');
     restartGameMusic();
-
-    print('DEBUG: _continueToNextLevel() completed. State: $currentState, waveCountdown: $waveCountdown');
   }
 
   // Helper to play audio
@@ -1383,8 +1379,6 @@ class MagnetWalkerGame extends FlameGame
 
 // Prepares the current wave (shows countdown, positions player, etc.)
   void prepareWave() {
-    print('DEBUG: prepareWave() called');
-
     // Clear any existing objects
     clearAllObjects();
 
@@ -1750,11 +1744,8 @@ class MagnetWalkerGame extends FlameGame
 
   void updateWaveCountdown(double dt) {
     if (currentState == GameState.countdown && waveCountdown > 0) {
-      print('DEBUG: Countdown update - waveCountdown: $waveCountdown, dt: $dt');
       waveCountdown -= dt;
       if (waveCountdown <= 0) {
-        print('DEBUG: Countdown finished, calling onCountdownFinished');
-
         onCountdownFinished();
       } else {
         if (currentLevelType != LevelType.demon) {
