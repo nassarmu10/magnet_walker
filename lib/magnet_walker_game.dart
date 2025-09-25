@@ -107,6 +107,9 @@ class MagnetWalkerGame extends FlameGame
   // Track the game state before pausing so we can restore it properly
   GameState? stateBeforePause;
 
+  // Flag to track if level progression was handled manually (to prevent dialog fallback)
+  bool levelProgressionHandled = false;
+
   // Method to set the exit callback
   void setExitCallback(VoidCallback callback) {
     onExitToMenu = callback;
@@ -891,9 +894,9 @@ class MagnetWalkerGame extends FlameGame
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            // Resume the game
+                            // Continue to next level preparation
                             isGameIntentionallyPaused = false;
-                            resumeGame();
+                            _continueToNextLevel();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -942,11 +945,13 @@ class MagnetWalkerGame extends FlameGame
           );
         },
       ).then((_) {
-        // Only resume if user didn't navigate to skin store
-        if (currentState == GameState.paused && !isNavigatingToSkinStore) {
+        // Only resume if user didn't navigate to skin store and level progression wasn't handled manually
+        if (currentState == GameState.paused && !isNavigatingToSkinStore && !levelProgressionHandled) {
           isGameIntentionallyPaused = false;
           resumeGame();
         }
+        // Reset the flag for next time
+        levelProgressionHandled = false;
       });
     });
   }
@@ -969,12 +974,33 @@ class MagnetWalkerGame extends FlameGame
       ),
     )
         .then((_) {
-      // Resume game when returning from skin store
-      // Clear both flags and resume the game
+      // Continue to next level when returning from skin store
+      // Clear both flags and continue level progression
       isNavigatingToSkinStore = false;
       isGameIntentionallyPaused = false;
-      resumeGame();
+      _continueToNextLevel();
     });
+  }
+
+  // Helper method to continue level progression after skin popup/store
+  void _continueToNextLevel() {
+    print('DEBUG: _continueToNextLevel() called');
+    levelProgressionHandled = true;
+
+    // Resume the engine first (it was paused when showing skin popup)
+    print('DEBUG: Resuming engine');
+    resumeEngine();
+
+    // Prepare the next wave/level (same logic as when no skins are unlocked)
+    print('DEBUG: Setting state to countdown and calling prepareWave');
+    currentState = GameState.countdown;
+    prepareWave();
+
+    // Restart game music
+    print('DEBUG: Restarting game music');
+    restartGameMusic();
+
+    print('DEBUG: _continueToNextLevel() completed. State: $currentState, waveCountdown: $waveCountdown');
   }
 
   // Helper to play audio
@@ -1357,6 +1383,8 @@ class MagnetWalkerGame extends FlameGame
 
 // Prepares the current wave (shows countdown, positions player, etc.)
   void prepareWave() {
+    print('DEBUG: prepareWave() called');
+
     // Clear any existing objects
     clearAllObjects();
 
@@ -1722,8 +1750,11 @@ class MagnetWalkerGame extends FlameGame
 
   void updateWaveCountdown(double dt) {
     if (currentState == GameState.countdown && waveCountdown > 0) {
+      print('DEBUG: Countdown update - waveCountdown: $waveCountdown, dt: $dt');
       waveCountdown -= dt;
       if (waveCountdown <= 0) {
+        print('DEBUG: Countdown finished, calling onCountdownFinished');
+
         onCountdownFinished();
       } else {
         if (currentLevelType != LevelType.demon) {
