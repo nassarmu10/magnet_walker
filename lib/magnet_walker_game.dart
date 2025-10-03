@@ -21,6 +21,7 @@ import 'components/player.dart';
 import 'components/game_object.dart';
 import 'components/game_particle.dart';
 import 'components/game_ui.dart';
+import 'components/laser_beam.dart';
 import 'level_types.dart';
 import 'spawn_managers/gravity_spawn_manager.dart';
 import 'spawn_managers/survival_spawn_manager.dart';
@@ -1158,6 +1159,16 @@ class MagnetWalkerGame extends FlameGame
           final distance = tapPosition.distanceTo(obj.position);
           if (distance < obj.radius + 15) {
             obj.collected = true;
+
+            // Create laser beam effect from player to bomb
+            if (player != null) {
+              final laserBeam = LaserBeam(
+                startPosition: player!.position.clone(),
+                endPosition: obj.position.clone(),
+              );
+              add(laserBeam);
+            }
+
             destroyBomb(obj);
             return;
           }
