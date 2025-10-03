@@ -22,7 +22,7 @@ class SkinManager {
       name: 'White Spirit',
       description: 'Pure and elegant essence',
       imagePath: 'whiteSS.png',
-      price: 2, // Available for purchase from level 2
+      price: 4, // Available for purchase from level 3
       isUnlocked: false,
       rarity: 'common',
     ),
@@ -31,7 +31,7 @@ class SkinManager {
       name: 'Ocean Sunset',
       description: 'Where sea meets golden sky',
       imagePath: 'blue-yellow-SS.png',
-      price: 4, // Available for purchase from level 4
+      price: 6, // Available for purchase from level 4
       isUnlocked: false,
       rarity: 'common',
     ),
@@ -40,7 +40,7 @@ class SkinManager {
       name: 'Fire Storm',
       description: 'Blazing flames and lightning',
       imagePath: 'red-yellow-SS.png',
-      price: 8, // Available for purchase from level 6
+      price: 9, // Available for purchase from level 6
       isUnlocked: false,
       rarity: 'common',
     ),

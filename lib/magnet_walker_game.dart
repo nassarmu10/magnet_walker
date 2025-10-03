@@ -172,8 +172,11 @@ class MagnetWalkerGame extends FlameGame
         if (musicEnabled) {
           FlameAudio.bgm.resume();
         }
-        // Only resume if game was not manually paused
-        if (currentState != GameState.paused) {
+        // Only resume if game was not manually paused (check the flag, not the state)
+        if (!isGameIntentionallyPaused &&
+            currentState != GameState.menu &&
+            currentState != GameState.gameOver &&
+            currentState != GameState.levelComplete) {
           resumeGameFromAppLifecycle();
           resumeEngine();
         }
