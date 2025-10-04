@@ -48,6 +48,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late RoundedRectComponent topRowBg;
   late RoundedRectComponent bottomRowBg;
   late ButtonComponent pauseButton;
+  late ButtonComponent infoButton;
   bool isPaused = false;
   VoidCallback? onExitToMenu;
 
@@ -158,6 +159,140 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       priority: 25,
     );
     add(pauseButton);
+
+    // === Info Button ===
+    infoButton = ButtonComponent(
+      position: Vector2(
+        gameSize.x - pauseMargin,
+        gameSize.y - pauseMargin - adBarHeight - extraMargin - pauseButtonSize - pauseMargin,
+      ),
+      size: Vector2(pauseButtonSize, pauseButtonSize),
+      anchor: Anchor.bottomRight,
+      button: RectangleComponent(
+        size: Vector2(pauseButtonSize, pauseButtonSize),
+        paint: Paint()..color = Colors.transparent,
+      ),
+      children: [
+        // Background circle with gradient
+        CircleComponent(
+          radius: pauseButtonSize / 2,
+          paint: Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFF2a2a4e).withOpacity(0.98),
+                const Color(0xFF1a1a3e).withOpacity(0.95)
+              ],
+            ).createShader(
+                Rect.fromLTWH(0, 0, pauseButtonSize, pauseButtonSize)),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Outer glow border with blur
+        CircleComponent(
+          radius: pauseButtonSize / 2,
+          paint: Paint()
+            ..color = amber.withOpacity(0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3 * scaleFactor
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6 * scaleFactor),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Main border
+        CircleComponent(
+          radius: pauseButtonSize / 2,
+          paint: Paint()
+            ..color = amber.withOpacity(0.8)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Inner subtle glow
+        CircleComponent(
+          radius: pauseButtonSize / 2 - 4 * scaleFactor,
+          paint: Paint()
+            ..color = amber.withOpacity(0.2)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Info icon background circle (larger, gradient)
+        CircleComponent(
+          radius: pauseButtonSize * 0.32,
+          paint: Paint()
+            ..shader = RadialGradient(
+              colors: [
+                amber.withOpacity(0.9),
+                amber.withOpacity(0.7),
+              ],
+            ).createShader(Rect.fromCircle(
+              center: Offset(pauseButtonSize / 2, pauseButtonSize / 2),
+              radius: pauseButtonSize * 0.32,
+            ))
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2 * scaleFactor),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Info icon white glow
+        CircleComponent(
+          radius: pauseButtonSize * 0.3,
+          paint: Paint()
+            ..color = Colors.white.withOpacity(0.95)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 1 * scaleFactor),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Info icon dot (top part of 'i') - with glow
+        CircleComponent(
+          radius: pauseButtonSize * 0.065,
+          paint: Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFF1a1a3e),
+                const Color(0xFF0a0a2e),
+              ],
+            ).createShader(Rect.fromCircle(
+              center: Offset(pauseButtonSize / 2, pauseButtonSize * 0.35),
+              radius: pauseButtonSize * 0.065,
+            )),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize * 0.35),
+          anchor: Anchor.center,
+        ),
+        // Info icon stem (bottom part of 'i') - rounded rectangle
+        RectangleComponent(
+          position: Vector2(pauseButtonSize * 0.455, pauseButtonSize * 0.48),
+          size: Vector2(pauseButtonSize * 0.09, pauseButtonSize * 0.2),
+          paint: Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1a1a3e),
+                const Color(0xFF0a0a2e),
+              ],
+            ).createShader(Rect.fromLTWH(
+              pauseButtonSize * 0.455,
+              pauseButtonSize * 0.48,
+              pauseButtonSize * 0.09,
+              pauseButtonSize * 0.2,
+            )),
+        ),
+        // Shine effect on top-left
+        CircleComponent(
+          radius: pauseButtonSize * 0.12,
+          paint: Paint()
+            ..color = Colors.white.withOpacity(0.3)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4 * scaleFactor),
+          position: Vector2(pauseButtonSize * 0.35, pauseButtonSize * 0.35),
+          anchor: Anchor.center,
+        ),
+      ],
+      onPressed: showInfoDialog,
+      priority: 25,
+    );
+    add(infoButton);
 
     // === Header ===
     final headerMarginX = ScreenUtils.getUIMargin(gameSize);
@@ -305,6 +440,190 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   // Add this method to initialize the exit callback
   void setExitCallback(VoidCallback callback) {
     onExitToMenu = callback;
+  }
+
+  void showInfoDialog() {
+    if (isPaused) {
+      return; // Prevent multiple dialogs
+    }
+
+    // Pause the game immediately
+    isPaused = true;
+    game.pauseGame();
+
+    // Get current level to show appropriate instructions
+    final currentLevel = game.waveManager.level;
+    final levelType = LevelTypeConfig.getLevelType(currentLevel);
+
+    String title;
+    String content;
+    String emoji;
+    Color themeColor;
+
+    // Determine which instructions to show based on level type
+    if (levelType == LevelType.gravity) {
+      title = "Gravity Mode";
+      emoji = "🎮";
+      content =
+          "• Steer to dodge rockets\n• Collect coins to reach target\n• Avoid bombs at all costs\n• Survive the wave!";
+      themeColor = const Color(0xFF00E0FF);
+    } else if (levelType == LevelType.survival) {
+      title = "Survival Mode";
+      emoji = "⚡";
+      content =
+          "• Ship can't move\n• Tap rockets to destroy them\n• Collect coins to reach target\n• Don't let bombs reach you!";
+      themeColor = const Color(0xFFFFB400);
+    } else if (levelType == LevelType.demon) {
+      title = "Demon Boss Battle";
+      emoji = "🔥";
+      content =
+          "• Demon's rockets are deadly\n• Move to activate magnetic force\n• Hurl rockets back at demon\n• Reduce demon's health to zero!";
+      themeColor = const Color(0xFFFF4D4D);
+    } else {
+      // Fallback
+      title = "How to Play";
+      emoji = "ℹ️";
+      content = "Follow the on-screen instructions to complete each wave!";
+      themeColor = const Color(0xFF00E0FF);
+    }
+
+    // Use a post-frame callback to ensure the context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = game.buildContext;
+
+      if (context == null) {
+        // If context is not available, try again after a short delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          final retryContext = game.buildContext;
+          if (retryContext != null) {
+            _showInfoDialogWithContext(
+                retryContext, title, content, emoji, themeColor);
+          } else {
+            // If we still can't get context, resume the game
+            resumeGame();
+          }
+        });
+        return;
+      }
+
+      _showInfoDialogWithContext(context, title, content, emoji, themeColor);
+    });
+  }
+
+  void _showInfoDialogWithContext(BuildContext context, String title,
+      String content, String emoji, Color themeColor) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        final screenSize = MediaQuery.of(dialogContext).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+        final padding = dialogWidth * 0.06;
+        final titleFontSize =
+            isLandscape ? dialogWidth * 0.07 : dialogWidth * 0.08;
+        final contentFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+        final buttonFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.06;
+
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1a1a2e),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(dialogWidth * 0.07),
+              side: BorderSide(
+                color: themeColor.withOpacity(0.5),
+                width: 2,
+              ),
+            ),
+            title: Column(
+              children: [
+                Text(
+                  emoji,
+                  style: TextStyle(fontSize: titleFontSize * 1.2),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: padding * 0.3),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: themeColor,
+                    letterSpacing: 1.5,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 0),
+                        blurRadius: 10,
+                        color: themeColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: Container(
+              width: dialogWidth,
+              padding: EdgeInsets.all(padding * 0.8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(padding),
+                    decoration: BoxDecoration(
+                      color: themeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(dialogWidth * 0.04),
+                      border: Border.all(
+                        color: themeColor.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      content,
+                      style: TextStyle(
+                        fontSize: contentFontSize,
+                        color: Colors.white70,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildPauseActionButton(
+                      'GOT IT!',
+                      themeColor,
+                      Icons.check_circle,
+                      () {
+                        Navigator.of(dialogContext).pop();
+                        resumeGame();
+                      },
+                      buttonFontSize,
+                      padding,
+                      padding * 0.7,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((_) {
+      // Ensure the game is resumed if dialog is dismissed unexpectedly
+      if (isPaused) {
+        resumeGame();
+      }
+    });
   }
 
   void showPauseDialog() {
