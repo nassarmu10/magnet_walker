@@ -2,7 +2,6 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:async' as async;
-
 import '../../magnet_walker_game.dart';
 import '../../components/game_object.dart';
 import '../../level_types.dart';
@@ -12,10 +11,19 @@ class SurvivalSpawnManager {
   final MagnetWalkerGame game;
   async.Timer? spawnTimer;
 
+  // Track spawns for guaranteed bomb logic
+  int _spawnCount = 0;
+  bool _hasSpawnedBomb = false;
+  static const int _guaranteedBombWindow = 3;
+
   SurvivalSpawnManager(this.game);
 
   void startSpawning() {
     spawnTimer?.cancel();
+
+    // Reset guaranteed bomb tracking
+    _spawnCount = 0;
+    _hasSpawnedBomb = false;
 
     // Base spawn delay (slower by default)
     final baseSpawnRate = 2.0; // start at 1 spawn every 2s
@@ -31,7 +39,6 @@ class SurvivalSpawnManager {
     // Final spawn rate (never faster than 0.8s before lvl 30, 0.3s after)
     double minRate = (game.waveManager.level < 30) ? 0.8 : 0.3;
     double maxRate = 2.0; // or whatever your starting rate is
-
     final spawnRate =
         (baseSpawnRate - levelFactor - waveFactor).clamp(minRate, maxRate);
 
@@ -55,7 +62,7 @@ class SurvivalSpawnManager {
 
     // Use responsive margin for spawn offset
     final margin = ScreenUtils.responsive(20.0, gameSize);
-    
+
     switch (edge) {
       case 0: // Top
         spawnPosition = Vector2(
@@ -87,33 +94,54 @@ class SurvivalSpawnManager {
 
     // Bomb/coin ratio scaling
     double baseBombChance;
-
-// Before level 10: max 50% bombs
+    // Before level 10: max 50% bombs
     if (game.waveManager.level < 10) {
       baseBombChance = 0.3 + 0.1 * (game.waveManager.currentWave - 1);
       // Wave 1 → 30%, Wave 3 → 50%
     }
-// Mid levels 10–25: up to 65%
+    // Mid levels 10–25: up to 65%
     else if (game.waveManager.level < 25) {
       baseBombChance = 0.4 + 0.1 * (game.waveManager.currentWave - 1);
       // Wave 1 → 40%, Wave 3 → 60%
     }
-// High levels 25–40: up to 80%
+    // High levels 25–40: up to 80%
     else if (game.waveManager.level < 55) {
       baseBombChance = 0.5 + 0.15 * (game.waveManager.currentWave - 1);
       // Wave 1 → 50%, Wave 3 → 80%
     }
-// Insane mode 40+: up to 95%
+    // Insane mode 40+: up to 95%
     else {
       baseBombChance = 0.6 + 0.2 * (game.waveManager.currentWave - 1);
       // Wave 1 → 60%, Wave 3 → 95%
     }
 
-// Clamp to avoid 100%
+    // Clamp to avoid 100%
     final bombChance = baseBombChance.clamp(0.2, 0.95);
-    final type = math.Random().nextDouble() < bombChance
-        ? ObjectType.bomb
-        : ObjectType.coin;
+
+    // Determine object type with guaranteed bomb logic
+    ObjectType type;
+    _spawnCount++;
+
+    if (_spawnCount <= _guaranteedBombWindow) {
+      // Within first 3 spawns
+      if (!_hasSpawnedBomb && _spawnCount == _guaranteedBombWindow) {
+        // Force bomb on 3rd spawn if none spawned yet
+        type = ObjectType.bomb;
+        _hasSpawnedBomb = true;
+      } else {
+        // Normal random logic for 1st and 2nd spawn
+        final isBomb = math.Random().nextDouble() < bombChance;
+        type = isBomb ? ObjectType.bomb : ObjectType.coin;
+        if (isBomb) {
+          _hasSpawnedBomb = true;
+        }
+      }
+    } else {
+      // After first 3 spawns, use normal logic
+      type = math.Random().nextDouble() < bombChance
+          ? ObjectType.bomb
+          : ObjectType.coin;
+    }
 
     final obj = GameObject(
       position: spawnPosition,
@@ -121,6 +149,7 @@ class SurvivalSpawnManager {
       level: game.waveManager.level,
       levelType: LevelType.survival,
     );
+
     // Increase speed per wave
     if (type == ObjectType.bomb || type == ObjectType.coin) {
       obj.velocity *= (1.0 + 0.2 * (game.waveManager.currentWave - 1));
@@ -131,5 +160,9 @@ class SurvivalSpawnManager {
 
   void stop() {
     spawnTimer?.cancel();
+
+    // Reset guaranteed bomb tracking when stopping
+    _spawnCount = 0;
+    _hasSpawnedBomb = false;
   }
 }

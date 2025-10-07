@@ -164,7 +164,12 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     infoButton = ButtonComponent(
       position: Vector2(
         gameSize.x - pauseMargin,
-        gameSize.y - pauseMargin - adBarHeight - extraMargin - pauseButtonSize - pauseMargin,
+        gameSize.y -
+            pauseMargin -
+            adBarHeight -
+            extraMargin -
+            pauseButtonSize -
+            pauseMargin,
       ),
       size: Vector2(pauseButtonSize, pauseButtonSize),
       anchor: Anchor.bottomRight,
@@ -1842,9 +1847,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.demon) {
-      return 'The demon defeated you at level $level. Choose your next action:';
+      return 'The demon defeated you at level $level.';
     } else {
-      return 'You failed wave $wave of level $level. Choose your next action:';
+      return 'You failed wave $wave of level $level.';
     }
   }
 }

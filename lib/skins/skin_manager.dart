@@ -90,15 +90,6 @@ class SkinManager {
       rarity: 'epic',
     ),
     const Skin(
-      id: 'mystery',
-      name: 'Dark Mystery',
-      description: 'The unknown lurks within',
-      imagePath: 'shitSS.png',
-      price: 33, // Available for purchase from level 14
-      isUnlocked: false,
-      rarity: 'epic',
-    ),
-    const Skin(
       id: 'dolphin',
       name: 'Ocean Dancer',
       description: 'Playful spirit of the seas',

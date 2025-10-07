@@ -312,9 +312,9 @@ class MagnetWalkerGame extends FlameGame
       const double horizontalOffset = 10.0;
       switch (currentLevelType) {
         case LevelType.gravity:
-          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 120);
         case LevelType.demon:
-          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 117);
+          return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y - 120);
         case LevelType.survival:
           return Vector2(gameSize.x / 2 + horizontalOffset, gameSize.y / 2);
         default:
@@ -460,7 +460,6 @@ class MagnetWalkerGame extends FlameGame
       "dogSS.png",
       "tenninSS.png",
       "GiraffeSS.png",
-      "shitSS.png",
       "dolphinSS.png",
       "hippoSS.png",
       "lionSS.png",
@@ -1078,6 +1077,15 @@ class MagnetWalkerGame extends FlameGame
     }
   }
 
+  void destroyCoin(GameObject coin) {
+    if (coin.type == ObjectType.coin && coin.isMounted) {
+      createParticles(coin.position, Colors.yellow);
+      coin.removeFromParent();
+      gameObjects.remove(coin);
+      playSound('bomb.wav');
+    }
+  }
+
   void createParticles(Vector2 position, Color color) {
     // Ensure position is valid
     if (position.x.isNaN ||
@@ -1155,7 +1163,7 @@ class MagnetWalkerGame extends FlameGame
         currentLevelType == LevelType.survival) {
       final tapPosition = event.localPosition;
       for (final obj in List.from(gameObjects)) {
-        if (obj.isMounted && !obj.collected && obj.type == ObjectType.bomb) {
+        if (obj.isMounted && !obj.collected) {
           final distance = tapPosition.distanceTo(obj.position);
           if (distance < obj.radius + 15) {
             obj.collected = true;
@@ -1163,13 +1171,16 @@ class MagnetWalkerGame extends FlameGame
             // Create laser beam effect from player to bomb
             if (player != null) {
               final laserBeam = LaserBeam(
-                startPosition: player!.position.clone(),
+                startPosition: player!.center.clone() + Vector2(-12.0, 0),
                 endPosition: obj.position.clone(),
               );
               add(laserBeam);
             }
-
-            destroyBomb(obj);
+            if (obj.type == ObjectType.coin) {
+              destroyCoin(obj);
+            } else {
+              destroyBomb(obj);
+            }
             return;
           }
         }
@@ -1331,6 +1342,10 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to resume the game
   void resumeGame() {
+    // Only resume if we are actually paused; avoid overwriting countdown/game state
+    if (currentState != GameState.paused) {
+      return;
+    }
     // Restore the previous state, or default to playing if no previous state
     currentState = stateBeforePause ?? GameState.playing;
     stateBeforePause = null; // Clear the saved state
@@ -1371,11 +1386,10 @@ class MagnetWalkerGame extends FlameGame
 
   // Method to resume the game from app lifecycle (without restarting music)
   void resumeGameFromAppLifecycle() {
-    // Don't resume if the game is intentionally paused for UI (popups, dialogs, etc.)
-    if (isGameIntentionallyPaused) {
+    // Only act if we are paused by lifecycle; do not overwrite countdown/other states
+    if (isGameIntentionallyPaused || currentState != GameState.paused) {
       return;
     }
-
     // Restore the previous state, or default to playing if no previous state
     currentState = stateBeforePause ?? GameState.playing;
     stateBeforePause = null; // Clear the saved state
@@ -1514,10 +1528,21 @@ class MagnetWalkerGame extends FlameGame
       onWatchAd: () {
         AdManager.showRewardedAd(
           onRewarded: () {
+            // Ensure we clear any intentional pause flags and restart the wave
+            isGameIntentionallyPaused = false;
             restartWave();
           },
           onAdDismissed: () {
-            // Start music only after ad is dismissed
+            // Ad closed → resume engine/update loop and music
+            //resumeGame();
+            // If we are in countdown or playing, ensure updates progress
+            if (currentState == GameState.countdown ||
+                currentState == GameState.playing) {
+              // No-op: update() will drive countdown; just make sure we aren't paused
+            } else if (currentState == GameState.gameOver) {
+              // Safety: if lifecycle didn't resume properly, restart wave
+              restartWave();
+            }
             restartGameMusic();
           },
           onFailed: () {
@@ -1705,11 +1730,20 @@ class MagnetWalkerGame extends FlameGame
           onRewarded: () {
             // Continue from where the player left off
             // The saved demon health will be restored in startDemonLeve()
+            isGameIntentionallyPaused = false;
             _initializeLevel();
             _startLevel();
           },
           onAdDismissed: () {
-            // Start music only after ad is dismissed
+            // Ad closed → resume engine/update loop and music
+            if (currentState == GameState.countdown ||
+                currentState == GameState.playing) {
+              // Let update() drive countdown or demon start
+            } else if (currentState == GameState.gameOver) {
+              // Safety: re-initialize if still stuck in gameOver
+              _initializeLevel();
+              _startLevel();
+            }
             restartGameMusic();
           },
           onFailed: () {
