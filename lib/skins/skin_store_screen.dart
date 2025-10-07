@@ -454,7 +454,12 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
     final lockedByLevel =
         widget.skinManager.getLockedByLevel(widget.currentLevel);
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        // Allow back navigation - the game resume will be handled by the .then() callback in _openSkinStore
+        return true;
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFF0a0a1a),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1a1a2e),
@@ -631,6 +636,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen>
                   },
                 ),
         ],
+      ),
       ),
     );
   }

@@ -28,7 +28,6 @@ class WaveManager {
   }
 
   void setTarget() {
-    print('WaveManager: Setting target for level $level');
     if (level == 1) {
       waveTarget = 1; // Just 1 coin for level 1
     } else if (level == 2) {
@@ -44,7 +43,6 @@ class WaveManager {
       waveTarget = 15 + ((level - 20) ~/ 5);
       waveTarget = waveTarget.clamp(15, 20); // safety cap
     }
-    print('WaveManager: Target set to $waveTarget for level $level');
   }
 
   // Add score to current wave

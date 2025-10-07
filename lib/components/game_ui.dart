@@ -4,9 +4,9 @@ import 'package:flutter/widgets.dart';
 import '../magnet_walker_game.dart';
 import '../managers/ad_manager.dart';
 import '../level_types.dart';
+import '../utils/screen_utils.dart';
 import 'dart:math' as math;
 import 'package:flame/input.dart';
-import '../skins/skin_store_screen.dart';
 
 // Custom rounded rectangle component for modern UI
 class RoundedRectComponent extends Component {
@@ -40,7 +40,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late TextComponent levelTypeText;
   // late TextComponent playTimeText;
   late TextComponent targetScoreText;
-  late TextComponent instructionsText;
   bool gameOverVisible = false;
   bool isInitialized = false;
 
@@ -49,6 +48,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   late RoundedRectComponent topRowBg;
   late RoundedRectComponent bottomRowBg;
   late ButtonComponent pauseButton;
+  late ButtonComponent infoButton;
   bool isPaused = false;
   VoidCallback? onExitToMenu;
 
@@ -67,130 +67,311 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     if (isInitialized) return;
 
     final gameSize = game.canvasSize;
+    final isLandscape = ScreenUtils.isLandscape(gameSize);
+    final scaleFactor = ScreenUtils.getScaleFactor(gameSize);
 
-    // IMPROVED: Enhanced pause button with better visual feedback
+    // === Color & Style Palette ===
+    const cyan = Color(0xFF00E0FF);
+    const amber = Color(0xFFFFB400);
+    const danger = Color(0xFFFF4D4D);
+    const bgTop = Color(0xFF0D1B2A);
+    const bgBottom = Color(0xFF1B263B);
+
+    TextPaint hudText(Color color, double size) => TextPaint(
+          style: TextStyle(
+            fontFamily: 'Orbitron', // add this font to pubspec
+            color: color,
+            fontSize: size,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2 * scaleFactor,
+            shadows: [
+              Shadow(
+                offset: const Offset(0, 0),
+                blurRadius: 8 * scaleFactor,
+                color: color.withOpacity(0.8),
+              ),
+            ],
+          ),
+        );
+
+    // === Pause Button ===
+    final pauseButtonSize = ScreenUtils.responsive(48.0, gameSize);
+    final pauseMargin = ScreenUtils.responsive(16.0, gameSize);
+    final adBarHeight = ScreenUtils.responsive(55.0, gameSize);
+    final extraMargin = ScreenUtils.responsive(10.0, gameSize);
+
     pauseButton = ButtonComponent(
-      position: Vector2(gameSize.x - 20, gameSize.y - 45), // Better positioning
-      size: Vector2(55, 55),
+      position: Vector2(
+        gameSize.x - pauseMargin,
+        gameSize.y - pauseMargin - adBarHeight - extraMargin,
+      ),
+      size: Vector2(pauseButtonSize, pauseButtonSize),
       anchor: Anchor.bottomRight,
       button: RectangleComponent(
-        size: Vector2(55, 55),
+        size: Vector2(pauseButtonSize, pauseButtonSize),
         paint: Paint()..color = Colors.transparent,
       ),
       children: [
-        // Enhanced background with subtle animation potential
+        // Background circle
         CircleComponent(
-          radius: 27.5,
+          radius: pauseButtonSize / 2,
           paint: Paint()
             ..shader = RadialGradient(
-              colors: [
-                const Color(0xFF1a1a2e).withOpacity(0.98),
-                const Color(0xFF0f0f23).withOpacity(0.95),
-              ],
-              stops: const [0.0, 1.0],
-            ).createShader(const Rect.fromLTWH(0, 0, 55, 55)),
-          position: Vector2(27.5, 27.5),
+              colors: [bgTop.withOpacity(0.98), bgBottom.withOpacity(0.95)],
+            ).createShader(
+                Rect.fromLTWH(0, 0, pauseButtonSize, pauseButtonSize)),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
-        // Glowing border effect
+        // Cyan glow border
         CircleComponent(
-          radius: 27.5,
+          radius: pauseButtonSize / 2,
           paint: Paint()
-            ..color = const Color(0xFF00ff88).withOpacity(0.6)
+            ..color = cyan.withOpacity(0.6)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5,
-          position: Vector2(27.5, 27.5),
+            ..strokeWidth = 3 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
-        // Inner glow
+        // Inner subtle glow
         CircleComponent(
-          radius: 24,
+          radius: pauseButtonSize / 2 - 3 * scaleFactor,
           paint: Paint()
-            ..color = const Color(0xFF00ff88).withOpacity(0.15)
+            ..color = cyan.withOpacity(0.15)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1,
-          position: Vector2(27.5, 27.5),
+            ..strokeWidth = 1 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
           anchor: Anchor.center,
         ),
-        // Enhanced pause icon
+        // Pause bars
         RectangleComponent(
-          position: Vector2(19, 18.5),
-          size: Vector2(6, 18),
-          paint: Paint()..color = Colors.white.withOpacity(0.95),
+          position: Vector2(pauseButtonSize * 0.35, pauseButtonSize * 0.3),
+          size: Vector2(pauseButtonSize * 0.12, pauseButtonSize * 0.4),
+          paint: Paint()..color = Colors.white,
         ),
         RectangleComponent(
-          position: Vector2(30, 18.5),
-          size: Vector2(6, 18),
-          paint: Paint()..color = Colors.white.withOpacity(0.95),
+          position: Vector2(pauseButtonSize * 0.55, pauseButtonSize * 0.3),
+          size: Vector2(pauseButtonSize * 0.12, pauseButtonSize * 0.4),
+          paint: Paint()..color = Colors.white,
         ),
       ],
-      onPressed: () {
-        print('Pause button pressed!');
-        showPauseDialog();
-      },
+      onPressed: showPauseDialog,
       priority: 25,
     );
     add(pauseButton);
 
-    // IMPROVED: Better header dimensions and positioning
-    final headerMarginX = gameSize.x * 0.025; // Slightly tighter margins
-    final headerMarginY = gameSize.y * 0.025;
-    final headerWidth = gameSize.x * 0.95;
-    final headerHeight = gameSize.y * 0.12; // Slightly more compact
+    // === Info Button ===
+    infoButton = ButtonComponent(
+      position: Vector2(
+        gameSize.x - pauseMargin,
+        gameSize.y -
+            pauseMargin -
+            adBarHeight -
+            extraMargin -
+            pauseButtonSize -
+            pauseMargin,
+      ),
+      size: Vector2(pauseButtonSize, pauseButtonSize),
+      anchor: Anchor.bottomRight,
+      button: RectangleComponent(
+        size: Vector2(pauseButtonSize, pauseButtonSize),
+        paint: Paint()..color = Colors.transparent,
+      ),
+      children: [
+        // Background circle with gradient
+        CircleComponent(
+          radius: pauseButtonSize / 2,
+          paint: Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFF2a2a4e).withOpacity(0.98),
+                const Color(0xFF1a1a3e).withOpacity(0.95)
+              ],
+            ).createShader(
+                Rect.fromLTWH(0, 0, pauseButtonSize, pauseButtonSize)),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Outer glow border with blur
+        CircleComponent(
+          radius: pauseButtonSize / 2,
+          paint: Paint()
+            ..color = amber.withOpacity(0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3 * scaleFactor
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6 * scaleFactor),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Main border
+        CircleComponent(
+          radius: pauseButtonSize / 2,
+          paint: Paint()
+            ..color = amber.withOpacity(0.8)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Inner subtle glow
+        CircleComponent(
+          radius: pauseButtonSize / 2 - 4 * scaleFactor,
+          paint: Paint()
+            ..color = amber.withOpacity(0.2)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1 * scaleFactor,
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Info icon background circle (larger, gradient)
+        CircleComponent(
+          radius: pauseButtonSize * 0.32,
+          paint: Paint()
+            ..shader = RadialGradient(
+              colors: [
+                amber.withOpacity(0.9),
+                amber.withOpacity(0.7),
+              ],
+            ).createShader(Rect.fromCircle(
+              center: Offset(pauseButtonSize / 2, pauseButtonSize / 2),
+              radius: pauseButtonSize * 0.32,
+            ))
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2 * scaleFactor),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Info icon white glow
+        CircleComponent(
+          radius: pauseButtonSize * 0.3,
+          paint: Paint()
+            ..color = Colors.white.withOpacity(0.95)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 1 * scaleFactor),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize / 2),
+          anchor: Anchor.center,
+        ),
+        // Info icon dot (top part of 'i') - with glow
+        CircleComponent(
+          radius: pauseButtonSize * 0.065,
+          paint: Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFF1a1a3e),
+                const Color(0xFF0a0a2e),
+              ],
+            ).createShader(Rect.fromCircle(
+              center: Offset(pauseButtonSize / 2, pauseButtonSize * 0.35),
+              radius: pauseButtonSize * 0.065,
+            )),
+          position: Vector2(pauseButtonSize / 2, pauseButtonSize * 0.35),
+          anchor: Anchor.center,
+        ),
+        // Info icon stem (bottom part of 'i') - rounded rectangle
+        RectangleComponent(
+          position: Vector2(pauseButtonSize * 0.455, pauseButtonSize * 0.48),
+          size: Vector2(pauseButtonSize * 0.09, pauseButtonSize * 0.2),
+          paint: Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1a1a3e),
+                const Color(0xFF0a0a2e),
+              ],
+            ).createShader(Rect.fromLTWH(
+              pauseButtonSize * 0.455,
+              pauseButtonSize * 0.48,
+              pauseButtonSize * 0.09,
+              pauseButtonSize * 0.2,
+            )),
+        ),
+        // Shine effect on top-left
+        CircleComponent(
+          radius: pauseButtonSize * 0.12,
+          paint: Paint()
+            ..color = Colors.white.withOpacity(0.3)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4 * scaleFactor),
+          position: Vector2(pauseButtonSize * 0.35, pauseButtonSize * 0.35),
+          anchor: Anchor.center,
+        ),
+      ],
+      onPressed: showInfoDialog,
+      priority: 25,
+    );
+    add(infoButton);
 
-    // IMPROVED: Enhanced header background with better gradient
+    // === Header ===
+    final headerMarginX = ScreenUtils.getUIMargin(gameSize);
+    final headerMarginY =
+        ScreenUtils.getPreciseTopMargin(gameSize); // Use precise top margin
+    final headerWidth = gameSize.x - (headerMarginX * 2);
+    final headerHeight = ScreenUtils.getHeaderHeight(gameSize);
+
     headerBg = RoundedRectComponent(
-      position: Vector2(headerMarginX, headerMarginY),
+      position: Vector2((gameSize.x - headerWidth) / 2, headerMarginY),
       size: Vector2(headerWidth, headerHeight),
-      paint: Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF1a1a2e).withOpacity(0.95),
-            const Color(0xFF16213e).withOpacity(0.92),
-            const Color(0xFF0f0f23).withOpacity(0.88),
-          ],
-          stops: const [0.0, 0.6, 1.0],
-        ).createShader(Rect.fromLTWH(
-            headerMarginX, headerMarginY, headerWidth, headerHeight)),
-      radius: 18,
-      priority: -2,
-    );
-    add(headerBg);
-
-    // IMPROVED: Add subtle border to header
-    final headerBorder = RoundedRectComponent(
-      position: Vector2(headerMarginX, headerMarginY),
-      size: Vector2(headerWidth, headerHeight),
-      paint: Paint()
-        ..color = const Color(0xFF00ff88).withOpacity(0.3)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-      radius: 18,
-      priority: -1,
-    );
-    add(headerBorder);
-
-    // IMPROVED: More balanced row heights
-    final topRowHeight = headerHeight * 0.48;
-    final topRowY = headerMarginY + headerHeight * 0.06;
-
-    topRowBg = RoundedRectComponent(
-      position: Vector2(headerMarginX + 10, topRowY),
-      size: Vector2(headerWidth - 20, topRowHeight),
       paint: Paint()
         ..shader = LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            const Color(0xFF000000).withOpacity(0.15),
-            const Color(0xFF1a1a2e).withOpacity(0.25),
-            const Color(0xFF000000).withOpacity(0.15),
+            const Color(0xFF000011).withOpacity(0.95), // Deep cyber dark
+            const Color(0xFF001133).withOpacity(0.93), // Dark cyber blue
+            const Color(0xFF002255).withOpacity(0.95), // Cyber blue
+            const Color(0xFF001144).withOpacity(0.93), // Dark cyber accent
           ],
-          stops: const [0.0, 0.5, 1.0],
+          stops: const [0.0, 0.3, 0.7, 1.0],
         ).createShader(Rect.fromLTWH(
-            headerMarginX + 10, topRowY, headerWidth - 20, topRowHeight)),
+            headerMarginX, headerMarginY, headerWidth, headerHeight)),
+      radius: 20,
+      priority: -2,
+    );
+    add(headerBg);
+
+    final headerBorder = RoundedRectComponent(
+      position: Vector2(headerMarginX, headerMarginY),
+      size: Vector2(headerWidth, headerHeight),
+      paint: Paint()
+        ..color = const Color(0xFF00ffff).withOpacity(0.8) // Bright cyan neon
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+      radius: 20,
+      priority: -1,
+    );
+    add(headerBorder);
+
+    // Add outer neon glow effect for cyberpunk style
+    final headerOuterGlow = RoundedRectComponent(
+      position: Vector2(headerMarginX - 1, headerMarginY - 1),
+      size: Vector2(headerWidth + 2, headerHeight + 2),
+      paint: Paint()
+        ..color = const Color(0xFF0088ff).withOpacity(0.4) // Blue outer glow
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0),
+      radius: 21,
+      priority: -3,
+    );
+    add(headerOuterGlow);
+
+    // === Rows inside header ===
+    final topRowHeight = headerHeight * 0.48;
+    final topRowY = headerMarginY + headerHeight * 0.06;
+
+    topRowBg = RoundedRectComponent(
+      position: Vector2(headerMarginX + 14, topRowY),
+      size: Vector2(headerWidth - 28, topRowHeight),
+      paint: Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Colors.black.withOpacity(0.12),
+            bgBottom.withOpacity(0.2),
+            Colors.black.withOpacity(0.12),
+          ],
+        ).createShader(Rect.fromLTWH(
+            headerMarginX + 14, topRowY, headerWidth - 28, topRowHeight)),
       radius: 14,
       priority: 0,
     );
@@ -200,149 +381,63 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     final bottomRowY = topRowY + topRowHeight + 6;
 
     bottomRowBg = RoundedRectComponent(
-      position: Vector2(headerMarginX + 10, bottomRowY),
-      size: Vector2(headerWidth - 20, bottomRowHeight),
+      position: Vector2(headerMarginX + 14, bottomRowY),
+      size: Vector2(headerWidth - 28, bottomRowHeight),
       paint: Paint()
         ..shader = LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            const Color(0xFF000000).withOpacity(0.15),
-            const Color(0xFF1a1a2e).withOpacity(0.25),
-            const Color(0xFF000000).withOpacity(0.15),
+            Colors.black.withOpacity(0.12),
+            bgBottom.withOpacity(0.2),
+            Colors.black.withOpacity(0.12),
           ],
-          stops: const [0.0, 0.5, 1.0],
         ).createShader(Rect.fromLTWH(
-            headerMarginX + 10, bottomRowY, headerWidth - 20, bottomRowHeight)),
+            headerMarginX + 14, bottomRowY, headerWidth - 28, bottomRowHeight)),
       radius: 14,
       priority: 0,
     );
     add(bottomRowBg);
 
-    // IMPROVED: Better text positioning and styling
+    // === Text Components ===
     final topRowCenterY = topRowY + topRowHeight / 2;
     final topRowLeftX = headerMarginX + 28;
     final topRowRightX = headerMarginX + headerWidth - 28;
 
-    // IMPROVED: Enhanced score text with icon-like prefix
+    final fontSize = isLandscape
+        ? ScreenUtils.responsive(12.0, gameSize)
+        : ScreenUtils.responsive(14.0, gameSize);
+
     scoreText = TextComponent(
-      text: '⭐ Score: 0',
+      text: '⭐ SCORE: 0',
       position: Vector2(topRowLeftX, topRowCenterY),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFF00ff88),
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 12,
-              color: Color(0xFF00ff88),
-            ),
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 6,
-              color: Colors.black87,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: hudText(cyan, fontSize),
       anchor: Anchor.centerLeft,
     );
     add(scoreText);
 
-    // IMPROVED: Enhanced level text with better formatting
     levelText = TextComponent(
-      text: '🏆 Level 1 • Wave 1/1',
+      text: '🏆 LEVEL 1 • WAVE 1/1',
       position: Vector2(topRowRightX, topRowCenterY),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFF8844ff),
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 12,
-              color: Color(0xFF8844ff),
-            ),
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 6,
-              color: Colors.black87,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: hudText(amber, fontSize),
       anchor: Anchor.centerRight,
     );
     add(levelText);
 
-    // IMPROVED: Enhanced target score with progress indicator feel
     final bottomRowCenterY = bottomRowY + bottomRowHeight / 2;
     final bottomRowCenterX = headerMarginX + headerWidth / 2;
 
     targetScoreText = TextComponent(
-      text: '🎯 Target: 13',
+      text: '🎯 TARGET: 13',
       position: Vector2(bottomRowCenterX, bottomRowCenterY),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFFff8844),
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 10,
-              color: Color(0xFFff8844),
-            ),
-            Shadow(
-              offset: Offset(2, 2),
-              blurRadius: 5,
-              color: Colors.black87,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: hudText(
+          danger,
+          isLandscape
+              ? ScreenUtils.responsive(13.0, gameSize)
+              : ScreenUtils.responsive(15.0, gameSize)),
       anchor: Anchor.center,
     );
     add(targetScoreText);
-
-    // IMPROVED: Better instructions positioning and styling
-    final adHeight = 55.0;
-    instructionsText = TextComponent(
-      text: 'Collect ⭐ coins • Avoid 💣 bombs',
-      position: Vector2(gameSize.x / 2, gameSize.y - 35 - adHeight),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontFamily: 'Roboto',
-          color: Color(0xFF88aacc),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.8,
-          shadows: [
-            Shadow(
-              offset: Offset(0, 0),
-              blurRadius: 6,
-              color: Color(0xFF44aaff),
-            ),
-            Shadow(
-              offset: Offset(1, 1),
-              blurRadius: 3,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-    );
-    add(instructionsText);
 
     isInitialized = true;
   }
@@ -352,33 +447,210 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     onExitToMenu = callback;
   }
 
-  void showPauseDialog() {
-    print('showPauseDialog called, isPaused: $isPaused'); // Debug log
-
+  void showInfoDialog() {
     if (isPaused) {
-      print('Already paused, returning');
       return; // Prevent multiple dialogs
     }
 
     // Pause the game immediately
     isPaused = true;
     game.pauseGame();
-    print('Game paused successfully');
+
+    // Get current level to show appropriate instructions
+    final currentLevel = game.waveManager.level;
+    final levelType = LevelTypeConfig.getLevelType(currentLevel);
+
+    String title;
+    String content;
+    String emoji;
+    Color themeColor;
+
+    // Determine which instructions to show based on level type
+    if (levelType == LevelType.gravity) {
+      title = "Gravity Mode";
+      emoji = "🎮";
+      content =
+          "• Steer to dodge rockets\n• Collect coins to reach target\n• Avoid bombs at all costs\n• Survive the wave!";
+      themeColor = const Color(0xFF00E0FF);
+    } else if (levelType == LevelType.survival) {
+      title = "Survival Mode";
+      emoji = "⚡";
+      content =
+          "• Ship can't move\n• Tap rockets to destroy them\n• Collect coins to reach target\n• Don't let bombs reach you!";
+      themeColor = const Color(0xFFFFB400);
+    } else if (levelType == LevelType.demon) {
+      title = "Demon Boss Battle";
+      emoji = "🔥";
+      content =
+          "• Demon's rockets are deadly\n• Move to activate magnetic force\n• Hurl rockets back at demon\n• Reduce demon's health to zero!";
+      themeColor = const Color(0xFFFF4D4D);
+    } else {
+      // Fallback
+      title = "How to Play";
+      emoji = "ℹ️";
+      content = "Follow the on-screen instructions to complete each wave!";
+      themeColor = const Color(0xFF00E0FF);
+    }
 
     // Use a post-frame callback to ensure the context is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = game.buildContext;
-      print('Context available: ${context != null}');
 
       if (context == null) {
-        print('Context is null, retrying...');
+        // If context is not available, try again after a short delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          final retryContext = game.buildContext;
+          if (retryContext != null) {
+            _showInfoDialogWithContext(
+                retryContext, title, content, emoji, themeColor);
+          } else {
+            // If we still can't get context, resume the game
+            resumeGame();
+          }
+        });
+        return;
+      }
+
+      _showInfoDialogWithContext(context, title, content, emoji, themeColor);
+    });
+  }
+
+  void _showInfoDialogWithContext(BuildContext context, String title,
+      String content, String emoji, Color themeColor) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        final screenSize = MediaQuery.of(dialogContext).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+        final padding = dialogWidth * 0.06;
+        final titleFontSize =
+            isLandscape ? dialogWidth * 0.07 : dialogWidth * 0.08;
+        final contentFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+        final buttonFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.06;
+
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1a1a2e),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(dialogWidth * 0.07),
+              side: BorderSide(
+                color: themeColor.withOpacity(0.5),
+                width: 2,
+              ),
+            ),
+            title: Column(
+              children: [
+                Text(
+                  emoji,
+                  style: TextStyle(fontSize: titleFontSize * 1.2),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: padding * 0.3),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: themeColor,
+                    letterSpacing: 1.5,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 0),
+                        blurRadius: 10,
+                        color: themeColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: Container(
+              width: dialogWidth,
+              padding: EdgeInsets.all(padding * 0.8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(padding),
+                    decoration: BoxDecoration(
+                      color: themeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(dialogWidth * 0.04),
+                      border: Border.all(
+                        color: themeColor.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      content,
+                      style: TextStyle(
+                        fontSize: contentFontSize,
+                        color: Colors.white70,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildPauseActionButton(
+                      'GOT IT!',
+                      themeColor,
+                      Icons.check_circle,
+                      () {
+                        Navigator.of(dialogContext).pop();
+                        resumeGame();
+                      },
+                      buttonFontSize,
+                      padding,
+                      padding * 0.7,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((_) {
+      // Ensure the game is resumed if dialog is dismissed unexpectedly
+      if (isPaused) {
+        resumeGame();
+      }
+    });
+  }
+
+  void showPauseDialog() {
+    if (isPaused) {
+      return; // Prevent multiple dialogs
+    }
+
+    // Pause the game immediately
+    isPaused = true;
+    game.pauseGame();
+
+    // Use a post-frame callback to ensure the context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = game.buildContext;
+
+      if (context == null) {
         // If context is not available, try again after a short delay
         Future.delayed(const Duration(milliseconds: 100), () {
           final retryContext = game.buildContext;
           if (retryContext != null) {
             _showPauseDialogWithContext(retryContext);
           } else {
-            print('Context still null after retry, resuming game');
             // If we still can't get context, resume the game
             resumeGame();
           }
@@ -391,19 +663,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
   }
 
   void _showPauseDialogWithContext(BuildContext context) {
-    print('Showing pause dialog with context');
-
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (BuildContext dialogContext) {
-        final screenWidth = MediaQuery.of(dialogContext).size.width;
-        final dialogWidth = screenWidth * 0.8;
+        final screenSize = MediaQuery.of(dialogContext).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.8;
         final padding = dialogWidth * 0.06;
-        final titleFontSize = dialogWidth * 0.08;
-        final buttonFontSize = dialogWidth * 0.055;
-        final buttonPaddingV = dialogWidth * 0.045;
-        final buttonPaddingH = dialogWidth * 0.08;
+        final titleFontSize =
+            isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+        final buttonFontSize =
+            isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+        final buttonPaddingV =
+            isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+        final buttonPaddingH =
+            isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
 
         return WillPopScope(
           onWillPop: () async =>
@@ -492,7 +768,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFF00ff88),
                       Icons.play_arrow,
                       () {
-                        print('Continue button pressed');
                         Navigator.of(dialogContext).pop();
                         resumeGame();
                       },
@@ -510,7 +785,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                       const Color(0xFFff4444),
                       Icons.home, // Changed icon to home
                       () {
-                        print('Exit to menu button pressed');
                         Navigator.of(dialogContext).pop();
                         exitToMenu();
                       },
@@ -539,7 +813,6 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     ).then((_) {
       // Ensure the game is resumed if dialog is dismissed unexpectedly
       if (isPaused) {
-        print('Dialog dismissed unexpectedly, resuming game');
         resumeGame();
       }
     });
@@ -631,17 +904,16 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     }
     // Update target score display
     if (game.currentLevelType != LevelType.demon) {
+      String levelMode = game.currentLevelType == LevelType.survival
+          ? "Survival Mode"
+          : game.currentLevelType == LevelType.gravity
+              ? "Gravity Mode"
+              : "";
       targetScoreText.text =
-          '🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
+          '$levelMode 🎯${game.waveManager.waveScore}/${game.waveManager.waveTarget}';
     } else {
       targetScoreText.text = "⚔️ Boss Battle";
     }
-
-    // Update instructions based on level type
-    final currentLevelType =
-        LevelTypeConfig.getLevelType(game.waveManager.level);
-    final instructions = LevelTypeConfig.getLevelInstructions(currentLevelType);
-    instructionsText.text = instructions;
 
     // Update container colors with pulsing effect
     if (!isPaused) {
@@ -659,33 +931,35 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
     if (!isInitialized) return;
 
-    // Add subtle geometric patterns to header
-    _renderModernDecorations(canvas);
-
     // Add border glow effects
     _renderGlowEffects(canvas);
 
     // Show wave message/countdown overlay with modern styling
     if (game.waveMessage != null && game.waveMessage!.isNotEmpty) {
       final gameSize = game.canvasSize;
+      final isLandscape = ScreenUtils.isLandscape(gameSize);
+      final scaleFactor = ScreenUtils.getScaleFactor(gameSize);
 
-      // Modern wave message design
+      // Modern wave message design with responsive sizing
       final message = game.waveMessage!;
-      final messageTextStyle = const TextStyle(
+      final messageFontSize = isLandscape
+          ? ScreenUtils.responsive(24.0, gameSize)
+          : ScreenUtils.responsive(32.0, gameSize);
+      final messageTextStyle = TextStyle(
         fontFamily: 'Roboto',
-        color: Color(0xFF00ff88),
-        fontSize: 32,
+        color: const Color(0xFF00ff88),
+        fontSize: messageFontSize,
         fontWeight: FontWeight.bold,
-        letterSpacing: 2.0,
+        letterSpacing: 2.0 * scaleFactor,
         shadows: [
           Shadow(
-            offset: Offset(0, 0),
-            blurRadius: 12,
-            color: Color(0xFF00ff88),
+            offset: const Offset(0, 0),
+            blurRadius: 12 * scaleFactor,
+            color: const Color(0xFF00ff88),
           ),
           Shadow(
-            offset: Offset(2, 2),
-            blurRadius: 8,
+            offset: Offset(2 * scaleFactor, 2 * scaleFactor),
+            blurRadius: 8 * scaleFactor,
             color: Colors.black87,
           ),
         ],
@@ -702,9 +976,12 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       final rectWidth = textPainter.width + padding;
       final rectHeight = textPainter.height + padding * 0.8;
 
+      // Adjust message position for landscape
+      final messageYOffset =
+          isLandscape ? -25 * scaleFactor : -50 * scaleFactor;
       final messageBg = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(gameSize.x / 2, gameSize.y / 2 - 50),
+          center: Offset(gameSize.x / 2, gameSize.y / 2 + messageYOffset),
           width: rectWidth,
           height: rectHeight,
         ),
@@ -742,32 +1019,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       // Wave message text
       final offset = Offset(
         (gameSize.x - textPainter.width) / 2,
-        (gameSize.y - textPainter.height) / 2 - 50,
+        (gameSize.y - textPainter.height) / 2 + messageYOffset,
       );
       textPainter.paint(canvas, offset);
     }
-  }
-
-  void _renderModernDecorations(Canvas canvas) {
-    final gameSize = game.canvasSize;
-
-    // Subtle corner decorations
-    final decorPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    // Top-left corner decoration
-    final topLeft = Offset(gameSize.x * 0.03 + 8, gameSize.y * 0.02 + 8);
-    canvas.drawLine(topLeft, Offset(topLeft.dx + 15, topLeft.dy), decorPaint);
-    canvas.drawLine(topLeft, Offset(topLeft.dx, topLeft.dy + 15), decorPaint);
-
-    // Top-right corner decoration
-    final topRight = Offset(gameSize.x * 0.97 - 8, gameSize.y * 0.02 + 8);
-    canvas.drawLine(
-        topRight, Offset(topRight.dx - 15, topRight.dy), decorPaint);
-    canvas.drawLine(
-        topRight, Offset(topRight.dx, topRight.dy + 15), decorPaint);
   }
 
   void _renderGlowEffects(Canvas canvas) {
@@ -821,15 +1076,23 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final dialogWidth = screenWidth * 0.85;
+          final screenSize = MediaQuery.of(context).size;
+          final isLandscape = screenSize.width > screenSize.height;
+          final dialogWidth =
+              isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = dialogWidth * 0.08;
-          final statFontSize = dialogWidth * 0.06;
-          final bodyFontSize = dialogWidth * 0.05;
-          final buttonFontSize = dialogWidth * 0.055;
-          final buttonPaddingV = dialogWidth * 0.045;
-          final buttonPaddingH = dialogWidth * 0.08;
+          final titleFontSize =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final statFontSize =
+              isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
+          final bodyFontSize =
+              isLandscape ? dialogWidth * 0.04 : dialogWidth * 0.05;
+          final buttonFontSize =
+              isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+          final buttonPaddingV =
+              isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+          final buttonPaddingH =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -856,8 +1119,8 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                 ],
               ),
             ),
-            content: Container(
-              width: dialogWidth,
+            content: SingleChildScrollView(
+              //width: dialogWidth,
               padding: EdgeInsets.all(padding),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -883,7 +1146,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
 
                   // Explanation section with different text based on level type
                   Container(
-                    padding: EdgeInsets.all(dialogWidth * 0.045),
+                    padding: EdgeInsets.all(dialogWidth * 0.025),
                     decoration: BoxDecoration(
                       color: const Color(0xFF44aaff).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(dialogWidth * 0.04),
@@ -899,6 +1162,7 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
+                      softWrap: true,
                     ),
                   ),
                 ],
@@ -955,14 +1219,21 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          final dialogWidth = screenWidth * 0.85;
+          final screenSize = MediaQuery.of(context).size;
+          final isLandscape = screenSize.width > screenSize.height;
+          final dialogWidth =
+              isLandscape ? screenSize.width * 0.75 : screenSize.width * 0.85;
           final padding = dialogWidth * 0.06;
-          final titleFontSize = dialogWidth * 0.08;
-          final statFontSize = dialogWidth * 0.06;
-          final buttonFontSize = dialogWidth * 0.055;
-          final buttonPaddingV = dialogWidth * 0.045;
-          final buttonPaddingH = dialogWidth * 0.08;
+          final titleFontSize =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
+          final statFontSize =
+              isLandscape ? dialogWidth * 0.05 : dialogWidth * 0.06;
+          final buttonFontSize =
+              isLandscape ? dialogWidth * 0.045 : dialogWidth * 0.055;
+          final buttonPaddingV =
+              isLandscape ? dialogWidth * 0.035 : dialogWidth * 0.045;
+          final buttonPaddingH =
+              isLandscape ? dialogWidth * 0.06 : dialogWidth * 0.08;
           return AlertDialog(
             backgroundColor: const Color(0xFF1a1a2e),
             shape: RoundedRectangleBorder(
@@ -1171,7 +1442,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     showDialog(
       context: context,
       builder: (context) {
-        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1268,6 +1542,121 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
     );
   }
 
+  Future<void> showInstructionsDialog({
+    required int level,
+    required VoidCallback onContinue,
+  }) async {
+    final context = game.buildContext;
+    if (context == null) {
+      // If context is not available yet, schedule to show later
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (game.buildContext != null) {
+          showInstructionsDialog(level: level, onContinue: onContinue);
+        }
+      });
+      return;
+    }
+    game.setPaused(true);
+    String title;
+    String content;
+    String emoji;
+
+    if (level == 1) {
+      title = "Welcome to Magnet Lord!";
+      emoji = "🎮";
+      content =
+          "• Steer to dodge rockets\n• Collect coins\n• Survive as long as you can\n• Good luck, Captain!";
+    } else if (level == 2) {
+      title = "Survival Mode Unlocked!";
+      emoji = "⚡";
+      content =
+          "• Ship can't move\n• Tap to destroy rockets\n• Collect coins\n• Outlast the storm!";
+    } else if (level == 12) {
+      title = "Demon Mode Unlocked!";
+      emoji = "🔥";
+      content =
+          "• Demon's rockets are deadly\n• Move to flip magnetic force\n• Hurl rockets back\n• Strike the Demon to win!";
+    } else {
+      onContinue();
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
+
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          backgroundColor: const Color(0xFF1a1a2e),
+          contentPadding: EdgeInsets.all(dialogWidth * 0.06),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$emoji $title',
+                style: TextStyle(
+                  fontSize: dialogWidth * 0.08,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: const [
+                    Shadow(
+                      offset: Offset(0, 0),
+                      blurRadius: 8,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                content,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: dialogWidth * 0.055,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.greenAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    game.setPaused(false);
+                    onContinue();
+                  },
+                  child: Text(
+                    'Got it!',
+                    style: TextStyle(
+                      fontSize: dialogWidth * 0.06,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void showNoLivesDialog({VoidCallback? onDialogClosed}) {
     final context = game.buildContext;
     if (context == null) return;
@@ -1276,7 +1665,10 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        final dialogWidth = MediaQuery.of(context).size.width * 0.85;
+        final screenSize = MediaQuery.of(context).size;
+        final isLandscape = screenSize.width > screenSize.height;
+        final dialogWidth =
+            isLandscape ? screenSize.width * 0.7 : screenSize.width * 0.85;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1455,9 +1847,9 @@ class GameUI extends Component with HasGameRef<MagnetWalkerGame> {
         LevelTypeConfig.getLevelType(game.waveManager.level);
 
     if (currentLevelType == LevelType.demon) {
-      return 'The demon defeated you at level $level. Choose your next action:';
+      return 'The demon defeated you at level $level.';
     } else {
-      return 'You failed wave $wave of level $level. Choose your next action:';
+      return 'You failed wave $wave of level $level.';
     }
   }
 }

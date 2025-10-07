@@ -125,31 +125,9 @@ class SciFiPortal extends PositionComponent {
     final fadeProgress = 1.0 - flashProgress;
 
     // Multiple flash layers for depth
-    _renderFlashWave(canvas, center, flashProgress, fadeProgress);
     _renderEnergyBurst(canvas, center, flashProgress, fadeProgress);
     _renderLightningBolts(canvas, center, flashProgress, fadeProgress);
     _renderParticleRing(canvas, center, flashProgress, fadeProgress);
-  }
-
-  void _renderFlashWave(
-      Canvas canvas, Offset center, double progress, double fade) {
-    // Expanding energy wave
-    final waveRadius = size.x * progress * 2.5;
-    final intensity = math.sin(fade * math.pi) * 0.9;
-
-    final wavePaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          Colors.white.withOpacity(intensity * 0.8),
-          Colors.cyanAccent.withOpacity(intensity * 0.6),
-          Colors.blue.withOpacity(intensity * 0.3),
-          Colors.transparent,
-        ],
-        stops: [0.0, 0.3, 0.7, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: waveRadius))
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * (1 - progress));
-
-    canvas.drawCircle(center, waveRadius, wavePaint);
   }
 
   void _renderEnergyBurst(
@@ -405,7 +383,7 @@ class EnergyWave {
     final fade = 1.0 - progress;
 
     final wavePaint = Paint()
-      ..color = Colors.cyanAccent.withOpacity(fade * 0.3) // Reduced opacity
+      ..color = Colors.red.withOpacity(fade * 0.3) // Reduced opacity
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0 // Reduced from 3.0
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4); // Reduced blur

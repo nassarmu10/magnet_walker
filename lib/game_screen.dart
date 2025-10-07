@@ -34,7 +34,7 @@ class _GameScreenState extends State<GameScreen> {
     game.setExitCallback(() async {
       // Stop game music completely
       FlameAudio.bgm.stop();
-      
+
       // Navigate back to menu - the main app will handle restarting menu music
       Navigator.pushReplacementNamed(context, '/');
     });
@@ -66,10 +66,8 @@ class _GameScreenState extends State<GameScreen> {
             setState(() {
               _isBannerAdLoaded = true;
             });
-            print('Banner Ad loaded successfully');
           },
           onAdFailedToLoad: (ad, error) {
-            print('Banner Ad failed to load: $error');
             ad.dispose();
             _bannerAd = null;
           },
@@ -88,26 +86,31 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      // extendBodyBehindAppBar: true, // Game renders behind AppBar
+      // appBar: AppBar(
+      //   backgroundColor: Colors.transparent, // Completely transparent
+      //   elevation: 0, // No shadow
+      //   toolbarHeight: 0, // No height - just for safe area
+      //   automaticallyImplyLeading: false, // No back button
+      // ),
+      body: Stack(
         children: [
-          // Game area with SafeArea
-          Expanded(
-            child: SafeArea(
-              bottom: false,
-              minimum: const EdgeInsets.only(
-                  bottom: 8.0), // Optional: add some bottom margin
-              child: GameWidget(game: game),
-            ),
+          // Full-screen game with top safe area only
+          SafeArea(
+            top: false,
+            bottom: false, // Game goes under banner
+            child: GameWidget(game: game),
           ),
-          // Banner ad area
+          // Banner ad overlaid at bottom
           if (_isBannerAdLoaded && _bannerAd != null)
-            Container(
-              width: _bannerAd!.size.width.toDouble(),
-              height: _bannerAd!.size.height.toDouble(),
-              padding: const EdgeInsets.only(
-                  bottom: 4.0), // Optional: add some padding
-              alignment: Alignment.center,
-              child: AdWidget(ad: _bannerAd!),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: _bannerAd!.size.width.toDouble(),
+                height: _bannerAd!.size.height.toDouble(),
+                margin: const EdgeInsets.only(bottom: 4.0),
+                child: AdWidget(ad: _bannerAd!),
+              ),
             ),
         ],
       ),

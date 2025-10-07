@@ -5,6 +5,7 @@ import 'dart:async' as async;
 import '../../magnet_walker_game.dart';
 import '../../components/game_object.dart';
 import '../../level_types.dart';
+import '../../utils/screen_utils.dart';
 
 class GravitySpawnManager {
   final MagnetWalkerGame game;
@@ -13,11 +14,20 @@ class GravitySpawnManager {
   final List<Vector2> _recentSpawnPositions = [];
   static const int _maxRecentPositions = 5;
 
+  // Track spawns for guaranteed bomb logic
+  int _spawnCount = 0;
+  bool _hasSpawnedBomb = false;
+  static const int _guaranteedBombWindow = 3;
+
   GravitySpawnManager(this.game);
 
   void startSpawning() {
     spawnTimer?.cancel();
     _recentSpawnPositions.clear();
+
+    // Reset guaranteed bomb tracking
+    _spawnCount = 0;
+    _hasSpawnedBomb = false;
 
     final level = game.waveManager.level;
     final wave = game.waveManager.currentWave;
@@ -31,7 +41,7 @@ class GravitySpawnManager {
       // Mid–high game: scale more gradually
       spawnRate = math.max(0.9 - (wave - 1) * 0.05 - (level - 10) * 0.02, 0.45);
     } else {
-      // High levels: don’t flood, cap around 0.35s
+      // High levels: don't flood, cap around 0.35s
       spawnRate =
           math.max(0.7 - (wave - 1) * 0.04 - (level - 25) * 0.015, 0.35);
     }
@@ -47,16 +57,25 @@ class GravitySpawnManager {
   }
 
   void spawnObject() {
-    final gameSize =
-        game.camera.viewfinder.visibleGameSize ?? Vector2(375, 667);
+    final gameSize = game.canvasSize;
 
     // Choose x position
     Vector2 spawnPosition;
     int attempts = 0;
     final maxAttempts = 10;
     do {
-      final x = math.Random().nextDouble() * (gameSize.x - 80) + 40;
-      spawnPosition = Vector2(x, gameSize.y * 0.12 + gameSize.y * 0.055);
+      // Use responsive margins for spawn positioning
+      final margin = ScreenUtils.responsive(40.0, gameSize);
+      final x = math.Random().nextDouble() * (gameSize.x - margin * 2) + margin;
+
+      // Adjust spawn Y position based on orientation
+      final isLandscape = ScreenUtils.isLandscape(gameSize);
+      final spawnY = isLandscape
+          ? gameSize.y * 0.05 // Spawn closer to top in landscape
+          : gameSize.y * 0.12 +
+              gameSize.y * 0.055; // Original portrait position
+
+      spawnPosition = Vector2(x, spawnY);
       attempts++;
       if (attempts >= maxAttempts) break;
     } while (_isTooCloseToRecentSpawns(spawnPosition));
@@ -79,9 +98,30 @@ class GravitySpawnManager {
       bombChance = math.min(0.5 + 0.12 * (wave - 1), 0.85); // cap at 85%
     }
 
-    final type = math.Random().nextDouble() < (1 - bombChance)
-        ? ObjectType.coin
-        : ObjectType.bomb;
+    // Determine object type with guaranteed bomb logic
+    ObjectType type;
+    _spawnCount++;
+
+    if (_spawnCount <= _guaranteedBombWindow) {
+      // Within first 3 spawns
+      if (!_hasSpawnedBomb && _spawnCount == _guaranteedBombWindow) {
+        // Force bomb on 3rd spawn if none spawned yet
+        type = ObjectType.bomb;
+        _hasSpawnedBomb = true;
+      } else {
+        // Normal random logic for 1st and 2nd spawn
+        final isBomb = math.Random().nextDouble() < bombChance;
+        type = isBomb ? ObjectType.bomb : ObjectType.coin;
+        if (isBomb) {
+          _hasSpawnedBomb = true;
+        }
+      }
+    } else {
+      // After first 3 spawns, use normal logic
+      type = math.Random().nextDouble() < bombChance
+          ? ObjectType.bomb
+          : ObjectType.coin;
+    }
 
     final obj = GameObject(
       position: spawnPosition,
@@ -102,7 +142,7 @@ class GravitySpawnManager {
 
     // Apply downward velocity with slight random angle
     final angle =
-        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 3;
+        (math.pi / 2) + (math.Random().nextDouble() - 0.5) * math.pi / 10;
     final baseSpeed = 120.0; // Increased from 60.0 to make early levels faster
     obj.velocity =
         Vector2(math.cos(angle), math.sin(angle)) * baseSpeed * speedMultiplier;
@@ -127,5 +167,9 @@ class GravitySpawnManager {
   void stop() {
     spawnTimer?.cancel();
     _recentSpawnPositions.clear();
+
+    // Reset guaranteed bomb tracking when stopping
+    _spawnCount = 0;
+    _hasSpawnedBomb = false;
   }
 }
